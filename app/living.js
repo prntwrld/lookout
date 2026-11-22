@@ -254,7 +254,7 @@ async function speciesPage(F, s){
     <aside class="sp-side">${ph.length ? `<figure class="plate"><div class="frame" data-hide-broken id="big"><img src="${L.photoSrc(ph[0], "large")}"${s.pack ? ` data-fallback="${L.thumb(s)}"` : ""} alt="${esc(s.common || s.sci)}">${L.photoCredit(ph[0])}</div>
       ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.photoSrc(p, "small")}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}</figure>` : ""}
       ${mapBlock(ph.length)}
-      ${where_ ? `<div class="where-box">${where_}</div>` : ""}<div class="where-box" id="old" hidden><h2 class="side-h">In the old books</h2></div></aside></div>
+      ${where_ ? `<div class="where-box">${where_}</div>` : ""}</aside></div>
     <section class="section" id="alike" hidden><h2>Often confused with</h2><div class="row"></div></section>
     <section class="section" id="rel" hidden><h2>Relatives</h2><div class="row"></div></section>`;
   main.querySelector(".strip")?.addEventListener("click", e => {
@@ -289,7 +289,6 @@ async function speciesPage(F, s){
     box.querySelector(".credit").innerHTML = `From the <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia article</a>'s description, CC BY-SA`;
     box.hidden = false;
   })();
-  plateFor(s.id, s.sci, s.common).then(p => { if(!p) return; $("old").insertAdjacentHTML("beforeend", plateFig(p)); $("old").hidden = false; });
   /* look-alikes: the species iNaturalist's identifiers here most often mix it up with */
   L.nat("identifications/similar_species", {taxon_id: s.id, place_id: L.PNW}).then(j => {
     const l = (j.results || []).filter(r => r.taxon && r.taxon.id !== s.id && r.taxon.rank_level <= 10 && r.count >= 2).slice(0, 12);
@@ -310,52 +309,6 @@ async function speciesPage(F, s){
     }).catch(() => fill(local.map(x => L.speciesTile(x)).join("")));
   } else fill(local.map(x => L.speciesTile(x)).join(""));
 }
-
-/* ---------- In the old books: public-domain plates from Wikimedia Commons (data/plates.json, from tools/build_plates.py) ---------- */
-const plates = () => L.data.json("plates.json").then(j => j.plates || {}).catch(() => ({}));
-/* for a species the file doesn't cover, the visitor's browser asks Commons itself, by the same rules as the build:
-   public domain, a plate rather than a photograph, 1930 or earlier when dated, and naming the species. The answer
-   (or that there's none) is kept in this browser. */
-const WORKS = /audubon|birds of america|curtis|botanical magazine|k[öo]hler|medizinal|thom[ée]|sowerby|english botany|lindman|bilder ur nordens|gould|naumann|fuertes|haeckel|kunstformen|lear|wilson'?s american|catesby|redout|jacquin|flora danica|sturm|bessler|biodiversity heritage|\bbhl\b|iconographia|walcott|north american wild flowers|brehm|keulemans|thorburn|ridgway/i;
-const ART = /plate|tafel|\bpl\.|lithograph|engraving|etching|illustration|drawing|watercolou?r|painting|chromolitho|woodcut|hand-colou?red|botanical|ornitholog/i;
-const NOT = /\bmap\b|distribution|range map|specimen|herbarium|skull|skeleton|\begg|stamp|coin|\bphoto|DSC|IMG_|\bP\d{6,}|diagram|chart|label|cladogram|sonogram|spectrogram|\(\d{8,}\)|flickr|national forest|national park service|usfws|fish and wildlife service|\bnps\b/i;
-async function commonsFiles(q){
-  const j = await getJ("https://commons.wikimedia.org/w/api.php?format=json&origin=*&action=query&generator=search&gsrnamespace=6&gsrlimit=40&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=900"
-    + "&iiextmetadatafilter=LicenseShortName|DateTimeOriginal|Artist|ObjectName|Categories|ImageDescription&gsrsearch=" + encodeURIComponent(q));
-  return Object.values(j.query?.pages || {});
-}
-function pickPlate(pages, names, needWork = false){
-  let best = null, top = -1e9;
-  for(const p of pages){
-    const ii = p.imageinfo?.[0] || {}, m = ii.extmetadata || {}, v = k => plain(m[k]?.value);
-    const title = p.title.slice(5), desc = v("ImageDescription"), text = [title, desc, v("Categories")].join(" ");
-    if(!/public domain|^pd\b|cc0/i.test(v("LicenseShortName")) || NOT.test(title + " " + desc)) continue;
-    if(!names.some(n => n && (title + " " + desc).toLowerCase().includes(n.toLowerCase()))) continue;
-    const years = [...v("DateTimeOriginal").matchAll(/\b(1[5-9]\d\d)\b/g)].map(x => +x[1]), year = years.length ? Math.max(...years) : null;
-    if((year && year > 1930) || (ii.width || 0) < 450 || !ii.thumburl) continue;
-    /* a plate: from one of the known old works, or called a drawing, engraving or the like in its own words and dated */
-    if(!(WORKS.test(text) || (!needWork && ART.test(title + " " + desc) && year))) continue;
-    const score = (WORKS.test(text) ? 6 : 0) + (/plate|tafel/i.test(text) ? 2 : 0) + (year ? 1 : 0) - ((ii.width || 0) < 700);
-    if(score > top){ top = score; const by = v("Artist").slice(0, 90);
-      best = {src: ii.thumburl.split("?")[0], page: ii.descriptionurl || "", title: (v("ObjectName") || title).replace(/\.\w+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120), by: /^(unknown|anonymous|not stated)/i.test(by) ? "" : by, year}; }
-  }
-  return best;
-}
-/* by its scientific name first; then by its common name, but only in the known old works */
-async function findPlate(sci, common){
-  let p = pickPlate(await commonsFiles(`"${sci}" filetype:bitmap`), [sci]);
-  if(!p && common) p = pickPlate(await commonsFiles(`"${common}" (Audubon OR plate OR lithograph OR engraving) filetype:bitmap`), [common], true);
-  return p;
-}
-const plateFor = async (id, sci, common) => {
-  const P = await plates(); if(String(id) in P) return P[id];
-  const k = "lookout-plate-" + id, c = L.store.get(k); if(c) return c.v;
-  if(!sci || !sci.includes(" ") || navigator.onLine === false) return null;
-  const v = await findPlate(sci, common).catch(() => undefined); if(v !== undefined) L.store.set(k, {v});
-  return v || null;
-};
-const plateCap = p => `${esc([p.title, p.by, p.year].filter(Boolean).join(", "))}. Public domain, via <a href="${esc(p.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>`;
-const plateFig = (p, name = "") => `<figure class="old-plate"><a href="${esc(p.page)}" target="_blank" rel="noopener"><img src="${esc(String(p.src).split("?")[0].replace("//thumb.wikimedia.org/", "//upload.wikimedia.org/"))}" alt="${esc(name ? `${name}, an old natural-history plate` : p.title)}" loading="lazy"></a><figcaption>${name ? `<b>${esc(name)}</b> · ` : ""}${plateCap(p)}</figcaption></figure>`;
 
 /* ---------- the kinds within a group or a taxon: its families (or orders, or genera) recorded here, the most seen first ---------- */
 const CHILD = {kingdom: "phylum", phylum: "class", subphylum: "class", class: "order", subclass: "order", superorder: "order", order: "family", suborder: "family", infraorder: "family",
@@ -648,7 +601,6 @@ async function groupPage(F, key){
     </div><div>${top.k === "tidepools" && !sub ? `<div id="tides" hidden></div>` : taxa ? `<div id="range" hidden><h2 class="side-h">Where it's recorded</h2><div class="mapbox tall" id="g-map"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings on iNaturalist</span><span><i></i>Your places</span></p></div>` : ""}</div></div>
     ${top.k === "tidepools" && !sub ? `<section class="section" id="spots" hidden><h2>Where to go</h2><div class="split"><div class="mapbox" id="spot-map"></div><div class="spots-box"><ul class="around spots"></ul></div></div></section>` : ""}
     <section class="section" id="classics" hidden><h2>Northwest classics</h2><div class="row"></div></section>
-    <section class="section" id="g-old" hidden><h2>In the old books</h2><div class="row plates"></div></section>
     <section class="section" id="g-now" hidden><h2>Out in ${MONTH}</h2><div class="row"></div></section>
     ${kinds.length ? `<section class="section"><h2>Kinds of ${esc(g.name.toLowerCase())}</h2><div class="cards" id="kinds">${kinds.map(k => `<a class="card" href="?g=${k.k}" data-k="${k.k}"><div class="pic"><span class="ph">${L.initials(k.name)}</span></div><h3>${esc(k.name)}</h3>${D[k.k]?.hook ? `<p>${esc(D[k.k].hook)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
     ${taxa ? `<section class="section" id="kinds-sec" hidden><h2>${kinds.length ? "Families" : `Kinds of ${esc(g.name.toLowerCase())}`} <span class="n"></span></h2><div class="cards"></div></section>` : ""}
@@ -674,9 +626,6 @@ async function groupPage(F, key){
     const tiles = words.ids.map(i => by[i]).filter(Boolean).map(t => F?.byId[t.id] ? L.speciesTile(F.byId[t.id]) : L.liveTile(L.taxonCard(t)));
     if(!tiles.length) return;
     const sec = $("classics"); sec.querySelector(".row").innerHTML = tiles.join(""); sec.hidden = false; L.fillPhotos(sec);
-    /* their plates from the old books, where there are some */
-    plates().then(P => { const ps = words.ids.filter(i => P[i] && by[i]).map(i => plateFig(P[i], L.cap(by[i].preferred_common_name || by[i].name)));
-      if(ps.length < 2) return; const o = $("g-old"); o.querySelector(".row").innerHTML = ps.join(""); o.hidden = false; });
   }).catch(() => {});
   /* out this month */
   if(taxa) counts({month: L.month(), taxon_id: taxa, per_page: 30}).then(l => {
