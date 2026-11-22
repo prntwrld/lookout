@@ -1,0 +1,58 @@
+{
+  "note": "The Whales page (living/?f=whales), written for Lookout; edit freely. months are the best months to see each one in the Salish Sea or off the coast (some are here all year). Coordinates from OpenStreetMap.",
+  "hook": "Orcas, humpbacks and gray whales, when they're around, and where to watch from shore",
+  "intro": [
+    "The Salish Sea and the outer coast are among the best places in the world to see whales from land. Orcas hunt within sight of lighthouses, humpbacks have come back to waters they'd vanished from for most of a century, and every spring gray whales pass the headlands on one of the longest migrations of any mammal, between Baja California and the Arctic.",
+    "There are two kinds of orca here, and they never mix. The southern residents eat salmon, above all chinook; fewer than 80 are left, and they're endangered in both countries. Bigg's orcas hunt seals, sea lions and porpoises, and their numbers are growing: they're the ones most often seen now, in any month."
+  ],
+  "listen": {"name": "Orcasound", "href": "https://live.orcasound.net/", "text": "Underwater microphones in the Salish Sea stream live: orca calls are most likely when the residents are near San Juan Island in summer."},
+  "whales": [
+    {"sci": "Orcinus orca", "id": 41521, "name": "Orca", "months": [5, 6, 7, 8, 9, 10, 11, 12],
+      "note": "Bigg's orcas any month; the southern residents mostly around the San Juans in summer, and in Puget Sound in autumn, following the chum."},
+    {"sci": "Megaptera novaeangliae", "id": 41566, "name": "Humpback whale", "months": [4, 5, 6, 7, 8, 9, 10, 11],
+      "note": "Back in the Salish Sea after decades away; most from late summer into autumn. Look for the tall bushy blow and the flukes as they dive."},
+    {"sci": "Eschrichtius robustus", "id": 41478, "name": "Gray whale", "months": [12, 1, 3, 4, 5],
+      "note": "Passing the coast south in December and January and north from March to May; a few feed off Whidbey Island in spring, and some stay off Oregon all summer."},
+    {"sci": "Balaenoptera acutorostrata", "id": 41550, "name": "Minke whale", "months": [4, 5, 6, 7, 8, 9, 10],
+      "note": "Small and shy, with a curved fin that shows soon after a faint blow; feeding around the San Juans in summer."},
+    {"sci": "Phocoena phocoena", "id": 41440, "name": "Harbour porpoise", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "note": "Here all year: a small, quiet roll and a triangular fin, close to shore on calm days."},
+    {"sci": "Phocoenoides dalli", "id": 41446, "name": "Dall's porpoise", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "note": "Black and white and very fast, throwing up a rooster tail of spray; they ride the bow waves of boats."},
+    {"sci": "Aethalodelphis obliquidens", "id": 1664971, "name": "Pacific white-sided dolphin", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "note": "Mostly offshore, in big leaping groups; now and then in the straits and around Vancouver Island."}
+  ],
+  "spots": [
+    {"name": "Lime Kiln Point", "where": "San Juan Island, WA", "lat": 48.5164, "lon": -123.1501, "months": [5, 6, 7, 8, 9, 10], "who": "Orcas, humpbacks and minke whales",
+      "note": "The Whale Watch Park: orcas pass close beneath the lighthouse cliffs."},
+    {"name": "Point Robinson", "where": "Maury Island, Vashon, WA", "lat": 47.3881, "lon": -122.3743, "months": [10, 11, 12], "who": "Orcas",
+      "note": "The lighthouse point in mid Puget Sound, where orcas pass in autumn and early winter."},
+    {"name": "Point No Point", "where": "Hansville, WA", "lat": 47.9122, "lon": -122.5267, "months": [9, 10, 11, 12], "who": "Orcas and humpbacks",
+      "note": "A beach and lighthouse at the mouth of Puget Sound, watching Admiralty Inlet."},
+    {"name": "Langley", "where": "Whidbey Island, WA", "lat": 48.0400, "lon": -122.4094, "months": [3, 4, 5], "who": "Gray whales",
+      "note": "A small group of grays feeds on ghost shrimp in Saratoga Passage each spring, sometimes right below town."},
+    {"name": "Westport Viewing Tower", "where": "Westport, WA", "lat": 46.9115, "lon": -124.1174, "months": [3, 4, 5], "who": "Gray whales",
+      "note": "A tower at the harbour mouth, looking out where grays pass north in spring."},
+    {"name": "Amphitrite Point", "where": "Ucluelet, BC", "lat": 48.9212, "lon": -125.5411, "months": [3, 4, 5, 6, 7, 8, 9], "who": "Gray whales and humpbacks",
+      "note": "The lighthouse on the Wild Pacific Trail; grays pass in March and April, humpbacks feed offshore in summer."},
+    {"name": "Telegraph Cove", "where": "Northern Vancouver Island, BC", "lat": 50.5479, "lon": -126.8318, "months": [7, 8, 9], "who": "Orcas and humpbacks",
+      "note": "The gateway to Johnstone Strait, summer home of the northern resident orcas."},
+    {"name": "Cape Lookout", "where": "Near Tillamook, OR", "lat": 45.3839, "lon": -123.9659, "months": [12, 1, 3, 4, 5], "who": "Gray whales",
+      "note": "A trail through the forest to the end of the cape, far out over the migration route."},
+    {"name": "Depoe Bay", "where": "Whale Watching Center, OR", "lat": 44.8100, "lon": -124.0623, "months": [12, 1, 3, 4, 5, 6, 7, 8, 9, 10], "who": "Gray whales",
+      "note": "Grays pass in winter and spring, and a few stay to feed in the summer; Oregon's state parks staff the coast's viewpoints in whale-watch weeks."},
+    {"name": "Cape Perpetua", "where": "Near Yachats, OR", "lat": 44.2810, "lon": -124.1087, "months": [12, 1, 3, 4, 5], "who": "Gray whales",
+      "note": "High above the sea at the visitor center, looking along the migration route."}
+  ],
+  "care": [
+    "Boats and paddlers must stay well back by law, and further from the endangered southern residents: the current distances are at bewhalewise.org.",
+    "Never approach, chase or cut in front of a whale; if one surfaces near you, stop and let it pass.",
+    "Drones disturb whales too; keep them well away and follow the rules for flying near wildlife.",
+    "Report what you see: sightings help researchers and warn ferries and ships."
+  ],
+  "links": [
+    {"name": "Be Whale Wise: the rules on the water", "href": "https://www.bewhalewise.org/"},
+    {"name": "Orca Network: report and follow sightings", "href": "https://www.orcanetwork.org/"},
+    {"name": "Orcasound: listen live", "href": "https://live.orcasound.net/"}
+  ]
+}

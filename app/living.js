@@ -533,7 +533,7 @@ async function week(F, where = null){
       <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy"></div><b>${esc(name)}</b></a>`; };
   sec.hidden = false;
   /* the Near you card on Explore takes this week's most-seen species as its picture */
-  const nc = !where && $("explore-cards")?.querySelector('[data-k="near"] .pic .ph'), p0 = list[0].t.photo;
+  const nc = !where && main.querySelector('#explore-cards [data-k="near"] .pic .ph'), p0 = list[0].t.photo;
   if(nc) nc.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p0, "medium"), alt: "", loading: "lazy", title: `Photo © ${p0.by} · ${p0.lic}`}));
   /* twelve, with their names; twelve more at a time on request */
   let n = 12;
@@ -560,7 +560,7 @@ async function guidePage(F){
     ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}</div>
     <section class="section" id="browse"><h2 id="list-h">Explore</h2>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>
-    <div class="cards" id="explore-cards"></div><div id="list"></div></section>`;
+    <div class="cards" id="explore-cards"></div><div class="cards" id="group-cards" style="margin-top:28px"></div><p class="muted small" id="group-line" style="margin-top:20px"></p><div id="list"></div></section>`;
   if(navigator.onLine !== false){
     outNow(F).catch(() => {});
     /* once both have answered, a lone one takes the whole width */
@@ -572,7 +572,7 @@ async function guidePage(F){
   let token = 0;
   const draw = async () => {
     const q = state().q, me = ++token, box = $("list"), head = $("list-h");
-    $("explore-cards").hidden = !!q;
+    for(const id of ["explore-cards", "group-cards", "group-line"]) $(id).hidden = !!q;
     if(!q){ box.innerHTML = ""; head.innerHTML = "Explore"; return; }
     box.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`;
     try {
@@ -858,6 +858,23 @@ const HABITATS = [
   ["herps", "Frogs, snakes and lizards", "20978,26036", "amphibians"],
   ["snails", "Slugs and snails", "47114", "snails"]];
 const ago = d => { const n = Math.round((Date.now() - new Date(d)) / 864e5); return n <= 0 ? "today" : n === 1 ? "yesterday" : n < 14 ? `${n} days ago` : `${Math.round(n / 7)} weeks ago`; };
+/* photographs as round pins on a map (Near you, Whales): at most max, one per species unless many is set; a pin landing
+   on another is nudged aside so both can be tapped. Each opens to the photo, what it is, when and who. Returns the points. */
+function photoPins(map, F, obs, {max = 40, many = false} = {}){
+  const Lf = window.L, pinned = [], ids = new Set(), taken = new Map(), pts = [];
+  for(const x of obs){ if((!many && ids.has(x.t.id)) || pinned.length >= max) continue; ids.add(x.t.id); pinned.push(x); }
+  for(const x of pinned){ let [lng, lat] = x.o.geojson.coordinates; const name = x.t.common || x.t.sci;
+    const cell = `${lat.toFixed(3)},${lng.toFixed(3)}`, n = taken.get(cell) || 0; taken.set(cell, n + 1);
+    if(n){ const a = n * 2.4; lat += Math.sin(a) * .0012 * Math.ceil(n / 6); lng += Math.cos(a) * .0018 * Math.ceil(n / 6); }
+    pts.push([lat, lng]);
+    Lf.marker([lat, lng], {title: name, icon: Lf.divIcon({className: "", html: `<span class="photo-pin"><img src="${L.inat(x.p, "square")}" alt=""></span>`, iconSize: [36, 36]})}).addTo(map)
+      .bindPopup(`<a class="pop near-pop" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}"><img src="${L.inat(x.p, "small")}" alt=""><b>${esc(name)}</b><span>${esc(ago(x.o.observed_on))}${x.o.place_guess ? ` · ${esc(String(x.o.place_guess).split(",")[0])}` : ""}${x.o.user?.login ? ` · ${esc(x.o.user.login)}` : ""}</span></a><span class="credit">© ${esc(x.p.by)} · ${esc(x.p.lic)}</span>`, {maxWidth: 220});
+  }
+  return pts;
+}
+/* recent observations with open-licensed photos, in the shape the pins and rows use */
+const recentObs = j => j.results.map(o => ({o, p: L.openPhoto(o.photos?.[0]), t: o.taxon && L.taxonCard(o.taxon)})).filter(x => x.p && x.t && x.o.geojson);
+
 async function nearPage(F){
   document.title = "Near you — Lookout";
   let r = String(L.store.get("lookout-near-km", 10)), map = null;
@@ -900,14 +917,7 @@ async function nearPage(F){
         Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, className: "base-tiles", attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · sightings © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers`}).addTo(map);
         const ring = Lf.circle([h.lat, h.lon], {radius: +r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2d5c43", weight: 1.5, fill: false, dashArray: "4 6"}).addTo(map);
         Lf.marker([h.lat, h.lon], {icon: Lf.divIcon({className: "", html: `<span class="you-dot"></span>`, iconSize: [16, 16]}), title: "You"}).addTo(map);
-        /* one pin per species, at most 40; one landing on another is nudged aside so both can be tapped */
-        const pinned = [], ids = new Set(), taken = new Map();
-        for(const x of obs){ if(ids.has(x.t.id) || pinned.length >= 40) continue; ids.add(x.t.id); pinned.push(x); }
-        for(const x of pinned){ let [lng, lat] = x.o.geojson.coordinates; const name = x.t.common || x.t.sci;
-          const cell = `${lat.toFixed(3)},${lng.toFixed(3)}`, n = taken.get(cell) || 0; taken.set(cell, n + 1);
-          if(n){ const a = n * 2.4; lat += Math.sin(a) * .0012 * Math.ceil(n / 6); lng += Math.cos(a) * .0018 * Math.ceil(n / 6); }
-          Lf.marker([lat, lng], {title: name, icon: Lf.divIcon({className: "", html: `<span class="photo-pin"><img src="${L.inat(x.p, "square")}" alt=""></span>`, iconSize: [36, 36]})}).addTo(map)
-            .bindPopup(`<a class="pop near-pop" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}"><img src="${L.inat(x.p, "small")}" alt=""><b>${esc(name)}</b><span>${esc(ago(x.o.observed_on))}${x.o.user?.login ? ` · ${esc(x.o.user.login)}` : ""}</span></a><span class="credit">© ${esc(x.p.by)} · ${esc(x.p.lic)}</span>`, {maxWidth: 220}); }
+        photoPins(map, F, obs);
         map.fitBounds(ring.getBounds(), {padding: [10, 10]});
       }
       /* the latest, one per species */
@@ -1025,28 +1035,79 @@ async function salmonPage(F){
   }
 }
 
+/* ---------- Whales (living/?f=whales): who's around this month, the seven, a map of the last month's sightings,
+   where to watch from shore, and how to watch without harm (data/whales.json) ---------- */
+async function whalesPage(F){
+  const D = await L.data.json("whales.json").catch(() => null);
+  if(!D){ main.innerHTML = `<h1>Whales</h1><p class="muted">The whale guide didn't load.</p>`; return; }
+  document.title = "Whales — Lookout";
+  const m = L.month(), T = navigator.onLine === false ? {} : await taxaById(D.whales.map(w => w.id));
+  const photo = id => T[id] ? L.taxonCard(T[id]).photo : null;
+  const now = D.whales.filter(w => w.months.includes(m)), nowSpots = D.spots.filter(sp => sp.months.includes(m));
+  const lead = [41566, 41521, 41478].map(id => ({id, p: photo(id)})).find(x => x.p);
+  main.innerHTML = `<section class="hero">${lead ? `<div class="frame" data-hide-broken><a href="${L.speciesHref({id: lead.id})}"><img src="${L.inat(lead.p, "large")}" alt=""></a>${L.photoCredit(lead.p)}</div>` : ""}
+      <p class="eyebrow"><a href="./" class="crumb">Living things</a> · <a href="?g=mammals" class="crumb">Mammals</a></p><h1>Whales</h1><p class="sub-line">${esc(D.hook)}</p></section>
+    <div class="split"><div class="about">${D.intro.map(p => `<p>${esc(p)}</p>`).join("")}</div>
+      <div><h2 class="side-h">Around in ${MONTH}</h2><ul class="bullets" style="columns:1">${now.map(w => `<li>${esc(w.name)}</li>`).join("")}</ul>
+        ${nowSpots.length ? `<h2 class="side-h" style="margin-top:24px">Where to watch now</h2><ul class="bullets" style="columns:1">${nowSpots.map(sp => `<li>${esc(sp.name)} <span class="muted small">${esc(sp.who)}</span></li>`).join("")}</ul>` : ""}
+        <h2 class="side-h" style="margin-top:24px">Listen live</h2><p class="small"><a href="${esc(D.listen.href)}" target="_blank" rel="noopener">${esc(D.listen.name)} ↗</a> · ${esc(D.listen.text)}</p></div></div>
+    <section class="section" id="w-map-sec" hidden><h2>Seen lately <span class="n" id="w-map-n"></span></h2><p class="muted small sec-sub">Whales, dolphins and porpoises photographed in Washington, Oregon and British Columbia in the last month. Tap one.</p><div class="mapbox near-map" id="w-map"></div></section>
+    <section class="section"><h2>Who you might see</h2><p class="muted small sec-sub">Shaded months are the best for each; the outlined month is now.</p>
+      <div class="cards">${D.whales.map(w => { const p = photo(w.id);
+        return `<a class="card" href="${L.speciesHref({id: w.id})}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(w.name)}</span>`}${w.months.includes(m) ? `<span class="badge">Around now</span>` : ""}</div>
+          <h3>${esc(w.name)}</h3>${monthBar(w.months, m)}<p>${esc(w.note)}</p></a>`; }).join("")}</div></section>
+    <section class="section" id="spots"><h2>Where to watch from shore</h2><div class="split"><div class="mapbox" id="spot-map"></div><div class="spots-box"><ul class="around spots">${D.spots.map(sp => `<li><b>${esc(sp.name)}</b> <span>${esc(sp.where)}</span>${sp.months.includes(m) ? ` <span class="now-tag">Now</span>` : ""}<br><span>${esc(sp.who)}, ${esc(L.bloomText(sp.months))}. ${esc(sp.note)}</span></li>`).join("")}</ul></div></div></section>
+    <section class="section"><h2>Watching without harm</h2><ul class="around">${D.care.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <ul class="around" style="margin-top:14px">${D.links.map(x => `<li><a href="${esc(x.href)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a></li>`).join("")}</ul></section>`;
+  const Lf = window.L; if(!Lf || navigator.onLine === false){ $("spot-map").hidden = true; return; }
+  /* the shore spots, those good now filled in */
+  const mp = Lf.map("spot-map", {scrollWheelZoom: false});
+  Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 13, className: "base-tiles", attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`}).addTo(mp);
+  const pts = D.spots.map(sp => { Lf.marker([sp.lat, sp.lon], {title: sp.name, icon: Lf.divIcon({className: "", html: `<span class="pin${sp.months.includes(m) ? " done" : ""}"></span>`, iconSize: [14, 14]})}).addTo(mp)
+    .bindPopup(`<span class="pop"><b>${esc(sp.name)}</b><span>${esc(sp.who)}, ${esc(L.bloomText(sp.months))}</span></span>`); return [sp.lat, sp.lon]; });
+  const fit = () => { mp.invalidateSize(); mp.fitBounds(pts, {padding: [20, 20]}); }; fit(); new ResizeObserver(fit).observe($("spot-map"));
+  const sb = main.querySelector(".spots-box"), mark = () => sb.classList.toggle("more-down", sb.scrollTop < sb.scrollHeight - sb.clientHeight - 4);
+  sb.addEventListener("scroll", mark, {passive: true}); new ResizeObserver(mark).observe(sb);
+  /* the last month's sightings as photo pins: every whale, dolphin and porpoise (152871, the cetaceans) */
+  const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  L.nat("observations", {taxon_id: "152871", place_id: L.PNW, d1: since, photos: "true", photo_license: L.LICENSES, order_by: "observed_on", per_page: 80, verifiable: "true"}).then(j => {
+    const obs = recentObs(j); if(obs.length < 2) return;
+    const sec = $("w-map-sec"); sec.hidden = false;
+    $("w-map-n").textContent = `${obs.length} in the last month`;
+    const wm = Lf.map("w-map", {scrollWheelZoom: false}).setView([48, -123.5], 6);
+    Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 13, className: "base-tiles", attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · sightings © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers`}).addTo(wm);
+    const wp = photoPins(wm, F, obs, {max: 60, many: true});
+    if(wp.length) wm.fitBounds(wp, {padding: [24, 24], maxZoom: 10});
+  }).catch(() => {});
+}
+
 /* ---------- Explore: a card for each group, in place of one long wall ---------- */
 async function explore(F){
   const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
-  /* sixteen cards, four by four: the three features and thirteen groups (slime moulds stay reachable by search and the key) */
-  const groups = L.GROUPS.filter(g => g.k !== "all" && g.k !== "slime");
-  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=salmon" data-k="salmon"><div class="pic"><span class="ph">Sa</span><span class="badge">Running now</span></div><h3>Salmon runs</h3><p>When the five salmon come home, and where to watch them</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
+  /* four features in a row, then twelve groups, four by four; worms and slime moulds in a line below */
+  const LINE = ["worms", "slime"], groups = L.GROUPS.filter(g => g.k !== "all" && !LINE.includes(g.k));
+  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a><a class="card" href="?f=salmon" data-k="salmon"><div class="pic"><span class="ph">Sa</span><span class="badge">Running now</span></div><h3>Salmon runs</h3><p>When the five salmon come home, and where to watch them</p></a><a class="card" href="?f=whales" data-k="whales"><div class="pic"><span class="ph">Wh</span></div><h3>Whales</h3><p>Orcas, humpbacks and gray whales, and where to watch from shore</p></a>`;
+  $("group-cards").innerHTML = groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
     <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
-  /* each card's picture: its first classic */
-  /* salmon's card: a spawning sockeye */
-  L.nat("taxa/69922").then(j => { const p = L.taxonCard(j.results[0]).photo, c = $("explore-cards").querySelector('[data-k="salmon"] .pic');
+  $("group-line").innerHTML = "Also: " + LINE.map(k => `<a href="?g=${k}">${esc(L.group(k).name)}</a>`).join(" · ");
+  /* whales' card: a humpback */
+  L.nat("taxa/41566").then(j => { const p = L.taxonCard(j.results[0]).photo, c = main.querySelector('[data-k="whales"] .pic');
+    if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
+  /* each group card's picture: its first classic */
+  /* salmon's card: a spawning coho (Fish has the sockeye) */
+  L.nat("taxa/53692").then(j => { const p = L.taxonCard(j.results[0]).photo, c = main.querySelector('[data-k="salmon"] .pic');
     if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
   /* near you's card: the most-seen species this week, if the week is known in this browser */
-  const wk = L.store.get("lookout-kept-week", null)?.v?.find(x => x.t.photo)?.t.photo, nc = $("explore-cards").querySelector('[data-k="near"] .pic');
+  const wk = L.store.get("lookout-kept-week", null)?.v?.find(x => x.t.photo)?.t.photo, nc = main.querySelector('[data-k="near"] .pic');
   if(wk && nc) nc.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(wk, "medium"), alt: "", loading: "lazy", title: `Photo © ${wk.by} · ${wk.lic}`}));
   /* foraging's card: the salmonberry, the first wild fruit of the year (not a mushroom: Fungi has the chanterelle) */
   L.data.json("foraging.json").then(Fo => { const w = Fo.wild.find(x => x.sci === "Rubus spectabilis") || Fo.wild.find(x => x.kind === "berries");
-    return w?.id && L.nat("taxa/" + w.id); }).then(j => { const p = j && L.taxonCard(j.results[0]).photo, c = $("explore-cards").querySelector('[data-k="foraging"] .pic');
+    return w?.id && L.nat("taxa/" + w.id); }).then(j => { const p = j && L.taxonCard(j.results[0]).photo, c = main.querySelector('[data-k="foraging"] .pic');
     if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
   const ids = groups.map(g => D[g.k]?.ids?.[0]).filter(Boolean);
   if(ids.length && navigator.onLine !== false) L.nat("taxa/" + ids.join(",")).then(j => {
     const by = Object.fromEntries(j.results.map(t => [t.id, L.taxonCard(t).photo]));
-    for(const g of groups){ const p = by[D[g.k]?.ids?.[0]], c = $("explore-cards").querySelector(`[data-k="${g.k}"] .pic`);
+    for(const g of groups){ const p = by[D[g.k]?.ids?.[0]], c = main.querySelector(`[data-k="${g.k}"] .pic`);
       if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }
   }).catch(() => {});
 }
@@ -1081,6 +1142,7 @@ L.data.flowers().catch(() => null).then(async F => {
   if(new URLSearchParams(location.search).get("f") === "foraging") return foragingPage(F);
   if(new URLSearchParams(location.search).get("f") === "near") return nearPage(F);
   if(new URLSearchParams(location.search).get("f") === "salmon") return salmonPage(F);
+  if(new URLSearchParams(location.search).get("f") === "whales") return whalesPage(F);
   if(!id) return guidePage(F);
   /* a number above species level (a genus, a family…) has a page of its own */
   if(/^\d+$/.test(id) && !F?.byId[id]){
