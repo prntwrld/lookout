@@ -272,6 +272,7 @@ input[type=search]{min-width:220px}
 .facts dt{color:var(--muted);padding-right:22px;font-size:15px}
 .facts dd{margin:0}
 .sw{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-1px;margin-right:5px;border:1px solid var(--shade)}
+.side-h{font:400 26px/1.2 var(--display);margin:0 0 14px}
 .where{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .where a{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;text-decoration:none;color:var(--ink)}
 .where img,.where .ph{width:64px;height:64px;border-radius:4px;object-fit:cover;background:var(--soft)}
@@ -375,6 +376,7 @@ footer a{color:inherit}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stats dd{font-size:20px}
   .row{grid-auto-columns:128px}
+  .strip{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:84px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin}
   .grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px}
   .kinds{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
   .kind b{font-size:17px}

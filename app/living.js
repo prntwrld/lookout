@@ -42,20 +42,22 @@ async function loadSpecies(key, F){
     s.order = anc.find(a => a.rank === "order")?.name || "";
     s.genusId = anc.find(a => a.rank === "genus")?.id;
     s.ancestorIds = [...(t.ancestor_ids || []), t.id];
+    s.anc = anc;
     s.summary ||= shorten(plain(t.wikipedia_summary));
     s.wiki ||= wikiTitle(t.wikipedia_url);
-    /* photos: iNaturalist's own picks first (chosen to show the species), then Wikipedia's lead picture, then the region's
+    /* photos (up to 12): iNaturalist's own picks first (chosen to show the species), then Wikipedia's lead picture, then the region's
        sightings; then the better-looking ones forward, so a night-camera frame or a far-off speck doesn't lead */
     const cands = [], seen = new Set(), add = (p, keep) => { const k = p && (p.id || p.src); if(p && !seen.has(k)){ seen.add(k); cands.push(keep ? {...p, keep: true} : p); } };
     (t.taxon_photos || []).forEach(x => add(L.openPhoto(x.photo), true));
     if(cands.length < 2) add(await L.wikiLead(s.wiki), true);
     if(pack) s.photos.forEach(p => add(p));
-    if(cands.length < 6){
-      try { const j = await L.nat("observations", {taxon_id: t.id, photo_license: L.LICENSES, quality_grade: "research", order_by: "votes", per_page: 20, place_id: L.PNW});
+    if(cands.length < 12){
+      try { const j = await L.nat("observations", {taxon_id: t.id, photo_license: L.LICENSES, quality_grade: "research", per_page: 30, place_id: L.PNW});
         j.results.forEach(o => add(L.openPhoto(o.photos?.[0]))); } catch(e){}
     }
+    /* the region's recent sightings rather than its most-voted (which run to book pages and cameras) */
     const ranked = await L.rankPhotos(cands);
-    if(ranked.length) s.photos = ranked.slice(0, 6);
+    if(ranked.length) s.photos = ranked.slice(0, 12);
   }
   if(pack) s.group ||= "Plantae";
   return s;
@@ -81,6 +83,47 @@ const monthBar = (on, m, shade) => `<div class="months">${L.MON.map((n, i) => {
   return `<span class="${a > .12 ? "on" : ""}${i + 1 === m ? " now" : ""}"${shade && a > .12 ? ` style="opacity:${(.35 + .65 * a).toFixed(2)}"` : ""} title="${L.MONTHS[i]}">${n[0]}</span>`;
 }).join("")}</div>`;
 
+/* ---------- classification: class › order › family › genus, each a page of its own ---------- */
+const TREE = ["class", "order", "family", "genus"];
+const RANK = {kingdom: "Kingdom", phylum: "Phylum", class: "Class", subclass: "Subclass", order: "Order", superfamily: "Superfamily", family: "Family",
+  subfamily: "Subfamily", tribe: "Tribe", genus: "Genus", subgenus: "Subgenus", section: "Section", complex: "Species complex"};
+const sciName = a => a.rank_level <= 20 ? `<i>${esc(a.name)}</i>` : esc(a.name);
+const treeLine = anc => (anc || []).filter(a => TREE.includes(a.rank)).map(a =>
+  `<a href="${L.speciesHref(a)}" title="${esc(RANK[a.rank] || a.rank)}">${sciName(a)}</a>${a.preferred_common_name ? ` <span class="muted small">(${esc(L.cap(a.preferred_common_name).toLowerCase())})</span>` : ""}`).join(" › ");
+
+/* ---------- field marks: what it looks like, from the Wikipedia article's Description section (as in Myriad) ---------- */
+const MARKS = /^(description|identification|appearance|characteristics|morphology|physical (description|characteristics|appearance)|field (marks|identification)|description and identification|anatomy and morphology|features)$/i;
+async function fieldMarks(title, max = 1100){
+  if(!title) return [];
+  const r = await fetch("https://en.wikipedia.org/w/api.php?format=json&origin=*&action=query&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&titles=" + encodeURIComponent(title), {signal: AbortSignal.timeout(15000)});
+  if(!r.ok) return [];
+  const text = Object.values((await r.json()).query?.pages || {})[0]?.extract || "", sec = {};
+  let head = "Intro";
+  for(const line of text.split("\n")){ const m = /^(=+)\s*(.*?)\s*=+$/.exec(line); if(m){ head = m[2]; continue; } if(line.trim()) (sec[head] ||= []).push(line.trim()); }
+  const key = Object.keys(sec).find(k => MARKS.test(k)) || Object.keys(sec).find(k => /^(description|identification|appearance)/i.test(k));
+  const out = []; let n = 0;
+  for(const p of key ? sec[key] : []){ if(p.length < 40) continue; if(n && n + p.length > max) break; out.push(p); n += p.length; if(n > max) break; }
+  return out;
+}
+
+/* ---------- range: how often it's recorded in each of the three, and whether it's native or introduced there ---------- */
+const STATES = [[46, "Washington"], [10, "Oregon"], [7085, "British Columbia"]];
+const andList = l => l.length < 3 ? l.join(" and ") : l.slice(0, -1).join(", ") + " and " + l[l.length - 1];
+async function rangeText(id){
+  const got = await Promise.all(STATES.map(async ([pid, name]) => {
+    const [c, t] = await Promise.all([L.nat("observations", {taxon_id: id, place_id: pid, verifiable: "true", per_page: 0}).then(j => j.total_results).catch(() => null),
+      L.nat("taxa/" + id, {preferred_place_id: pid}).then(j => j.results?.[0]?.establishment_means?.establishment_means || "").catch(() => "")]);
+    return {name, n: c, means: t};
+  }));
+  if(got.every(g => g.n == null)) return "";
+  const by = m => got.filter(g => g.n && g.means === m).map(g => g.name);
+  const nat = by("native").concat(by("endemic")), intro = by("introduced");
+  /* iNaturalist lists the status for some places and not others: "native" alone means native wherever it's listed */
+  const words = intro.length ? `Introduced in ${andList(intro)}${nat.length ? `; native in ${andList(nat)}` : ""}` : nat.length ? "Native to the Pacific Northwest" : "";
+  const none = got.filter(g => g.n === 0).map(g => g.name);
+  return `${words ? esc(words) + "<br>" : ""}<span class="muted small">${got.filter(g => g.n).map(g => `${esc(g.name)} ${L.num(g.n)}`).join(" · ")}${none.length ? `${got.some(g => g.n) ? " · " : ""}not recorded in ${esc(andList(none))}` : ""}</span>`;
+}
+
 async function speciesPage(F, s){
   const P = await L.data.places().catch(() => null);
   document.title = `${s.common || s.sci} — Lookout`;
@@ -95,7 +138,9 @@ async function speciesPage(F, s){
     ["Habitat", list(s.habitat, HAB)],
     ["Regions", P && s.regions?.length ? s.regions.map(r => esc(P.region[r]?.name || r)).join(", ") : ""],
     ...(s.packQs || []).map(q => [esc(q.title), esc((s.packEntry[q.k] || []).map(c => q.opts[c]).filter(Boolean).join(", "))]),
-    ["Family", s.family ? esc(L.familyName(s.family)) : ""],
+    ["Family", s.family && !s.anc?.length ? esc(L.familyName(s.family)) : ""],
+    ["Classification", treeLine(s.anc)],
+    ["Range", `<span id="range-text"></span>`],
     ["Sightings", `<span id="sightings"></span>`],
     ["Size", s.bird ? list(s.bird.size, BIRD.size) : ""],
     ["Bill", s.bird ? list(s.bird.bill, BIRD.bill) : ""],
@@ -110,10 +155,13 @@ async function speciesPage(F, s){
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
     <div class="split"><div><dl class="facts">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
       ${s.summary ? `<div class="about" style="margin-top:24px"><p>${esc(s.summary)}</p><p class="credit">From ${s.wiki ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>` : "Wikipedia"}, CC BY-SA</p></div>` : ""}
+      <div class="about" id="marks" style="margin-top:24px" hidden><h2 class="side-h">Field marks</h2><div></div><p class="credit">From the <a href="https://en.wikipedia.org/wiki/${encodeURIComponent((s.wiki || "").replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia article</a>'s description, CC BY-SA</p></div>
       <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : s.bird ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=birds">Name a bird with the key</a>` : s.packKey ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=${s.packKey.id}">Name one with the key</a>` : ""}</p></div>
-      <div>${where.length ? `<h2 style="font:400 26px var(--display);margin:0 0 14px">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
-        ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>` : ""}</div></div>
+      <div>${where.length ? `<h2 class="side-h">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
+        ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>`
+        : P ? `<h2 class="side-h">Where to see it</h2><p class="muted small">Not recorded near any of your places yet. A place shows here once iNaturalist observers have seen it near the trailhead${s.pack ? ", or when the place is in its range, elevation and flowering season" : ""}. The map below shows everywhere it's been seen in the Pacific Northwest.</p>` : ""}</div></div>
     <section class="section" id="range" hidden><h2>Where it's been seen</h2><div class="mapbox" id="rangemap"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings</span><span><i></i>Your places</span></p></section>
+    <section class="section" id="alike" hidden><h2>Often confused with</h2><div class="row"></div></section>
     <section class="section" id="rel" hidden><h2>Relatives</h2><div class="row"></div></section>`;
   main.querySelector(".strip")?.addEventListener("click", e => {
     const b = e.target.closest("[data-i]"); if(!b) return;
@@ -137,6 +185,16 @@ async function speciesPage(F, s){
     el.innerHTML = `${L.num(j.total_results)} in the Pacific Northwest <a class="small" href="https://www.inaturalist.org/observations?taxon_id=${s.id}&place_id=${L.PNW}" target="_blank" rel="noopener">see them ↗</a>`;
     show(el.parentElement);
   }).catch(() => {});
+  rangeText(s.id).then(html => { const el = $("range-text"); if(el && html){ el.innerHTML = html; show(el.parentElement); } }).catch(() => {});
+  fieldMarks(s.wiki).then(ps => { if(!ps.length) return; $("marks").querySelector("div").innerHTML = ps.map(p => `<p>${esc(p)}</p>`).join(""); $("marks").hidden = false; }).catch(() => {});
+  /* look-alikes: the species iNaturalist's identifiers here most often mix it up with */
+  L.nat("identifications/similar_species", {taxon_id: s.id, place_id: L.PNW}).then(j => {
+    const l = (j.results || []).filter(r => r.taxon && r.taxon.id !== s.id && r.taxon.rank_level <= 10 && r.count >= 2).slice(0, 12);
+    if(!l.length) return;
+    const box = $("alike"), row = box.querySelector(".row"), note = n => `<span class="note">Mistaken for it ${L.num(n)} ${n === 1 ? "time" : "times"}</span>`;
+    row.innerHTML = l.map(r => F?.byId[r.taxon.id] ? L.speciesTile(F.byId[r.taxon.id], note(r.count)) : L.liveTile(L.taxonCard(r.taxon), note(r.count))).join("");
+    box.hidden = false; L.fillPhotos(row);
+  }).catch(() => {});
   /* relatives: others in its genus seen here (or, for the pack, its genus and family in the pack when offline) */
   const local = s.pack ? F.list.filter(x => x.id !== s.id && (x.sci.split(" ")[0] === s.sci.split(" ")[0] || x.family === s.family)).slice(0, 12) : [];
   const relBox = $("rel"), row = relBox.querySelector(".row");
@@ -148,6 +206,46 @@ async function speciesPage(F, s){
       else fill(local.map(x => L.speciesTile(x)).join(""));
     }).catch(() => fill(local.map(x => L.speciesTile(x)).join("")));
   } else fill(local.map(x => L.speciesTile(x)).join(""));
+}
+
+/* ---------- a genus, family, order or class: its picture, where it sits, and its species recorded here ---------- */
+async function rankPage(F, t){
+  const name = L.cap(t.preferred_common_name || "") || t.name, rank = RANK[t.rank] || L.cap(t.rank);
+  document.title = `${name} — Lookout`;
+  const photo = L.taxonCard(t).photo || await L.wikiLead(wikiTitle(t.wikipedia_url));
+  const summary = shorten(plain(t.wikipedia_summary)), wiki = wikiTitle(t.wikipedia_url), up = treeLine(t.ancestors);
+  const kind = ONE[t.iconic_taxon_name] || "";
+  main.innerHTML = `<section class="hero">${photo ? `<div class="frame" data-hide-broken><img src="${L.photoSrc(photo, "large")}" alt="${esc(name)}" crossorigin="anonymous">${L.photoCredit(photo)}</div>` : ""}
+      <p class="eyebrow">${esc([rank, kind].filter(Boolean).join(" · "))}</p><h1>${esc(name)}</h1>
+      <p class="sub-line">${sciName(t)}</p></section>
+    <div class="split"><div><dl class="facts">${up ? `<dt>Classification</dt><dd>${up}</dd>` : ""}<dt hidden>Sightings</dt><dd hidden><span id="sightings"></span></dd></dl>
+      ${summary ? `<div class="about" style="margin-top:24px"><p>${esc(summary)}</p><p class="credit">From <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</p></div>` : ""}
+      <p style="margin-top:18px"><a href="${L.inatTaxon(t.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a></p></div><div></div></div>
+    <section class="section" id="range" hidden><h2>Where it's been seen</h2><div class="mapbox" id="rangemap"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings</span><span><i></i>Your places</span></p></section>
+    <section class="section" id="members"><h2 id="members-h">Species recorded in the Pacific Northwest</h2><div id="list"><p class="status muted">Asking iNaturalist…</p></div></section>`;
+  L.nat("observations", {taxon_id: t.id, place_id: L.PNW, verifiable: "true", per_page: 0}).then(j => {
+    const el = $("sightings"); if(!el || !j.total_results) return;
+    el.innerHTML = `${L.num(j.total_results)} in the Pacific Northwest <a class="small" href="https://www.inaturalist.org/observations?taxon_id=${t.id}&place_id=${L.PNW}" target="_blank" rel="noopener">see them ↗</a>`;
+    el.parentElement.hidden = false; el.parentElement.previousElementSibling.hidden = false;
+  }).catch(() => {});
+  if(L.rangeMap && navigator.onLine !== false){ $("range").hidden = false; L.data.places().then(P => P.list).catch(() => []).then(pl => L.rangeMap($("rangemap"), t.id, pl)); }
+  let page = 1;
+  const draw = async () => {
+    const box = $("list");
+    try {
+      const j = await L.nat("observations/species_counts", {taxon_id: t.id, place_id: L.PNW, quality_grade: "research", per_page: 48, page});
+      if(page === 1){
+        if(!j.total_results){ $("members").hidden = true; return; }
+        box.innerHTML = `<div class="grid" id="grid"></div><p id="more-p" style="margin-top:22px" hidden><button type="button" class="btn ghost" id="more">More</button></p>`;
+        $("members-h").innerHTML = `Species recorded in the Pacific Northwest <span class="n">${L.num(j.total_results)}, most recorded first</span>`;
+      }
+      $("grid").insertAdjacentHTML("beforeend", j.results.map(x => F?.byId[x.taxon.id] ? L.speciesTile(F.byId[x.taxon.id]) : L.liveTile(L.taxonCard(x.taxon))).join(""));
+      $("more-p").hidden = page * 48 >= j.total_results;
+      L.fillPhotos(box);
+    } catch(e){ if(page === 1) $("members").hidden = true; }
+  };
+  main.addEventListener("click", e => { if(e.target.id === "more"){ page++; draw(); } });
+  draw();
 }
 
 /* ---------- the guide ---------- */
@@ -356,6 +454,11 @@ function flowerGrid(F, box, head){
 
 L.data.flowers().catch(() => null).then(async F => {
   if(!id) return guidePage(F);
+  /* a number above species level (a genus, a family…) has a page of its own */
+  if(/^\d+$/.test(id) && !F?.byId[id]){
+    const t = await L.nat("taxa/" + id).then(j => j.results?.[0]).catch(() => null);
+    if(t && t.rank_level > 10) return rankPage(F, t);
+  }
   const s = await loadSpecies(id, F);
   /* a bird in the bird pack brings the key's traits along */
   const B = s && await L.data.birds().catch(() => null), b = B?.byId[s.id];
