@@ -18,7 +18,7 @@ const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.we
   "fonts/source-serif-4-latin-600-normal.woff2", "fonts/source-serif-4-latin-600-italic.woff2",
   "data/places.json", "data/places-extra.json", "data/books.json", "data/regions.json",
   "data/flowers.json", "data/flower-traits.json", "data/pojar.json"];
-const REMOTE_IMG = /(^|\.)(inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org|upload\.wikimedia\.org)$/;
+const REMOTE_IMG = /(^|\.)(inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org|upload\.wikimedia\.org|thumb\.wikimedia\.org)$/;
 const LIMIT = {[IMG]: 500, [TILES]: 1500};
 
 /* add what can be fetched; one missing file never spoils the rest */

@@ -48,7 +48,7 @@ async function speciesPage(F, s){
     ["Family", esc(L.familyName(s.family))],
     ["Pojar", s.pojar ? `p. ${esc(s.pojar)}` : ""]
   ].filter(x => x[1]);
-  main.innerHTML = `<section class="hero">${ph.length ? `<div class="frame" id="big"><img src="${L.inat(ph[0], "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.inatCredit(ph[0])}</div>
+  main.innerHTML = `<section class="hero">${ph.length ? `<div class="frame" data-hide-broken id="big"><img src="${L.inat(ph[0], "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.inatCredit(ph[0])}</div>
       ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.inat(p, "small")}" alt="" loading="lazy" crossorigin="anonymous"></button>`).join("")}</div>` : ""}` : ""}
       <p class="eyebrow">${esc(s.family)}${L.blooming(s, m) ? " · In bloom now" : ""}</p><h1>${esc(s.common || s.sci)}</h1>
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
@@ -56,7 +56,7 @@ async function speciesPage(F, s){
       ${s.summary ? `<div class="about" style="margin-top:24px"><p>${esc(s.summary)}</p><p class="credit">From ${s.wiki ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>` : "Wikipedia"}, CC BY-SA</p></div>` : ""}
       <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">Sightings on iNaturalist ↗</a></p></div>
       <div>${where.length ? `<h2 style="font:400 26px var(--display);margin:0 0 14px">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
-        ? `<img src="${esc(L.sized(p.photo.src, 240))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>` : ""}</div></div>`
+        ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>` : ""}</div></div>`
     + L.section(kin.length ? `Other ${esc(genus)} in the guide` : "Relatives in the guide", [...kin, ...fam].length ? `<div class="row">${[...kin, ...fam].map(x => L.speciesTile(x)).join("")}</div>` : "")
     + `<p><a href="${L.ROOT}key/">Not sure? Try the key →</a></p>`;
   main.querySelector(".strip")?.addEventListener("click", e => {
@@ -75,7 +75,7 @@ function guidePage(F){
   const pick = pool[Math.floor(r() * pool.length)];
   const families = [...new Set(F.list.map(s => s.family))].sort();
   const colours = Object.keys(L.COLOUR).filter(c => F.list.some(s => s.colour.includes(c)));
-  main.innerHTML = (pick ? `<section class="hero"><div class="frame"><a href="${L.speciesHref(pick)}"><img src="${L.inat(pick.photos[0], "large")}" data-fallback="${L.thumb(pick)}" alt="${esc(pick.common || pick.sci)}" crossorigin="anonymous"></a>${L.inatCredit(pick.photos[0])}</div>
+  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(pick)}"><img src="${L.inat(pick.photos[0], "large")}" data-fallback="${L.thumb(pick)}" alt="${esc(pick.common || pick.sci)}" crossorigin="anonymous"></a>${L.inatCredit(pick.photos[0])}</div>
       <h1>Living things</h1><p class="sub-line">Cascades wildflowers · ${F.list.length} species · <a href="${L.speciesHref(pick)}">${esc(pick.common || pick.sci)}</a> above</p></section>` : `<h1>Living things</h1>`)
     + L.section(`In bloom in ${L.MONTHS[m - 1]}`, now.length ? `<div class="row">${now.sort((a, b) => b.obs - a.obs).map(s => L.speciesTile(s)).join("")}</div>` : "", {n: now.length})
     + L.section("Wildflowers", `<div class="filters"><input type="search" id="q" placeholder="Name" aria-label="Find by name">

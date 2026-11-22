@@ -24,7 +24,7 @@ function listPage(P){
   const season = P.list.filter(p => L.inSeason(p, m)).sort((a, b) => !!L.log.get(a.id) - !!L.log.get(b.id));
   const done = L.log.all(), n = P.list.filter(p => done[p.id]).length;
   const kinds = [...new Set(P.list.map(p => p.kind))];
-  main.innerHTML = (pick ? `<section class="hero"><div class="frame"><a href="${L.placeHref(pick.id)}"><img src="${esc(pick.photo.src)}" alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.credit(pick.photo.by, pick.photo.lic, pick.photo.page)}</div>
+  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(pick.id)}"><img src="${esc(pick.photo.src)}" alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.credit(pick.photo.by, pick.photo.lic, pick.photo.page)}</div>
       <h1>Places</h1><p class="sub-line">${n} of ${P.list.length} done · <a href="${L.placeHref(pick.id)}">${esc(pick.name)}</a> above</p></section>` : `<h1>Places</h1>`)
     + L.section(`In season in ${L.MONTHS[m - 1]}`, season.length ? `<div class="cards">${season.map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {n: season.length})
     + L.section("The map", `<div class="mapbox" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p>`)
@@ -119,7 +119,7 @@ async function placePage(P, p){
   const near = P.list.filter(q => q.id !== p.id).map(q => ({q, d: L.km(p.pin, q.pin)})).sort((a, b) => a.d - b.d).slice(0, 4);
   const heroSrc = mine || p.photo?.src;
   const render = async () => {
-    main.innerHTML = (heroSrc ? `<section class="hero"><div class="frame"><img src="${esc(heroSrc)}" alt="${esc(p.name)}"${mine ? "" : ` crossorigin="anonymous"`}>${mine ? `<span class="credit">Your photo</span>` : L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>` : `<section class="hero">`)
+    main.innerHTML = (heroSrc ? `<section class="hero"><div class="frame" data-hide-broken><img src="${esc(heroSrc)}" alt="${esc(p.name)}"${mine ? "" : ` crossorigin="anonymous"`}>${mine ? `<span class="credit">Your photo</span>` : L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>` : `<section class="hero">`)
       + `<p class="eyebrow">${esc(L.KIND[p.kind] || p.kind)} · ${esc(reg?.name || "")}</p><h1>${esc(p.name)}</h1><p class="sub-line">${esc(p.area || "")}</p>
       <dl class="stats">${[["Distance", p.distance_mi != null && L.miles(p.distance_mi), "round trip"], ["Gain", p.gain_ft != null && L.feet(p.gain_ft)],
         ["High point", p.high_ft != null && L.feet(p.high_ft)], ["Season", L.seasonText(p.season), L.inSeason(p) ? "now" : ""], ["Pass", p.pass]]
@@ -129,7 +129,7 @@ async function placePage(P, p){
       + L.section("The map", `<div class="mapbox small" id="map"></div>`)
       + L.section("Around here", around ? around + `<p class="credit">From OpenStreetMap</p>` : "")
       + L.section("About the area", about)
-      + L.section("Nearby", `<div class="cards">${near.map(({q, d}) => L.placeCard(q, P.region[q.region]).replace("</p></a>", ` · ${Math.round(d * 0.621)} mi away</p></a>`)).join("")}</div>`);
+      + L.section("Nearby", `<div class="cards">${near.map(({q, d}) => L.placeCard(q, P.region[q.region]).replace("</p></a>", ` · ${Math.round(d * 0.621)}\u00a0mi\u00a0away</p></a>`)).join("")}</div>`);
     L.map($("map"), P.list, {single: p, around: p.around || []});
     wireLog(p, () => placePage(P, p));
     L.ownPhotos(main);

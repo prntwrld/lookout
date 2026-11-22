@@ -89,20 +89,20 @@ const inatTaxon = id => `https://www.inaturalist.org/taxa/${id}`;
 const month = () => new Date().getMonth() + 1;
 const inRange = (m, [a, b]) => a <= b ? m >= a && m <= b : m >= a || m <= b;
 const inSeason = (p, m = month()) => Array.isArray(p.season) && inRange(m, p.season);
-const seasonText = s => Array.isArray(s) ? (s[0] === s[1] ? MONTHS[s[0] - 1] : `${MON[s[0] - 1]}–${MON[s[1] - 1]}`) : "";
+const seasonText = s => Array.isArray(s) ? (s[0] === s[1] ? MONTHS[s[0] - 1] : `${MON[s[0] - 1]}\u2060–\u2060${MON[s[1] - 1]}`) : "";
 const blooming = (s, m = month()) => (s.bloom || []).includes(m);
 const bloomText = b => {
   if(!b?.length) return "";
   /* runs of months: [5,6,7,9] -> May–Jul, Sep */
   const runs = []; let start = b[0], prev = b[0];
-  for(const m of [...b.slice(1), 99]){ if(m !== prev + 1){ runs.push(start === prev ? MON[start - 1] : `${MON[start - 1]}–${MON[prev - 1]}`); start = m; } prev = m; }
+  for(const m of [...b.slice(1), 99]){ if(m !== prev + 1){ runs.push(start === prev ? MON[start - 1] : `${MON[start - 1]}\u2060–\u2060${MON[prev - 1]}`); start = m; } prev = m; }
   return runs.join(", ");
 };
 
 /* ---------- numbers ---------- */
 const num = n => Number(n).toLocaleString("en-US");
-const miles = n => n == null ? "" : `${Number(n).toLocaleString("en-US", {maximumFractionDigits: 1})} mi`;
-const feet = n => n == null ? "" : `${num(n)} ft`;
+const miles = n => n == null ? "" : `${Number(n).toLocaleString("en-US", {maximumFractionDigits: 1})}\u00a0mi`;
+const feet = n => n == null ? "" : `${num(n)}\u00a0ft`;
 const km = (a, b) => { const R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r;
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 const KIND = {"hike": "Hike", "lookout": "Fire lookout", "hot-spring": "Hot spring", "ghost-town": "Ghost town", "viewpoint": "Viewpoint"};
@@ -181,9 +181,9 @@ const initials = s => esc(String(s || "?").split(/\s+/).map(w => w[0]).slice(0, 
 const placeCard = (p, region) => {
   const done = log.get(p.id);
   return `<a class="card" href="${placeHref(p.id)}" data-place="${esc(p.id)}"><div class="pic">${p.photo
-    ? `<img src="${esc(sized(p.photo.src, 640))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${initials(p.name)}</span>`}
+    ? `<img src="${esc(sized(p.photo.src, 500))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${initials(p.name)}</span>`}
     ${done ? `<span class="tick" title="Done ${esc(done.date)}" aria-label="Done">✓</span>` : ""}<span class="badge">${esc(KIND[p.kind] || p.kind)}</span></div>
-    <h3>${esc(p.name)}</h3><p>${[region?.name, p.distance_mi != null && miles(p.distance_mi), p.gain_ft != null && `${num(p.gain_ft)} ft gain`].filter(Boolean).map(esc).join(" · ")}</p></a>`;
+    <h3>${esc(p.name)}</h3><p>${[region?.name, p.distance_mi != null && miles(p.distance_mi), p.gain_ft != null && `${num(p.gain_ft)}\u00a0ft\u00a0gain`].filter(Boolean).map(esc).join(" · ")}</p></a>`;
 };
 /* once your own photos are known, they replace the stock picture on cards of places you've done */
 const ownPhotos = async root => {

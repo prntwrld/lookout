@@ -13,14 +13,14 @@ function hero(P, F, r){
   const useFlower = flowers.length && (!hikes.length || r() < .5);
   if(useFlower){
     const s = flowers[Math.floor(r() * Math.min(flowers.length, 40))], ph = s.photos[0];
-    return `<section class="hero"><div class="frame"><a href="${L.speciesHref(s)}"><img src="${L.inat(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.inatCredit(ph)}</div>
+    return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(s)}"><img src="${L.inat(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.inatCredit(ph)}</div>
       <p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></section>`;
   }
   const pool = hikes.length ? hikes : P.list.filter(p => p.photo);
   if(!pool.length) return "";
   const p = pool[Math.floor(r() * pool.length)], reg = P.region[p.region];
-  return `<section class="hero"><div class="frame"><a href="${L.placeHref(p.id)}"><img src="${esc(p.photo.src)}" alt="${esc(p.name)}" crossorigin="anonymous"></a>${L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>
+  return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(p.id)}"><img src="${esc(p.photo.src)}" alt="${esc(p.name)}" crossorigin="anonymous"></a>${L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>
     <p class="eyebrow">${L.inSeason(p) ? "In season now" : esc(L.KIND[p.kind])} · ${esc(reg?.name || "")}</p>
     <h1><a href="${L.placeHref(p.id)}" style="color:inherit;text-decoration:none">${esc(p.name)}</a></h1>
     <p class="sub-line">${[p.area, p.distance_mi != null && L.miles(p.distance_mi), p.gain_ft != null && `${L.num(p.gain_ft)} ft gain`, L.seasonText(p.season)].filter(Boolean).map(esc).join(" · ")}</p></section>`;
@@ -29,7 +29,7 @@ function hero(P, F, r){
 /* the wall: places and flowers mixed, flowers in bloom first, one big tile every few */
 function wall(P, F, r){
   const m = L.month();
-  const places = L.shuffle(P.list.filter(p => p.photo), r).map(p => ({href: L.placeHref(p.id), src: L.sized(p.photo.src, 800), name: p.name}));
+  const places = L.shuffle(P.list.filter(p => p.photo), r).map(p => ({href: L.placeHref(p.id), src: L.sized(p.photo.src, 960), name: p.name}));
   const fl = F?.list.filter(s => s.photos?.length) || [];
   const now = L.shuffle(fl.filter(s => L.blooming(s, m)), r), rest = L.shuffle(fl.filter(s => !L.blooming(s, m)), r);
   const flowers = [...now, ...rest].slice(0, 22).map(s => ({href: L.speciesHref(s), src: L.inat(s.photos[0], "medium"), fb: L.thumb(s), name: s.common || s.sci}));

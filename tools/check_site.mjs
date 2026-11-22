@@ -82,7 +82,7 @@ console.log("offline");
   if(!packed) flag("offline", "the wildflower pack wasn't saved within two minutes");
   await page.reload({waitUntil: "load"});
   /* open a place and a species while online, so they're saved */
-  await page.goto(BASE + "places/?id=colchuck", {waitUntil: "load"}); await page.waitForTimeout(2500);
+  await page.goto(BASE + "places/?id=maple-pass", {waitUntil: "load"}); await page.waitForTimeout(4000);
   await page.goto(BASE + `living/?id=${someFlower}`, {waitUntil: "load"}); await page.waitForTimeout(2500);
   await ctx.setOffline(true);
   server.kill();   /* and the server too, to be sure */
@@ -103,7 +103,7 @@ console.log("offline");
   if(!thumbsOk) flag("offline", "the key's photos didn't load offline");
   await page.screenshot({path: `${SHOTS}/offline-key.png`});
 
-  for(const [name, url, want] of [["place", "places/?id=colchuck", "Colchuck Lake"], ["species", `living/?id=${someFlower}`, null], ["home", "", null], ["guide", "living/", "Living things"]]){
+  for(const [name, url, want] of [["place", "places/?id=maple-pass", "Maple Pass Loop"], ["species", `living/?id=${someFlower}`, null], ["home", "", null], ["guide", "living/", "Living things"]]){
     await page.goto(BASE + url, {waitUntil: "load"}).catch(e => flag("offline", `${name} didn't load: ${e.message}`));
     const h1 = await page.waitForSelector("h1", {timeout: 10000}).then(h => h.textContent()).catch(() => null);
     if(!h1 || (want && !h1.includes(want))) flag("offline", `${name}: heading was ${JSON.stringify(h1)}`);

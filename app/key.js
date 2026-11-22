@@ -147,8 +147,8 @@ function locate(){
 async function start(){
   const [fl, regions] = await Promise.all([L.data.flowers(), L.data.json("regions.json")]);
   F = fl; REG = regions.regions;
-  const r = L.rng("key " + L.today()), pic = F.list.filter(s => s.photos?.length && L.blooming(s))[0] || F.list[Math.floor(r() * F.list.length)];
-  main.innerHTML = `${pic ? `<section class="hero"><div class="frame"><img src="${L.inat(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="" crossorigin="anonymous">${L.inatCredit(pic.photos[0])}</div>` : `<section class="hero">`}
+  const r = L.rng("key " + L.today()), pool = F.list.filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
+  main.innerHTML = `${pic ? `<section class="hero short"><div class="frame" data-hide-broken><a href="${L.speciesHref(pic)}"><img src="${L.inat(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="${esc(pic.common || pic.sci)}" crossorigin="anonymous"></a>${L.inatCredit(pic.photos[0])}</div>` : `<section class="hero">`}
     <h1>The key</h1><p class="sub-line">${F.list.length} Cascades wildflowers</p></section>
     <div class="key"><div class="qs" id="qs"></div><div id="results"><div class="left" id="left"></div><div id="hits"></div></div></div>
     <button type="button" class="peek btn" id="peek"></button>`;

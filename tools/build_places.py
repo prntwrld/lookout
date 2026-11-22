@@ -165,13 +165,23 @@ def image_info(name):
         for ii in page.get("imageinfo", []):
             m = ii.get("extmetadata", {})
             lic = re.sub(r"<[^>]+>", "", m.get("LicenseShortName", {}).get("value", "")).strip()
-            if not FREE.match(lic) or ii.get("width", 0) < 900 or name.lower().endswith((".svg", ".gif", ".tif", ".tiff")):
+            if not FREE.match(lic) or ii.get("width", 0) < 900 or not re.search(r"\.(jpe?g|png|webp)$", name, re.I):
                 return None
             by = html.unescape(re.sub(r"<[^>]+>", "", m.get("Artist", {}).get("value", ""))).strip() or "Wikimedia Commons"
-            return {"src": ii.get("thumburl") or ii["url"], "w": ii.get("thumbwidth") or ii["width"],
-                    "h": ii.get("thumbheight") or ii["height"], "by": re.sub(r"\s+", " ", by)[:80], "lic": lic,
-                    "page": ii.get("descriptionurl", "")}
+            return {"src": thumb_url(ii["url"], ii["width"]), "w": ii["width"], "h": ii["height"],
+                    "by": re.sub(r"\s+", " ", by)[:80], "lic": lic, "page": ii.get("descriptionurl", "").split("?")[0]}
     return None
+
+
+def thumb_url(original, width, want=1280):
+    """Wikimedia's own thumbnail at one of its standard widths (the page picks smaller ones from the same name),
+    rather than the full-size original, which Wikimedia limits when it's linked from other sites."""
+    url = original.split("?")[0]
+    mm = re.match(r"(https://upload\.wikimedia\.org/wikipedia/commons)/(\w/\w\w)/(.+)$", url)
+    if not mm or width <= want:
+        return url
+    base, path, name = mm.groups()
+    return f"{base}/thumb/{path}/{name}/{want}px-{name}"
 
 
 def seen_by_month(p):
