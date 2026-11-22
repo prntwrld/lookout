@@ -151,8 +151,8 @@ async function speciesPage(F, s){
 }
 
 /* ---------- the guide ---------- */
-const state = () => { const h = new URLSearchParams(location.hash.slice(1)); return {g: h.get("g") || "all", when: h.get("when") || "month", q: h.get("q") || ""}; };
-const setState = st => { const h = new URLSearchParams(); if(st.g !== "all") h.set("g", st.g); if(st.when !== "month") h.set("when", st.when); if(st.q) h.set("q", st.q);
+const state = () => { const h = new URLSearchParams(location.hash.slice(1)); return {g: h.get("g") || "all", q: h.get("q") || ""}; };
+const setState = st => { const h = new URLSearchParams(); if(st.g !== "all") h.set("g", st.g); if(st.q) h.set("q", st.q);
   history.replaceState(null, "", location.pathname + (h.toString() ? "#" + h : "")); };
 
 async function heroPick(F, r){
@@ -168,19 +168,128 @@ async function heroPick(F, r){
   return s ? {href: L.speciesHref(s), name: s.common || s.sci, photo: s.photos[0], fb: L.thumb(s)} : null;
 }
 
+/* ---------- the season, live from iNaturalist (adapted from Myriad's Field Guide front page) ---------- */
+const MONTH = L.MONTHS[L.month() - 1];
+const daysAgo = n => { const d = new Date(Date.now() - n * 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+/* the most-seen species for a query: [{t: taxon card, count}] (hybrids and higher ranks left out) */
+const counts = async params => (await L.nat("observations/species_counts", {place_id: L.PNW, quality_grade: "research", ...params})).results
+  .filter(r => r.taxon && ["species", "subspecies", "variety"].includes(r.taxon.rank)).map(r => ({t: L.taxonCard(r.taxon), count: r.count}));
+const tileOf = (F, x, note) => F?.byId[x.t.id] ? L.speciesTile(F.byId[x.t.id], `<span class="note">${esc(note)}</span>`) : L.liveTile(x.t, `<span class="note">${esc(note)}</span>`);
+
+/* Out in <Month>: mushrooms, blooming, migrating, and mammals, amphibians and reptiles */
+async function outNow(F){
+  const at = {month: L.month()};
+  const [fungi, bloomNative, bloomAll, birdsNow, birdsYear, animals] = await Promise.all([
+    counts({...at, taxon_id: "50814", per_page: 40}),
+    counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, native: "true", per_page: 40}),
+    counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, per_page: 40}),
+    counts({...at, taxon_id: "3", per_page: 200}),
+    counts({taxon_id: "3", per_page: 400}),
+    counts({...at, taxon_id: "40151,20978,26036", per_page: 40})].map(p => p.catch(() => [])));
+  const bloom = bloomNative.length >= 8 ? bloomNative : bloomAll;
+  /* migrating: birds whose share of this month's sightings is well above their share of the year's */
+  const sum = l => l.reduce((a, x) => a + x.count, 0) || 1;
+  const nowT = sum(birdsNow), yearT = sum(birdsYear), yearOf = Object.fromEntries(birdsYear.map(x => [x.t.id, x.count]));
+  const migr = birdsNow.filter(x => x.count >= 25 && yearOf[x.t.id]).map(x => ({...x, lift: (x.count / nowT) / (yearOf[x.t.id] / yearT)}))
+    .filter(x => x.lift >= 1.9).sort((a, b) => b.lift - a.lift).slice(0, 30);
+  const n = x => `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`;
+  const TABS = [
+    ["fungi", "Mushrooms", fungi, n, "Mushrooms, brackets and puffballs seen this month"],
+    ["bloom", "Blooming", bloom, x => `${L.num(x.count)} in flower`, "Wildflowers and shrubs seen in flower this month"],
+    ["migr", "Migrating", migr, x => `${x.lift >= 10 ? "10" : x.lift.toFixed(1).replace(/\.0$/, "")}× its usual`, "Birds seen far more this month than the rest of the year: arriving, leaving or passing through"],
+    ["animals", "Animals", animals, n, "Mammals, amphibians and reptiles seen this month"]].filter(t => t[2].length >= 6);
+  if(!TABS.length) return;
+  const sec = $("out"), m = L.month();
+  /* open on the most seasonal: mushrooms in autumn, flowers in spring and summer */
+  const pref = [9, 10, 11].includes(m) ? ["fungi", "migr", "animals", "bloom"] : [3, 4, 5, 6, 7, 8].includes(m) ? ["bloom", "migr", "animals", "fungi"] : ["migr", "animals", "fungi", "bloom"];
+  let on = pref.find(k => TABS.some(t => t[0] === k));
+  const draw = () => {
+    const [, , list, note, sub] = TABS.find(t => t[0] === on);
+    sec.querySelector(".body").innerHTML = `<div class="tabs" role="group" aria-label="Out in ${MONTH}">${TABS.map(([k, label, l]) => `<button type="button" data-tab="${k}" aria-pressed="${k === on}">${label} <span>${l.length}</span></button>`).join("")}</div>
+      <p class="muted small tab-note">${esc(sub)}</p><div class="row">${list.slice(0, 30).map(x => tileOf(F, x, note(x))).join("")}</div>`;
+    L.fillPhotos(sec);
+    /* on a phone the tabs scroll sideways: keep the chosen one in view */
+    const tabs = sec.querySelector(".tabs"), b = tabs.querySelector('[aria-pressed="true"]');
+    if(b && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = Math.max(0, b.offsetLeft - tabs.offsetLeft - 8);
+  };
+  sec.addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b){ on = b.dataset.tab; draw(); } });
+  draw(); sec.hidden = false;
+}
+
+/* Songs & calls of the season: birds singing this month, then mammals and frogs when there are recordings, one after another */
+async function songs(){
+  const S = L.sound; if(!S) return;
+  const at = {month: L.month(), sounds: "true"};
+  const [birds, others] = await Promise.all([counts({...at, taxon_id: "3", per_page: 18}), counts({...at, taxon_id: "40151,20979", per_page: 8})].map(p => p.catch(() => [])));
+  if(!birds.length && !others.length) return;
+  const track = (x, rec) => ({...rec, name: x.t.common || x.t.sci, href: L.speciesHref(x.t), img: x.t.photo ? L.inat(x.t.photo, "small") : "", t: x.t});
+  /* birds: Xeno-canto's recordings on Commons, one per bird; any without one, an observer's recording from here this month */
+  const got = await S.commonsSounds(birds.map(x => x.t.sci)).catch(() => ({}));
+  const near = x => S.natSounds({taxon_id: x.t.id, place_id: L.PNW, month: L.month(), per_page: 3}).then(l => l[0] ? track(x, {...l[0], note: l[0].where}) : null).catch(() => null);
+  const commons = await S.verified(birds.map(x => got[x.t.sci]?.[0] ? track(x, got[x.t.sci][0]) : null).filter(Boolean), 10, 4);
+  /* any bird whose Commons recording didn't play (or has none), up to ten in all: an observer's recording from here this month */
+  let b = commons;
+  if(commons.length < 10){
+    const have = new Set(commons.map(t => t.t.id));
+    const more = (await Promise.all(birds.filter(x => !have.has(x.t.id)).slice(0, 12 - commons.length).map(near))).filter(Boolean);
+    const extra = await S.verified(more, 10 - commons.length, 4), ids = new Set([...commons, ...extra].map(t => t.t.id));
+    const all = [...commons, ...extra];
+    b = birds.filter(x => ids.has(x.t.id)).map(x => all.find(t => t.t.id === x.t.id));   /* in order of how often they're recorded */
+  }
+  /* mammals and frogs: observers' recordings from the Northwest this month */
+  const o = await S.verified((await Promise.all(others.slice(0, 6).map(near))).filter(Boolean), 3, 3);
+  /* mostly birds, with a mammal or frog after every third */
+  const list = []; b.forEach((t, i) => { list.push(t); if(i % 3 === 2 && o.length) list.push(o.shift()); }); list.push(...o);
+  if(list.length < 3) return;
+  /* a picture for each, open-licensed, where the species' own default photo isn't */
+  const pics = await L.openPhotos(list.filter(t => !t.img).map(t => t.t.id)).catch(() => ({}));
+  list.forEach(t => { if(!t.img && pics[t.t.id]) t.img = L.inat(pics[t.t.id], "small"); });
+  const sec = $("songs");
+  sec.querySelector(".body").innerHTML = `<p class="song-ctl"><button type="button" class="btn ghost" id="play-all">Play all ${list.length}</button></p><div id="tracks"></div>`;
+  const player = S.trackList($("tracks"), list, {chain: true});
+  $("play-all").addEventListener("click", player.playAll);
+  sec.hidden = false;
+}
+
+/* Seen this week: a dense wall of the most-sighted species over the last seven days */
+async function week(F){
+  const list = (await counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160}).catch(() => [])).filter(x => x.t.photo);
+  if(list.length < 8) return;
+  const sec = $("week"), body = sec.querySelector(".body");
+  const tile = x => { const name = x.t.common || x.t.sci;
+    return `<a href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${name}: ${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
+      <img src="${L.inat(x.t.photo, "small")}" alt="${esc(name)}" loading="lazy" crossorigin="anonymous"><span>${esc(name)}</span></a>`; };
+  sec.hidden = false;
+  /* about 40, rounded up to whole rows; the rest on request */
+  let all = false;
+  const draw = () => {
+    const cols = getComputedStyle(body.querySelector(".wall") || body).gridTemplateColumns?.split(" ").length || 1;
+    const n = Math.min(list.length, Math.max(cols, cols * Math.ceil(40 / cols)));
+    body.innerHTML = `<div class="wall dense">${(all ? list : list.slice(0, n)).map(tile).join("")}</div>`
+      + (list.length > n ? `<p style="margin-top:14px"><button type="button" class="linkish" data-all>${all ? "Show fewer" : `Show all ${list.length}`}</button></p>` : "");
+  };
+  body.innerHTML = `<div class="wall dense"></div>`; draw();
+  body.addEventListener("click", e => { if(e.target.closest("[data-all]")){ all = !all; draw(); if(!all) sec.scrollIntoView({block: "nearest"}); } });
+}
+
 async function guidePage(F){
   const r = L.rng("living " + L.today()), st = state();
   const pick = await heroPick(F, r);
+  const quiet = (id, title, sub) => `<section class="section" id="${id}" hidden><h2>${title}</h2>${sub ? `<p class="muted small sec-sub">${sub}</p>` : ""}<div class="body"></div></section>`;
   main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.photoSrc(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.photoCredit(pick.photo)}</div>` : `<section class="hero">`)
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
-    <div id="groups" style="margin:30px 0 18px">${L.groupChips(st.g)}</div>
-    <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}">
-      <div class="chips" id="when">${[["month", `Seen in ${L.MONTHS[L.month() - 1]}`], ["year", "All year"]].map(([k, n]) => `<button type="button" class="chip" data-w="${k}" aria-pressed="${k === st.when}">${n}</button>`).join("")}</div></div>
-    <section class="section" style="margin-top:20px"><h2 id="list-h"></h2><div id="list"></div></section>`;
+    ${quiet("out", `Out in ${MONTH}`, "")}
+    ${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
+    ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}
+    <section class="section" id="browse"><h2 id="list-h">Every species</h2>
+    <div id="groups" style="margin:0 0 18px">${L.groupChips(st.g)}</div>
+    <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>
+    <div id="list"></div></section>`;
+  if(navigator.onLine !== false){ outNow(F).catch(() => {}); songs().catch(() => {}); week(F).catch(() => {}); }
+  if(st.q || st.g !== "all") requestAnimationFrame(() => $("browse").scrollIntoView());
   let page = 1, token = 0;
   const draw = async (more = false) => {
     const s = state(), me = ++token, box = $("list"), head = $("list-h");
-    $("when").hidden = s.g === "flowers" || !!s.q;
     $("groups").innerHTML = L.groupChips(s.q ? "" : s.g);
     if(s.g === "flowers" && !s.q) return flowerGrid(F, box, head);
     if(!more){ page = 1; box.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`; }
@@ -193,12 +302,14 @@ async function guidePage(F){
         if(me !== token) return;
         head.innerHTML = `Matching “${esc(s.q)}” <span class="n">${total}</span>`;
       } else {
-        const params = {place_id: L.PNW, quality_grade: "research", per_page: 48, page, ...(L.group(s.g).taxa ? {taxon_id: L.group(s.g).taxa} : {}), ...(s.when === "month" ? {month: L.month()} : {})};
+        /* a catalogue: every species recorded here, the most-recorded first (the month is up above) */
+        const params = {place_id: L.PNW, quality_grade: "research", per_page: 48, page, ...(L.group(s.g).taxa ? {taxon_id: L.group(s.g).taxa} : {})};
         const j = await L.nat("observations/species_counts", params);
         if(me !== token) return;
         total = j.total_results;
         tiles = j.results.map(x => F?.byId[x.taxon.id] ? L.speciesTile(F.byId[x.taxon.id]) : L.liveTile(L.taxonCard(x.taxon)));
-        head.innerHTML = `${esc(L.group(s.g).name)}${s.when === "month" ? ` seen in ${L.MONTHS[L.month() - 1]}` : ""} <span class="n">${L.num(total)} species</span>`;
+        const g = L.group(s.g);
+        head.innerHTML = `${g.k === "all" ? "Every species" : esc(g.name)} <span class="n">${L.num(total)} recorded in the Pacific Northwest · most recorded first</span>`;
       }
       if(!more) box.innerHTML = `<div class="grid" id="grid"></div><p id="more-p" style="margin-top:22px" hidden><button type="button" class="btn ghost" id="more">More</button></p>`;
       $("grid").insertAdjacentHTML("beforeend", tiles.join("") || "");
@@ -212,9 +323,8 @@ async function guidePage(F){
     }
   };
   const go = patch => { setState({...state(), ...patch}); draw(); };
-  main.addEventListener("click", e => {
+  $("browse").addEventListener("click", e => {
     const g = e.target.closest("[data-g]"); if(g) return go({g: g.dataset.g, q: ""}), $("q").value = "";
-    const w = e.target.closest("[data-w]"); if(w){ main.querySelectorAll("#when .chip").forEach(b => b.setAttribute("aria-pressed", b === w)); return go({when: w.dataset.w}); }
     if(e.target.id === "more"){ page++; draw(true); }
     if(e.target.id === "retry") draw();
   });
