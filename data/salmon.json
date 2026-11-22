@@ -1,0 +1,50 @@
+{
+  "note": "The Salmon runs page (living/?f=salmon), written for Lookout; edit freely. river = the months a run is usually in the rivers, spawn = the months it usually spawns, across Washington, Oregon and southern British Columbia (each river differs, and runs vary year to year). Coordinates from OpenStreetMap.",
+  "hook": "Five kinds of salmon come home every year. Here's when, and where to watch them",
+  "intro": [
+    "Salmon are born in Northwest rivers, go to sea for one to five years, and come back to the very stream where they hatched to spawn and die. On the way home they stop eating, change colour, and grow hooked jaws and humped backs. Their bodies feed bears, eagles, otters and the forest itself: the nitrogen in streamside trees can be traced to salmon.",
+    "Something is running almost every month. Sockeye pour through the Ballard Locks in July, chinook and coho fill the rivers in autumn, chum crowd the small creeks from November into December, and winter steelhead follow them. In late December and January, hundreds of bald eagles gather on the upper Skagit River to feed on the spent chum."
+  ],
+  "fish": [
+    {"sci": "Oncorhynchus tshawytscha", "id": 54191, "name": "Chinook", "aka": "king salmon", "river": [4, 5, 6, 7, 8, 9, 10, 11], "spawn": [8, 9, 10, 11],
+      "note": "The biggest: they can top 30 pounds. Spring, summer and fall runs; spawning chinook turn dark olive to maroon."},
+    {"sci": "Oncorhynchus nerka", "id": 69922, "name": "Sockeye", "aka": "red salmon", "river": [6, 7, 8, 9, 10], "spawn": [9, 10],
+      "note": "Bright red bodies and green heads when they spawn, in rivers that run through lakes. The Adams River run in British Columbia is huge every fourth year: 2026 is one."},
+    {"sci": "Oncorhynchus kisutch", "id": 53692, "name": "Coho", "aka": "silver salmon", "river": [9, 10, 11, 12], "spawn": [10, 11, 12, 1],
+      "note": "Red sides and a dark back when they spawn, and leap well; they climb into the smallest creeks after the first big autumn rains."},
+    {"sci": "Oncorhynchus keta", "id": 107572, "name": "Chum", "aka": "dog salmon", "river": [10, 11, 12], "spawn": [11, 12],
+      "note": "Tiger-striped in purple and green, and the males have big teeth. The easiest to watch: they spawn in small lowland creeks, often in the city."},
+    {"sci": "Oncorhynchus gorbuscha", "id": 107570, "name": "Pink", "aka": "humpy", "river": [8, 9, 10], "spawn": [9, 10], "odd": true,
+      "note": "The smallest and most numerous; the males grow a great hump. In Puget Sound and southern British Columbia they return only in odd-numbered years."},
+    {"sci": "Oncorhynchus mykiss", "id": 47516, "name": "Steelhead", "aka": "sea-run rainbow trout", "river": [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "spawn": [2, 3, 4, 5, 6],
+      "note": "Washington's state fish. Unlike salmon, some survive spawning and return again. Winter runs come in from December, summer runs from May."}
+  ],
+  "spots": [
+    {"name": "Ballard Locks", "where": "Seattle, WA", "lat": 47.6660, "lon": -122.3977, "months": [6, 7, 8, 9, 10], "fish": "Sockeye, chinook and coho",
+      "note": "Underwater windows look into the fish ladder: sockeye peak in July, chinook in August and September, coho into October."},
+    {"name": "Cedar River", "where": "Renton, WA", "lat": 47.4802, "lon": -122.2018, "months": [9, 10], "fish": "Sockeye",
+      "note": "Sockeye spawn right through town; watch from the trail and its bridges."},
+    {"name": "Issaquah Salmon Hatchery", "where": "Issaquah, WA", "lat": 47.5293, "lon": -122.0390, "months": [9, 10], "fish": "Chinook and coho",
+      "note": "Salmon climb Issaquah Creek past the hatchery; Salmon Days fills the town in early October."},
+    {"name": "Piper's Creek", "where": "Carkeek Park, Seattle, WA", "lat": 47.7097, "lon": -122.3728, "months": [11, 12], "fish": "Chum",
+      "note": "Chum spawn a few steps from the trail in a city park."},
+    {"name": "Kennedy Creek Salmon Trail", "where": "Near Olympia, WA", "lat": 47.0912, "lon": -123.0960, "months": [11, 12], "fish": "Chum",
+      "note": "One of the densest chum runs in the state, along a short trail by the creek."},
+    {"name": "Bonneville Dam", "where": "Columbia River Gorge, OR", "lat": 45.6387, "lon": -121.9479, "months": [6, 7, 8, 9, 10], "fish": "Chinook, sockeye, coho and steelhead",
+      "note": "Windows onto the fish ladders, where the Columbia's runs are counted fish by fish."},
+    {"name": "Oxbow Regional Park", "where": "Sandy River, OR", "lat": 45.4953, "lon": -122.2914, "months": [10, 11], "fish": "Chinook",
+      "note": "Fall chinook spawn in the Sandy River's gravel bars."},
+    {"name": "Capilano River Hatchery", "where": "North Vancouver, BC", "lat": 49.3567, "lon": -123.1101, "months": [7, 8, 9, 10, 11], "fish": "Coho, chinook and steelhead",
+      "note": "Watch fish climb the ladder through windows, in the canyon below the dam."},
+    {"name": "Goldstream Provincial Park", "where": "Near Victoria, BC", "lat": 48.4770, "lon": -123.5430, "months": [10, 11, 12], "fish": "Chum",
+      "note": "Thousands of chum, and bald eagles gathering on the river flats into the winter."},
+    {"name": "Adams River", "where": "Tsútswecw Provincial Park, BC", "lat": 50.9225, "lon": -119.6288, "months": [10], "fish": "Sockeye",
+      "note": "In its big years (2026, 2030) one of the largest sockeye runs on Earth turns the river red in October."}
+  ],
+  "care": [
+    "Watch from the bank or the trail. Don't wade into the stream: the gravel holds the eggs.",
+    "Keep dogs leashed and away from carcasses: raw salmon can carry a disease that's deadly to dogs.",
+    "Leave the fish and the carcasses where they are; they feed the stream and the forest.",
+    "Fishing for salmon has its own seasons and rules, river by river: check the state or province's regulations first."
+  ]
+}

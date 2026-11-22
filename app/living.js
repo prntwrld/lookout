@@ -973,13 +973,69 @@ async function nearPage(F){
   if(here()) show(); else locate();
 }
 
+/* ---------- Salmon runs (living/?f=salmon): who's in the rivers this month, the six fish and their months, where to
+   watch them, what people have seen lately, and how to watch without harm (data/salmon.json) ---------- */
+async function salmonPage(F){
+  const D = await L.data.json("salmon.json").catch(() => null);
+  if(!D){ main.innerHTML = `<h1>Salmon runs</h1><p class="muted">The salmon guide didn't load.</p>`; return; }
+  document.title = "Salmon runs — Lookout";
+  const m = L.month(), odd = new Date().getFullYear() % 2 === 1;
+  const here = f => f.river.includes(m) && !(f.odd && !odd);
+  const T = navigator.onLine === false ? {} : await taxaById(D.fish.map(f => f.id));
+  const photo = id => T[id] ? L.taxonCard(T[id]).photo : null;
+  /* the picture: a fish spawning now, in its spawning colours (coho and sockeye first: their photos show them red) */
+  const order = ["Coho", "Sockeye", "Chum", "Chinook", "Steelhead", "Pink"], byOrder = l => [...l].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+  const lead = [...byOrder(D.fish.filter(f => f.spawn.includes(m) && here(f))), ...byOrder(D.fish)].map(f => ({f, p: photo(f.id)})).find(x => x.p);
+  const running = D.fish.filter(here), spawning = running.filter(f => f.spawn.includes(m));
+  const nowSpots = D.spots.filter(sp => sp.months.includes(m));
+  main.innerHTML = `<section class="hero">${lead ? `<div class="frame" data-hide-broken><a href="${L.speciesHref({id: lead.f.id})}"><img src="${L.inat(lead.p, "large")}" alt="${esc(lead.f.name)} salmon"></a>${L.photoCredit(lead.p)}</div>` : ""}
+      <p class="eyebrow"><a href="./" class="crumb">Living things</a> · <a href="?g=fish" class="crumb">Fish</a></p><h1>Salmon runs</h1><p class="sub-line">${esc(D.hook)}</p></section>
+    <div class="split"><div class="about">${D.intro.map(p => `<p>${esc(p)}</p>`).join("")}</div>
+      <div><h2 class="side-h">In the rivers in ${MONTH}</h2>${running.length ? `<ul class="bullets" style="columns:1">${running.map(f => `<li><b>${esc(f.name)}</b>${f.spawn.includes(m) ? ", spawning now" : ", coming home"}</li>`).join("")}</ul>` : `<p>Few runs in ${MONTH}.</p>`}
+        ${D.fish.some(f => f.odd) && !odd ? `<p class="muted small">Pink salmon return in odd-numbered years: next in ${new Date().getFullYear() + 1}.</p>` : ""}
+        ${nowSpots.length ? `<h2 class="side-h" style="margin-top:24px">Where to watch now</h2><ul class="bullets" style="columns:1">${nowSpots.map(sp => `<li>${esc(sp.name)} <span class="muted small">${esc(sp.fish)}</span></li>`).join("")}</ul>` : ""}</div></div>
+    <section class="section"><h2>Six fish, coming home</h2><p class="muted small sec-sub">Shaded months are when each is in the rivers; the outlined month is now. Each river runs a little earlier or later.</p>
+      <div class="cards">${D.fish.map(f => { const p = photo(f.id);
+        return `<a class="card" href="${L.speciesHref({id: f.id})}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(f.name)}</span>`}${here(f) ? `<span class="badge">${f.spawn.includes(m) ? "Spawning now" : "In the rivers"}</span>` : ""}</div>
+          <h3>${esc(f.name)} <span class="muted small">${esc(f.aka)}</span></h3>${monthBar(f.river, m)}<p>Spawns ${esc(L.bloomText(f.spawn))}${f.odd ? ", odd years" : ""}. ${esc(f.note)}</p></a>`; }).join("")}</div></section>
+    <section class="section" id="spots"><h2>Where to watch them</h2><div class="split"><div class="mapbox" id="spot-map"></div><div class="spots-box"><ul class="around spots">${D.spots.map(sp => `<li><b>${esc(sp.name)}</b> <span>${esc(sp.where)}</span>${sp.months.includes(m) ? ` <span class="now-tag">Now</span>` : ""}<br><span>${esc(sp.fish)}, ${esc(L.bloomText(sp.months))}. ${esc(sp.note)}</span></li>`).join("")}</ul></div></div></section>
+    <section class="section" id="s-recent" hidden><h2>Seen in the rivers lately</h2><p class="muted small sec-sub">Salmon and steelhead photographed in Washington, Oregon and British Columbia in the last month.</p><div class="row"></div></section>
+    <section class="section"><h2>Watching without harm</h2><ul class="around">${D.care.map(c => `<li>${esc(c)}</li>`).join("")}</ul></section>`;
+  /* the map: every spot, those running now filled in */
+  const Lf = window.L;
+  if(Lf && navigator.onLine !== false){
+    const mp = Lf.map("spot-map", {scrollWheelZoom: false});
+    Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 13, className: "base-tiles", attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`}).addTo(mp);
+    const pts = D.spots.map(sp => { Lf.marker([sp.lat, sp.lon], {title: sp.name, icon: Lf.divIcon({className: "", html: `<span class="pin${sp.months.includes(m) ? " done" : ""}"></span>`, iconSize: [14, 14]})}).addTo(mp)
+      .bindPopup(`<span class="pop"><b>${esc(sp.name)}</b><span>${esc(sp.fish)}, ${esc(L.bloomText(sp.months))}</span></span>`); return [sp.lat, sp.lon]; });
+    const fit = () => { mp.invalidateSize(); mp.fitBounds(pts, {padding: [20, 20]}); }; fit(); new ResizeObserver(fit).observe($("spot-map"));
+    const sb = main.querySelector(".spots-box"), mark = () => sb.classList.toggle("more-down", sb.scrollTop < sb.scrollHeight - sb.clientHeight - 4);
+    sb.addEventListener("scroll", mark, {passive: true}); new ResizeObserver(mark).observe(sb);
+  } else $("spot-map").hidden = true;
+  /* seen lately: photographs of salmon and steelhead from the last month, one per photo-taker and place */
+  if(navigator.onLine !== false){
+    const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    L.nat("observations", {taxon_id: D.fish.map(f => f.id).join(","), place_id: L.PNW, d1: since, photos: "true", photo_license: L.LICENSES, order_by: "observed_on", per_page: 30, verifiable: "true"}).then(j => {
+      const l = j.results.map(o => ({o, p: L.openPhoto(o.photos?.[0]), t: o.taxon && L.taxonCard(o.taxon)})).filter(x => x.p && x.t).slice(0, 18);
+      if(l.length < 3) return;
+      const town = w => String(w || "").split(",").map(x => x.trim()).filter(x => x && !/\d/.test(x) && !/^(USA?|United States|Canada|CA)$/.test(x)).slice(-2).join(", ");
+      const sec = $("s-recent"); sec.querySelector(".row").innerHTML = l.map(x => `<a class="sp" href="${L.speciesHref(x.t)}" title="Photo © ${esc(x.p.by)} · ${esc(x.p.lic)}"><div class="pic"><img src="${L.inat(x.p, "small")}" alt="" loading="lazy"></div><b>${esc(x.t.common || x.t.sci)}</b><span class="note">${esc([ago(x.o.observed_on), town(x.o.place_guess)].filter(Boolean).join(" · "))}</span></a>`).join("");
+      sec.hidden = false;
+    }).catch(() => {});
+  }
+}
+
 /* ---------- Explore: a card for each group, in place of one long wall ---------- */
 async function explore(F){
   const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
-  const groups = L.GROUPS.filter(g => g.k !== "all");
-  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
+  /* sixteen cards, four by four: the three features and thirteen groups (slime moulds stay reachable by search and the key) */
+  const groups = L.GROUPS.filter(g => g.k !== "all" && g.k !== "slime");
+  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=salmon" data-k="salmon"><div class="pic"><span class="ph">Sa</span><span class="badge">Running now</span></div><h3>Salmon runs</h3><p>When the five salmon come home, and where to watch them</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
     <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
   /* each card's picture: its first classic */
+  /* salmon's card: a spawning sockeye */
+  L.nat("taxa/69922").then(j => { const p = L.taxonCard(j.results[0]).photo, c = $("explore-cards").querySelector('[data-k="salmon"] .pic');
+    if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
   /* near you's card: the most-seen species this week, if the week is known in this browser */
   const wk = L.store.get("lookout-kept-week", null)?.v?.find(x => x.t.photo)?.t.photo, nc = $("explore-cards").querySelector('[data-k="near"] .pic');
   if(wk && nc) nc.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(wk, "medium"), alt: "", loading: "lazy", title: `Photo © ${wk.by} · ${wk.lic}`}));
@@ -1024,6 +1080,7 @@ L.data.flowers().catch(() => null).then(async F => {
   }
   if(new URLSearchParams(location.search).get("f") === "foraging") return foragingPage(F);
   if(new URLSearchParams(location.search).get("f") === "near") return nearPage(F);
+  if(new URLSearchParams(location.search).get("f") === "salmon") return salmonPage(F);
   if(!id) return guidePage(F);
   /* a number above species level (a genus, a family…) has a page of its own */
   if(/^\d+$/.test(id) && !F?.byId[id]){
