@@ -482,60 +482,220 @@ async function guidePage(F){
     ${quiet("out", `Out in ${MONTH}`, "")}
     <div class="split pair">${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
     ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}</div>
-    <section class="section" id="browse"><h2 id="list-h">Every species</h2>
-    <div id="groups" style="margin:0 0 18px">${L.groupChips(st.g)}</div>
+    <section class="section" id="browse"><h2 id="list-h">Explore</h2>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>
-    <div id="list"></div></section>`;
+    <div class="cards" id="explore-cards"></div><div id="list"></div></section>`;
   if(navigator.onLine !== false){
     outNow(F).catch(() => {});
     /* once both have answered, a lone one takes the whole width */
     Promise.all([songs().catch(() => {}), week(F).catch(() => {})]).then(() => main.querySelector(".pair")?.classList.toggle("solo", $("songs").hidden || $("week").hidden));
   }
-  if(st.q || st.g !== "all") requestAnimationFrame(() => $("browse").scrollIntoView());
-  let page = 1, token = 0;
+  explore(F).catch(() => {});
+  if(st.q) requestAnimationFrame(() => $("browse").scrollIntoView());
+  /* a search shows its species in place of the cards; clearing it brings the cards back */
+  let token = 0;
+  const draw = async () => {
+    const q = state().q, me = ++token, box = $("list"), head = $("list-h");
+    $("explore-cards").hidden = !!q;
+    if(!q){ box.innerHTML = ""; head.innerHTML = "Explore"; return; }
+    box.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`;
+    try {
+      const j = await L.nat("taxa/autocomplete", {q, per_page: 30, is_active: "true"});
+      const ts = j.results.filter(t => ["species", "subspecies", "variety", "form"].includes(t.rank));
+      if(me !== token) return;
+      head.innerHTML = `Matching “${esc(q)}” <span class="n">${ts.length}</span>`;
+      box.innerHTML = ts.length ? `<div class="grid">${ts.map(t => F?.byId[t.id] ? L.speciesTile(F.byId[t.id]) : L.liveTile(L.taxonCard(t))).join("")}</div>` : `<p class="muted">Nothing found.</p>`;
+      L.fillPhotos(box);
+    } catch(e){
+      if(me === token) box.innerHTML = `<p class="muted">Couldn't reach iNaturalist just now. <button type="button" class="linkish" id="retry">Try again</button></p>`;
+    }
+  };
+  $("browse").addEventListener("click", e => { if(e.target.id === "retry") draw(); });
+  window.addEventListener("hashchange", () => { $("q").value = state().q; draw(); });
+  let t; $("q").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { const v = e.target.value.trim(); setState({g: "all", q: v.length > 1 ? v : ""}); draw(); }, 350); });
+  draw();
+}
+
+/* ---------- a group's own page (living/?g=birds): what it is, when and where to look, its classics, what's out now,
+   its kinds, and its species most recorded first, a page at a time ---------- */
+const MOST = 24;
+async function groupPage(F, key){
+  const g = L.group(key), top = g.top, sub = g.k !== top.k;
+  const D = (await L.data.json("groups.json").catch(() => null))?.groups || {}, words = D[g.k] || {}, parent = D[top.k] || {};
+  document.title = `${g.name} — Lookout`;
+  const taxa = g.taxa || "";
+  /* the picture: its first classic, or (for a kind) the kind itself */
+  const heroId = words.ids?.[0] || (taxa ? taxa.split(",")[0] : null);
+  const ht = heroId ? await L.nat("taxa/" + heroId).then(j => j.results?.[0]).catch(() => null) : null;
+  let photo = ht && L.taxonCard(ht).photo;
+  /* the wildflowers are the pack: its most-seen flower with a photo */
+  const packTop = g.pack && F ? [...F.list].sort((a, b) => b.obs - a.obs).find(x => x.photos?.length) : null;
+  if(packTop) photo = packTop.photos[0];
+  const kinds = top.sub && !sub ? top.sub : [];
+  main.innerHTML = `<section class="hero">${photo ? `<div class="frame" data-hide-broken><a href="${packTop ? L.speciesHref(packTop) : L.speciesHref(ht)}"><img src="${L.photoSrc(photo, "large")}"${packTop ? ` data-fallback="${L.thumb(packTop)}"` : ""} alt="" crossorigin="anonymous"></a>${L.photoCredit(photo)}</div>` : ""}
+      <p class="eyebrow"><a href="./" class="crumb">Living things</a>${sub ? ` · <a href="?g=${top.k}" class="crumb">${esc(top.name)}</a>` : ""}</p>
+      <h1>${esc(g.name)}</h1>${words.hook ? `<p class="sub-line">${esc(words.hook)}</p>` : ""}</section>
+    <div class="split"><div>
+      ${(words.intro || []).length ? `<div class="about">${words.intro.map(p => `<p>${esc(p)}</p>`).join("")}</div>` : ""}
+      ${words.look ? `<h2 class="side-h" style="margin-top:28px">When and where to look</h2><p>${esc(words.look)}</p>` : ""}
+      <dl class="facts" style="margin-top:24px"><dt hidden>Recorded here</dt><dd hidden id="g-species"></dd><dt hidden>Sightings</dt><dd hidden id="g-sightings"></dd><dt hidden>Busiest months</dt><dd hidden id="g-months"></dd></dl>
+    </div><div>${top.k === "tidepools" && !sub ? `<div id="tides" hidden></div>` : taxa ? `<div id="range" hidden><h2 class="side-h">Where it's recorded</h2><div class="mapbox tall" id="g-map"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings on iNaturalist</span><span><i></i>Your places</span></p></div>` : ""}</div></div>
+    ${top.k === "tidepools" && !sub ? `<section class="section" id="spots" hidden><h2>Where to go</h2><div class="split"><div class="mapbox" id="spot-map"></div><div class="spots-box"><ul class="around spots"></ul></div></div></section>` : ""}
+    <section class="section" id="classics" hidden><h2>Northwest classics</h2><div class="row"></div></section>
+    <section class="section" id="g-now" hidden><h2>Out in ${MONTH}</h2><div class="row"></div></section>
+    ${kinds.length ? `<section class="section"><h2>Kinds of ${esc(g.name.toLowerCase())}</h2><div class="cards" id="kinds">${kinds.map(k => `<a class="card" href="?g=${k.k}" data-k="${k.k}"><div class="pic"><span class="ph">${L.initials(k.name)}</span></div><h3>${esc(k.name)}</h3>${D[k.k]?.hook ? `<p>${esc(D[k.k].hook)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
+    ${top.k === "tidepools" && !sub ? `<section class="section" id="care" hidden><h2>Looking without harming</h2><ul class="around"></ul></section>` : ""}
+    <section class="section" id="most"><h2 id="most-h">Most recorded</h2>
+      ${g.pack ? "" : `<div class="filters"><input type="search" id="gq" placeholder="Find ${esc(g.name.toLowerCase())}" aria-label="Find ${esc(g.name.toLowerCase())}"></div>`}<div id="list"></div></section>`;
+
+  /* the numbers, each appearing once it's known */
+  const fact = (id, html) => { const el = $(id); if(!el || !html) return; el.innerHTML = html; el.hidden = false; el.previousElementSibling.hidden = false; };
+  if(taxa){
+    L.nat("observations/species_counts", {place_id: L.PNW, taxon_id: taxa, quality_grade: "research", per_page: 0}).then(j => fact("g-species", `${L.num(j.total_results)} species in the Pacific Northwest`)).catch(() => {});
+    L.nat("observations", {place_id: L.PNW, taxon_id: taxa, verifiable: "true", per_page: 0}).then(j => fact("g-sightings", `${L.num(j.total_results)} <a class="small" href="https://www.inaturalist.org/observations?taxon_ids=${taxa}&place_id=${L.PNW}" target="_blank" rel="noopener">see them ↗</a>`)).catch(() => {});
+    L.nat("observations/histogram", {place_id: L.PNW, taxon_id: taxa, interval: "month_of_year", verifiable: "true"}).then(j => {
+      const h = Object.values(j.results?.month_of_year || {}), topN = Math.max(...h); if(!topN) return;
+      const shade = h.map(v => v / topN), months = shade.map((v, i) => v > .75 ? i + 1 : 0).filter(Boolean);
+      fact("g-months", monthBar([], L.month(), shade) + esc(L.bloomText(months)));
+    }).catch(() => {});
+    if($("g-map") && L.rangeMap && navigator.onLine !== false){ $("range").hidden = false; L.data.places().then(P => P.list).catch(() => []).then(pl => L.rangeMap($("g-map"), taxa, pl)); }
+  }
+  /* the classics, in the order they're written */
+  if(words.ids?.length) L.nat("taxa/" + words.ids.join(",")).then(j => {
+    const by = Object.fromEntries(j.results.map(t => [t.id, t]));
+    const tiles = words.ids.map(i => by[i]).filter(Boolean).map(t => F?.byId[t.id] ? L.speciesTile(F.byId[t.id]) : L.liveTile(L.taxonCard(t)));
+    if(!tiles.length) return;
+    const sec = $("classics"); sec.querySelector(".row").innerHTML = tiles.join(""); sec.hidden = false; L.fillPhotos(sec);
+  }).catch(() => {});
+  /* out this month */
+  if(taxa) counts({month: L.month(), taxon_id: taxa, per_page: 30}).then(l => {
+    if(l.length < 4) return;
+    const sec = $("g-now"); sec.querySelector(".row").innerHTML = l.map(x => tileOf(F, x, `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`)).join(""); sec.hidden = false; L.fillPhotos(sec);
+  }).catch(() => {});
+  /* each kind's card gets a picture of the kind */
+  if(kinds.length){
+    const ids = kinds.map(k => (k.taxa || "").split(",")[0]).filter(Boolean);
+    L.nat("taxa/" + ids.join(",")).then(j => {
+      const by = Object.fromEntries(j.results.map(t => [String(t.id), L.taxonCard(t).photo]));
+      for(const k of kinds){ const p = by[(k.taxa || "").split(",")[0]], c = main.querySelector(`#kinds [data-k="${k.k}"] .pic`);
+        if(p && c) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" crossorigin="anonymous" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }
+      /* a kind whose own picture isn't openly licensed: its most-recorded species' instead */
+      for(const k of kinds){ const c = main.querySelector(`#kinds [data-k="${k.k}"] .pic`); if(!c || c.querySelector("img") || !k.taxa) continue;
+        counts({taxon_id: k.taxa, per_page: 5}).then(l => { const p = l.find(x => x.t.photo)?.t.photo; if(p) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" crossorigin="anonymous" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }).catch(() => {}); }
+    }).catch(() => {});
+    /* the wildflowers are the pack: their card uses one of its thumbnails */
+    const fl = main.querySelector('#kinds [data-k="flowers"] .pic'), s0 = F?.list?.[0];
+    if(fl && s0) fl.innerHTML = `<img src="${L.thumb(s0)}" alt="" loading="lazy">`;
+  }
+  if(top.k === "tidepools" && !sub) tidePools().catch(() => {});
+
+  /* most recorded, a page at a time; the search looks only within the group */
+  if(g.pack) return flowerGrid(F, $("list"), $("most-h"));
+  let page = 1, q = "", token = 0;
   const draw = async (more = false) => {
-    const s = state(), me = ++token, box = $("list"), head = $("list-h");
-    $("groups").innerHTML = L.groupChips(s.q ? "" : s.g);
-    if(s.g === "flowers" && !s.q) return flowerGrid(F, box, head);
+    const me = ++token, box = $("list"), head = $("most-h");
     if(!more){ page = 1; box.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`; }
     try {
       let tiles, total;
-      if(s.q){
-        const j = await L.nat("taxa/autocomplete", {q: s.q, per_page: 30, is_active: "true"});
+      if(q){
+        const j = await L.nat("taxa/autocomplete", {q, per_page: 30, is_active: "true", ...(taxa ? {taxon_id: taxa} : {})});
         const ts = j.results.filter(t => ["species", "subspecies", "variety", "form"].includes(t.rank));
         tiles = ts.map(t => F?.byId[t.id] ? L.speciesTile(F.byId[t.id]) : L.liveTile(L.taxonCard(t))); total = ts.length;
         if(me !== token) return;
-        head.innerHTML = `Matching “${esc(s.q)}” <span class="n">${total}</span>`;
+        head.innerHTML = `Matching “${esc(q)}” <span class="n">${total}</span>`;
       } else {
-        /* a catalogue: every species recorded here, the most-recorded first (the month is up above) */
-        const params = {place_id: L.PNW, quality_grade: "research", per_page: 48, page, ...(L.group(s.g).taxa ? {taxon_id: L.group(s.g).taxa} : {})};
-        const j = await L.nat("observations/species_counts", params);
+        const j = await L.nat("observations/species_counts", {place_id: L.PNW, quality_grade: "research", per_page: MOST, page, ...(taxa ? {taxon_id: taxa} : {})});
         if(me !== token) return;
         total = j.total_results;
         tiles = j.results.map(x => F?.byId[x.taxon.id] ? L.speciesTile(F.byId[x.taxon.id]) : L.liveTile(L.taxonCard(x.taxon)));
-        const g = L.group(s.g);
-        head.innerHTML = `${g.k === "all" ? "Every species" : esc(g.name)} <span class="n">${L.num(total)} recorded in the Pacific Northwest · most recorded first</span>`;
+        head.innerHTML = `Most recorded <span class="n">${L.num(Math.min(page * MOST, total))} of ${L.num(total)}</span>`;
       }
-      if(!more) box.innerHTML = `<div class="grid" id="grid"></div><p id="more-p" style="margin-top:22px" hidden><button type="button" class="btn ghost" id="more">More</button></p>`;
-      $("grid").insertAdjacentHTML("beforeend", tiles.join("") || "");
+      if(!more) box.innerHTML = `<div class="grid" id="grid"></div><p id="more-p" style="margin-top:22px" hidden><button type="button" class="btn ghost" id="more">Show ${MOST} more</button></p>`;
+      $("grid").insertAdjacentHTML("beforeend", tiles.join(""));
       if(!$("grid").children.length) box.innerHTML = `<p class="muted">Nothing found.</p>`;
-      $("more-p") && ($("more-p").hidden = !!s.q || page * 48 >= total);
+      $("more-p") && ($("more-p").hidden = !!q || page * MOST >= total);
       L.fillPhotos(box);
     } catch(e){
-      if(me !== token) return;
-      box.innerHTML = `<p class="muted">Couldn't reach iNaturalist just now. <button type="button" class="linkish" id="retry">Try again</button></p>`;
-      if(F) box.insertAdjacentHTML("beforeend", `<p class="muted">The wildflowers are saved here: <button type="button" class="linkish" data-g="flowers">show them</button>.</p>`);
+      if(me === token) box.innerHTML = `<p class="muted">Couldn't reach iNaturalist just now. <button type="button" class="linkish" id="retry">Try again</button></p>`;
     }
   };
-  const go = patch => { setState({...state(), ...patch}); draw(); };
-  $("browse").addEventListener("click", e => {
-    const g = e.target.closest("[data-g]"); if(g) return go({g: g.dataset.g, q: ""}), $("q").value = "";
-    if(e.target.id === "more"){ page++; draw(true); }
-    if(e.target.id === "retry") draw();
-  });
-  window.addEventListener("hashchange", () => { $("q").value = state().q; draw(); });
-  let t; $("q").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => go({q: e.target.value.trim().length > 1 ? e.target.value.trim() : ""}), 350); });
+  $("most").addEventListener("click", e => { if(e.target.id === "more"){ page++; draw(true); } if(e.target.id === "retry") draw(); });
+  let t; $("gq")?.addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { const v = e.target.value.trim(); q = v.length > 1 ? v : ""; draw(); }, 350); });
   draw();
+}
+
+/* ---------- tide pools: the month's low tides at a NOAA station, the spots on a map, and how to look without harm ---------- */
+const NOAA = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
+const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+const clock = d => d.toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"}).toLowerCase().replace(" ", " ");
+async function tidePools(){
+  const T = await L.data.json("tidepools.json").catch(() => null); if(!T) return;
+  /* care */
+  const care = $("care"); if(care && T.care?.length){ care.querySelector("ul").innerHTML = T.care.map(c => `<li>${esc(c)}</li>`).join(""); care.hidden = false; }
+  /* the spots */
+  const spots = $("spots"), Lf = window.L;
+  const pick = st => { setStation(st); $("tides")?.scrollIntoView({behavior: "smooth", block: "start"}); };
+  if(spots && T.spots?.length){
+    const station = id => T.stations.find(s => s.id === id)?.name;
+    spots.querySelector("ul").innerHTML = T.spots.map((p, i) => `<li data-i="${i}"><b>${esc(p.name)}</b> <span>${esc(p.where)}</span><br><span>${esc(p.note)}</span>${p.station ? `<br><button type="button" class="linkish small" data-st="${p.station}">Low tides here (${esc(station(p.station))})</button>` : ""}</li>`).join("");
+    spots.addEventListener("click", e => { const b = e.target.closest("[data-st]"); if(b) pick(b.dataset.st); });
+    /* the list scrolls beside the map; its bottom edge fades while there's more */
+    const sb = spots.querySelector(".spots-box"), mark = () => sb.classList.toggle("more-down", sb.scrollTop < sb.scrollHeight - sb.clientHeight - 4);
+    sb.addEventListener("scroll", mark, {passive: true}); new ResizeObserver(mark).observe(sb);
+    spots.hidden = false;
+    if(Lf && navigator.onLine !== false){
+      const m = Lf.map("spot-map", {scrollWheelZoom: false});
+      Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 13, crossOrigin: "anonymous", className: "base-tiles",
+        attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`}).addTo(m);
+      const pts = T.spots.map(p => {
+        Lf.marker([p.lat, p.lon], {title: p.name, icon: Lf.divIcon({className: "", html: `<span class="pin"></span>`, iconSize: [14, 14]})}).addTo(m)
+          .bindPopup(`<span class="pop"><b>${esc(p.name)}</b><span>${esc(p.where)}</span></span>`);
+        return [p.lat, p.lon]; });
+      const fit = () => { m.invalidateSize(); m.fitBounds(pts, {padding: [20, 20]}); };
+      fit(); new ResizeObserver(fit).observe($("spot-map"));
+    } else $("spot-map").hidden = true;
+  }
+  /* the low tides */
+  const box = $("tides"); if(!box || navigator.onLine === false) return;
+  const saved = L.store.get("lookout-tide-station", "9442396");
+  box.innerHTML = `<h2 class="side-h">Low tides, the next four weeks</h2>
+    <div class="filters"><label>Tides at <select id="station">${T.stations.map(s => `<option value="${s.id}"${s.id === saved ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label></div>
+    <ul class="around tides" id="tide-list"></ul><p class="credit">Predictions from <a href="https://tidesandcurrents.noaa.gov/" target="_blank" rel="noopener">NOAA</a>, in feet above the average lowest tide (MLLW); below zero is a minus tide. Times are local.</p>`;
+  async function setStation(id){
+    $("station").value = id; L.store.set("lookout-tide-station", id);
+    const list = $("tide-list"); list.innerHTML = `<li class="muted">Asking NOAA…</li>`;
+    try {
+      const j = await fetch(`${NOAA}?product=predictions&datum=MLLW&interval=hilo&units=english&time_zone=lst_ldt&format=json&application=lookout&station=${id}&begin_date=${ymd(new Date())}&range=${28 * 24}`, {signal: AbortSignal.timeout(15000)}).then(r => r.json());
+      const lows = (j.predictions || []).filter(p => p.type === "L").map(p => ({d: new Date(p.t.replace(" ", "T")), v: +p.v}));
+      /* the lowest in daylight (7 am to 7:30 pm), lowest first; then in date order */
+      const day = lows.filter(x => { const h = x.d.getHours() + x.d.getMinutes() / 60; return h >= 7 && h <= 19.5; });
+      const best = day.filter(x => x.v < .5).sort((a, b) => a.v - b.v).slice(0, 8).sort((a, b) => a.d - b.d);
+      if(!best.length){
+        const low = day.sort((a, b) => a.v - b.v).slice(0, 4).sort((a, b) => a.d - b.d);
+        list.innerHTML = low.length ? `<li class="muted">No minus tides in daylight these four weeks; these are the lowest.</li>` + low.map(row).join("") : `<li class="muted">No predictions just now.</li>`;
+      } else list.innerHTML = best.map(row).join("");
+    } catch(e){ list.innerHTML = `<li class="muted">Couldn't reach NOAA just now.</li>`; }
+    box.hidden = false;
+  }
+  const row = x => `<li><span><b>${x.d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"})}</b>, ${clock(x.d)}</span><span class="ft">${x.v < 0 ? "−" : ""}${Math.abs(x.v).toFixed(1)} ft</span></li>`;
+  $("station").addEventListener("change", e => setStation(e.target.value));
+  box.hidden = false;
+  setStation(saved);
+}
+
+/* ---------- Explore: a card for each group, in place of one long wall ---------- */
+async function explore(F){
+  const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
+  const groups = L.GROUPS.filter(g => g.k !== "all");
+  $("explore-cards").innerHTML = groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
+    <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
+  /* each card's picture: its first classic */
+  const ids = groups.map(g => D[g.k]?.ids?.[0]).filter(Boolean);
+  if(ids.length && navigator.onLine !== false) L.nat("taxa/" + ids.join(",")).then(j => {
+    const by = Object.fromEntries(j.results.map(t => [t.id, L.taxonCard(t).photo]));
+    for(const g of groups){ const p = by[D[g.k]?.ids?.[0]], c = $("explore-cards").querySelector(`[data-k="${g.k}"] .pic`);
+      if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", crossOrigin: "anonymous", title: `Photo © ${p.by} · ${p.lic}`})); }
+  }).catch(() => {});
 }
 
 /* the 300 Cascades wildflowers, from the pack: filter by colour and family, sorted by how often they're seen */
@@ -560,6 +720,11 @@ function flowerGrid(F, box, head){
 }
 
 L.data.flowers().catch(() => null).then(async F => {
+  const gk = new URLSearchParams(location.search).get("g") || (!id && new URLSearchParams(location.hash.slice(1)).get("g"));
+  if(gk && L.group(gk).k === gk && gk !== "all"){
+    if(location.hash) history.replaceState(null, "", location.pathname + "?g=" + gk);
+    return groupPage(F, gk);
+  }
   if(!id) return guidePage(F);
   /* a number above species level (a genus, a family…) has a page of its own */
   if(/^\d+$/.test(id) && !F?.byId[id]){

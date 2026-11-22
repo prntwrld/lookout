@@ -1,0 +1,424 @@
+{
+  "note": "The words on each group's page in Living things (living/?g=<key>), written for Lookout; edit freely. hook: one line on its card. intro: a paragraph or two. look: where and when to look. classics: Northwest species to know, as scientific names (tools/resolve_groups.py turns them into iNaturalist numbers in ids). hero: the species whose photograph heads the page (defaults to the first classic).",
+  "groups": {
+    "birds": {
+      "hook": "Jays in the firs, eagles on the rivers, and a seabird that nests in old growth",
+      "intro": [
+        "The Northwest sits on the Pacific Flyway, so its birds come in waves: rufous hummingbirds racing north on the first warm days of spring, shorebirds pouring down the coast in late summer, ducks and swans settling onto the lowland fields for winter. Some never leave. Steller's jays, varied thrushes and chestnut-backed chickadees belong to the wet conifer forest year round.",
+        "The strangest story here is the marbled murrelet, a small seabird that flies inland at dawn to lay a single egg on a mossy branch high in an old-growth tree. Nobody found one of its nests until 1974."
+      ],
+      "look": "Mornings are best, in spring above all, when birds sing to hold their ground. Estuaries and river mouths gather the most species in autumn and winter; follow the salmon runs in November and December for bald eagles.",
+      "classics": [
+        "Cyanocitta stelleri",
+        "Ixoreus naevius",
+        "Haliaeetus leucocephalus",
+        "Brachyramphus marmoratus",
+        "Dryocopus pileatus",
+        "Selasphorus rufus",
+        "Cinclus mexicanus",
+        "Ardea herodias",
+        "Poecile rufescens"
+      ],
+      "ids": [
+        8234,
+        145088,
+        5305,
+        4531,
+        17855,
+        6363,
+        7643,
+        4956,
+        144820
+      ]
+    },
+    "mammals": {
+      "hook": "Orcas in the Salish Sea, elk in the rain forest, pikas calling from the talus",
+      "intro": [
+        "From the Salish Sea to the alpine talus, the Northwest holds mammals that live nowhere else together: southern resident orcas that hunt chinook salmon, Roosevelt elk grazing the Hoh and the Queets, the Olympic marmot found only on its own peninsula, and the American pika, a round-eared rabbit relative that gathers hay piles among the rocks for winter.",
+        "Most are shy and many come out at dusk. A Douglas squirrel scolding from a fir is the one you'll hear first."
+      ],
+      "look": "Dawn and dusk at meadow edges and river bars; tracks in fresh snow or mud. Watch for orcas from the west side of San Juan Island in summer, and listen for pikas' short squeaks on boulder fields above about 4,000 feet.",
+      "classics": [
+        "Orcinus orca",
+        "Cervus canadensis",
+        "Ursus americanus",
+        "Marmota olympus",
+        "Ochotona princeps",
+        "Enhydra lutris",
+        "Tamiasciurus douglasii",
+        "Oreamnos americanus",
+        "Lontra canadensis"
+      ],
+      "ids": [
+        41521,
+        204114,
+        41638,
+        46093,
+        43188,
+        41860,
+        46259,
+        42414,
+        41777
+      ]
+    },
+    "plants": {
+      "hook": "Some of the biggest trees on Earth, and the wildflowers that follow the snow",
+      "intro": [
+        "West of the Cascades, the rain grows conifers bigger than almost anywhere else: Douglas-firs past 300 feet, western redcedars a thousand years old, Sitka spruce draped in moss on the coast. Beneath them, sword fern, salal and Oregon grape make an evergreen understory that stays green all winter.",
+        "Higher up, the year is short and intense. Avalanche lilies push through the edge of the melting snow, and by August the subalpine meadows are lupine, paintbrush and beargrass."
+      ],
+      "look": "Lowland forests are green all year. Wildflowers start in the Columbia Gorge in March and climb with the season, reaching the high meadows from mid-July to August.",
+      "classics": [
+        "Pseudotsuga menziesii",
+        "Thuja plicata",
+        "Picea sitchensis",
+        "Arbutus menziesii",
+        "Acer macrophyllum",
+        "Gaultheria shallon",
+        "Erythronium montanum",
+        "Lysichiton americanus"
+      ],
+      "ids": [
+        48256,
+        48252,
+        68131,
+        51046,
+        48227,
+        48441,
+        60505,
+        48537
+      ]
+    },
+    "fungi": {
+      "hook": "Chanterelles, lobster mushrooms and lichens hanging like beards",
+      "intro": [
+        "The wet autumn makes the Northwest one of the great mushroom regions of the world. When the October rains soak the forest floor, chanterelles, boletes, lobster mushrooms and hundreds of small brown species come up through the needles, many of them partners of the trees' roots.",
+        "Fungi do the forest's quiet work: rotting fallen logs into nurse logs, feeding the trees through their roots, and, as lichens, hanging from the branches as old man's beard and lungwort."
+      ],
+      "look": "October and November after the first heavy rains, in mature conifer forest. Lichens are there all year, at their brightest when wet.",
+      "classics": [
+        "Cantharellus formosus",
+        "Amanita muscaria",
+        "Hypomyces lactifluorum",
+        "Laetiporus conifericola",
+        "Ganoderma oregonense",
+        "Hericium abietis",
+        "Lobaria pulmonaria",
+        "Letharia vulpina"
+      ],
+      "ids": [
+        120443,
+        48715,
+        48215,
+        118057,
+        118062,
+        55187,
+        48711,
+        54613
+      ]
+    },
+    "insects": {
+      "hook": "Swallowtails, bumble bees and beetles that come out with the autumn rain",
+      "intro": [
+        "Insects are the Northwest's most varied animals by far, and its summers are short, so much of their year is packed into a few warm months. Western tiger swallowtails float along streams in June, bumble bees work the subalpine flowers in August, and dragonflies patrol every pond.",
+        "Some keep stranger hours: rain beetles fly only in the first heavy autumn storms, and snow scorpionflies walk on the snow in midwinter."
+      ],
+      "look": "Sunny, still afternoons from May to September, near water and flowers. Turn a log and put it back as you found it.",
+      "classics": [
+        "Papilio rutulus",
+        "Bombus vosnesenskii",
+        "Limenitis lorquini",
+        "Anax junius",
+        "Prionus californicus",
+        "Nymphalis antiopa",
+        "Cicindela oregona"
+      ],
+      "ids": [
+        47226,
+        57689,
+        50880,
+        67731,
+        59892,
+        56832,
+        52620
+      ]
+    },
+    "spiders": {
+      "hook": "Orb weavers in the September dew, and harvestmen on every trail",
+      "intro": [
+        "Late summer is spider season. The cross orbweaver's webs appear across every path and porch in September, each spider grown fat on a summer of insects, and the morning dew picks them out in silver.",
+        "Under logs and in the moss are the less obvious kin: harvestmen, pseudoscorpions and, along the coast, mites as red as berries."
+      ],
+      "look": "September mornings, when dew and low sun show the webs. Most are harmless to people.",
+      "classics": [
+        "Araneus diadematus",
+        "Dolomedes triton",
+        "Misumena vatia",
+        "Phidippus johnsoni",
+        "Leiobunum townsendi"
+      ],
+      "ids": [
+        52628,
+        121437,
+        55746,
+        1362558,
+        296817
+      ]
+    },
+    "amphibians": {
+      "hook": "Newts crossing the trail in the rain, and frogs singing in February",
+      "intro": [
+        "The rain suits amphibians. Pacific chorus frogs start singing from ditches and ponds as early as February, the first sure sign of spring. Rough-skinned newts walk slowly across wet trails, bright orange underneath as a warning: their skin holds a powerful toxin.",
+        "The streams hold quieter ones: coastal tailed frogs that cling to rocks in fast cold water, and giant salamanders that grow longer than a foot."
+      ],
+      "look": "Rainy nights in early spring, when they move to breeding ponds; under logs in damp forest. Wash your hands after handling a newt, or better, just watch it.",
+      "classics": [
+        "Pseudacris regilla",
+        "Taricha granulosa",
+        "Dicamptodon tenebrosus",
+        "Ascaphus truei",
+        "Rana aurora",
+        "Ensatina eschscholtzii"
+      ],
+      "ids": [
+        24259,
+        27826,
+        26822,
+        24543,
+        25545,
+        27250
+      ]
+    },
+    "reptiles": {
+      "hook": "Garter snakes in the sun, and lizards on the warm rocks east of the mountains",
+      "intro": [
+        "Cool, wet summers keep reptiles few on the west side, but garter snakes are everywhere there is sun and water, and northern alligator lizards bask on rocky slopes. Cross the Cascades into the dry country and they multiply: fence lizards, gopher snakes, rattlesnakes and horned lizards.",
+        "In western Washington, the western pond turtle was nearly lost and is being brought back, pond by pond."
+      ],
+      "look": "Warm, sunny mornings on south-facing rock and at the edges of ponds, from April to September.",
+      "classics": [
+        "Thamnophis sirtalis",
+        "Thamnophis ordinoides",
+        "Elgaria coerulea",
+        "Sceloporus occidentalis",
+        "Chrysemys picta",
+        "Crotalus oreganus"
+      ],
+      "ids": [
+        28362,
+        28389,
+        32064,
+        36204,
+        39771,
+        48268
+      ]
+    },
+    "fish": {
+      "hook": "Five kinds of salmon coming home, and lingcod in the kelp",
+      "intro": [
+        "The salmon hold the Northwest together. Chinook, coho, sockeye, pink and chum return from the ocean to the stream where they hatched, spawn and die, and their bodies feed the eagles, the bears, the forest and the next year's young.",
+        "In the salt water, rockfish, lingcod and cabezon live among the kelp, and the inlets hold sixgill sharks in the deep and plainfin midshipmen that hum on summer nights."
+      ],
+      "look": "Watch salmon spawn from fall into early winter: chum and coho in November and December in the small lowland streams. Fish ladders at Ballard and Bonneville show them climbing.",
+      "classics": [
+        "Oncorhynchus nerka",
+        "Oncorhynchus tshawytscha",
+        "Oncorhynchus kisutch",
+        "Oncorhynchus keta",
+        "Oncorhynchus mykiss",
+        "Ophiodon elongatus"
+      ],
+      "ids": [
+        69922,
+        54191,
+        53692,
+        107572,
+        47516,
+        52539
+      ]
+    },
+    "molluscs": {
+      "hook": "Banana slugs on the forest floor, and the world's largest octopus offshore",
+      "intro": [
+        "Two Northwest molluscs are famous. The Pacific banana slug, bright yellow and up to ten inches long, recycles the forest floor's leaves and fungi. And in the Salish Sea lives the giant Pacific octopus, the largest octopus in the world, clever enough to open jars.",
+        "Between them are the clams of the beaches, the mussels on every rock, and land snails found in only a single river canyon."
+      ],
+      "look": "Banana slugs on wet days in moist forest, all year. Shellfish at low tide; check the state's biotoxin closures before you dig.",
+      "classics": [
+        "Ariolimax columbianus",
+        "Enteroctopus dofleini",
+        "Mytilus californianus",
+        "Panopea generosa",
+        "Haliotis kamtschatkana",
+        "Monadenia fidelis"
+      ],
+      "ids": [
+        47776,
+        48863,
+        62806,
+        117618,
+        56654,
+        62803
+      ]
+    },
+    "tidepools": {
+      "hook": "A world uncovered twice a day: sea stars, anemones and nudibranchs",
+      "intro": [
+        "Twice a day the Pacific draws back and uncovers one of the richest shorelines on Earth. Cold, nutrient-rich upwelling feeds an enormous amount of life onto the rocks: purple and orange ochre stars, giant green anemones glowing in the pools, gooseneck barnacles in the surf, and nudibranchs in colours that look invented.",
+        "Every animal here lives by the tide. Some close up and wait out the hours in air; others hide in pools or under rocks until the water comes back. The lower the tide, the deeper the world it shows."
+      ],
+      "look": "Go on a minus tide: the lowest of the month, often in the mornings from late spring to summer, and in the evenings in winter. Arrive an hour before the low and head back as it turns.",
+      "classics": [
+        "Pisaster ochraceus",
+        "Anthopleura xanthogrammica",
+        "Hermissenda crassicornis",
+        "Katharina tunicata",
+        "Pollicipes polymerus",
+        "Strongylocentrotus purpuratus",
+        "Dermasterias imbricata",
+        "Pycnopodia helianthoides"
+      ],
+      "ids": [
+        49699,
+        51659,
+        495552,
+        47632,
+        48786,
+        48035,
+        63382,
+        47673
+      ]
+    },
+    "seaweeds": {
+      "hook": "Bull kelp forests and the seaweeds that wash up after a storm",
+      "intro": [
+        "Bull kelp grows several inches a day in summer, from a holdfast on the rocks to a gas-filled float at the surface, building forests that shelter fish, sea otters and young salmon. Below the low tide line are dozens of other seaweeds, red, brown and green.",
+        "After winter storms the beaches are strewn with them: kelp stalks like whips, sea lettuce, and feather boa kelp."
+      ],
+      "look": "On the low rocks at a minus tide, and along the wrack line after a storm.",
+      "classics": [
+        "Nereocystis luetkeana",
+        "Egregia menziesii",
+        "Fucus distichus",
+        "Ulva lactuca",
+        "Mazzaella splendens",
+        "Postelsia palmiformis"
+      ],
+      "ids": [
+        120499,
+        67419,
+        69155,
+        67423,
+        71118,
+        1267793
+      ]
+    },
+    "worms": {
+      "hook": "Millipedes that smell of almonds, and earthworms under the moss",
+      "intro": [
+        "The forest floor is busy. The yellow-spotted millipede, black with bright spots, gives off cyanide that smells of almonds when disturbed, a warning to birds. Centipedes hunt under the bark, and the Oregon giant earthworm, rarely seen, can grow to about three feet long.",
+        "On the shore, tube worms fan out feathery plumes from the rocks at low tide."
+      ],
+      "look": "Under logs and leaf litter on damp days; at the shore, in the low pools.",
+      "classics": [
+        "Harpaphe haydeniana",
+        "Scolopendra polymorpha",
+        "Serpula columbiana",
+        "Eudistylia vancouveri"
+      ],
+      "ids": [
+        47737,
+        53762,
+        131207,
+        84864
+      ]
+    },
+    "slime": {
+      "hook": "Neither plant nor fungus: blobs that move, then turn to spores",
+      "intro": [
+        "Slime moulds are single cells that join into one creeping mass, flowing slowly over logs to feed on bacteria, then raising tiny fruiting bodies full of spores. Some are bright yellow, some like pink pebbles, some like a dish of scrambled eggs.",
+        "They thrive in the damp Northwest forest, on rotting wood after rain."
+      ],
+      "look": "On rotting logs in damp weather, from late spring to autumn. Look closely: many are tiny.",
+      "classics": [
+        "Fuligo septica",
+        "Lycogala epidendrum",
+        "Stemonitis axifera"
+      ],
+      "ids": [
+        55483,
+        47680,
+        322311
+      ]
+    },
+    "flowers": {
+      "hook": "The 300 Cascades wildflowers in the key, by colour and family"
+    },
+    "conifers": {
+      "hook": "Firs, cedars, hemlocks and spruce: the trees that make the forest"
+    },
+    "ferns": {
+      "hook": "Sword fern, licorice fern on the maples, deer fern by the trail"
+    },
+    "mosses": {
+      "hook": "The green coat on everything west of the mountains"
+    },
+    "grasses": {
+      "hook": "Sedges in the wetlands, bunchgrass on the dry side"
+    },
+    "mushrooms": {
+      "hook": "Caps, brackets, puffballs and corals"
+    },
+    "lichens": {
+      "hook": "Partnerships of fungus and alga, on bark and rock"
+    },
+    "butterflies": {
+      "hook": "Swallowtails, admirals, and moths by the porch light"
+    },
+    "bees": {
+      "hook": "Bumble bees, mason bees, yellowjackets and galls"
+    },
+    "beetles": {
+      "hook": "Ground beetles, longhorns and tiger beetles"
+    },
+    "dragonflies": {
+      "hook": "Darners and skimmers over every pond"
+    },
+    "flies": {
+      "hook": "Hover flies, bee flies and giant crane flies"
+    },
+    "bugs": {
+      "hook": "Water striders, spittlebugs and leaf-footed bugs"
+    },
+    "grasshoppers": {
+      "hook": "Band-winged grasshoppers and camel crickets"
+    },
+    "snails": {
+      "hook": "Banana slugs, Pacific sideband snails and taildroppers"
+    },
+    "clams": {
+      "hook": "Razor clams, geoducks and the mussels on every rock"
+    },
+    "octopus": {
+      "hook": "The giant Pacific octopus and the squid of the open sea"
+    },
+    "stars": {
+      "hook": "Ochre stars, sunflower stars and purple urchins"
+    },
+    "anemones": {
+      "hook": "Giant green anemones, and moon jellies in the bays"
+    },
+    "crabs": {
+      "hook": "Dungeness and hermit crabs, gooseneck and acorn barnacles"
+    },
+    "nudibranchs": {
+      "hook": "Sea slugs in colours that look invented"
+    },
+    "chitons": {
+      "hook": "Black leather chitons, and the gumboot as big as a shoe"
+    },
+    "sponges": {
+      "hook": "Encrusting sponges and sea squirts under the ledges"
+    }
+  }
+}

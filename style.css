@@ -209,10 +209,22 @@ h1 i,.sci{font-style:italic}
 .pair.solo .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 .pair .tracks{columns:auto}
 .track-box{max-height:700px;overflow-y:auto;scrollbar-width:thin;position:relative}
-.track-box.more-down{-webkit-mask-image:linear-gradient(#000 calc(100% - 56px),transparent);mask-image:linear-gradient(#000 calc(100% - 56px),transparent)}
+.track-box.more-down,.spots-box.more-down{-webkit-mask-image:linear-gradient(#000 calc(100% - 56px),transparent);mask-image:linear-gradient(#000 calc(100% - 56px),transparent)}
 .week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
 .week-grid .sp b{font-size:15px}
 .week-more{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:20px 0 0}
+
+/* ---------- a group's page ---------- */
+.crumb{color:inherit;text-decoration:none}
+.crumb:hover{text-decoration:underline}
+#spot-map{height:640px}
+.spots-box{max-height:640px;overflow-y:auto;scrollbar-width:thin;padding-right:6px}
+.spots{columns:1;margin:0}
+.spots li{padding:12px 0}
+.spots li b{font:400 18px/1.25 var(--display)}
+.tides{columns:1}
+.tides li{display:flex;gap:10px;align-items:baseline}
+.tides li .ft{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink);font-size:16px}
 
 /* ---------- maps ---------- */
 .mapbox{height:440px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
@@ -402,6 +414,8 @@ footer a{color:inherit}
   .wall{grid-template-columns:repeat(2,1fr);grid-auto-rows:140px;gap:5px}
   .wall a:nth-child(n+16){display:none}
   .pair{margin:42px 0}
+  #spot-map{height:340px}
+  .spots-box{max-height:480px}
   .track-box{max-height:480px}
   .week-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px}
   .week-grid .sp b{font-size:14px}
