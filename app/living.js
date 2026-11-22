@@ -337,7 +337,7 @@ function pickPlate(pages, names, needWork = false){
     if(!(WORKS.test(text) || (!needWork && ART.test(title + " " + desc) && year))) continue;
     const score = (WORKS.test(text) ? 6 : 0) + (/plate|tafel/i.test(text) ? 2 : 0) + (year ? 1 : 0) - ((ii.width || 0) < 700);
     if(score > top){ top = score; const by = v("Artist").slice(0, 90);
-      best = {src: ii.thumburl, page: ii.descriptionurl || "", title: (v("ObjectName") || title).replace(/\.\w+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120), by: /^(unknown|anonymous|not stated)/i.test(by) ? "" : by, year}; }
+      best = {src: ii.thumburl.split("?")[0], page: ii.descriptionurl || "", title: (v("ObjectName") || title).replace(/\.\w+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120), by: /^(unknown|anonymous|not stated)/i.test(by) ? "" : by, year}; }
   }
   return best;
 }
@@ -355,7 +355,7 @@ const plateFor = async (id, sci, common) => {
   return v || null;
 };
 const plateCap = p => `${esc([p.title, p.by, p.year].filter(Boolean).join(", "))}. Public domain, via <a href="${esc(p.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>`;
-const plateFig = (p, name = "") => `<figure class="old-plate"><a href="${esc(p.page)}" target="_blank" rel="noopener"><img src="${esc(p.src)}" alt="${esc(name ? `${name}, an old natural-history plate` : p.title)}" loading="lazy"></a><figcaption>${name ? `<b>${esc(name)}</b> · ` : ""}${plateCap(p)}</figcaption></figure>`;
+const plateFig = (p, name = "") => `<figure class="old-plate"><a href="${esc(p.page)}" target="_blank" rel="noopener"><img src="${esc(String(p.src).split("?")[0].replace("//thumb.wikimedia.org/", "//upload.wikimedia.org/"))}" alt="${esc(name ? `${name}, an old natural-history plate` : p.title)}" loading="lazy"></a><figcaption>${name ? `<b>${esc(name)}</b> · ` : ""}${plateCap(p)}</figcaption></figure>`;
 
 /* ---------- the kinds within a group or a taxon: its families (or orders, or genera) recorded here, the most seen first ---------- */
 const CHILD = {kingdom: "phylum", phylum: "class", subphylum: "class", class: "order", subclass: "order", superorder: "order", order: "family", suborder: "family", infraorder: "family",

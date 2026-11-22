@@ -74,7 +74,7 @@ def pick(pages, names, need_work=False):
         if score > top:
             name = re.sub(r"[_-]+", " ", (v("ObjectName") or title).rsplit(".", 1)[0]).strip()
             by = v("Artist")[:90]
-            top, best = score, {"src": ii["thumburl"], "page": ii.get("descriptionurl", ""), "title": name[:120],
+            top, best = score, {"src": ii["thumburl"].split("?")[0].replace("//thumb.wikimedia.org/", "//upload.wikimedia.org/"), "page": ii.get("descriptionurl", ""), "title": name[:120],
                                 "by": "" if re.match(r"unknown|anonymous|not stated", by, re.I) else by, "year": year}
     return best
 
