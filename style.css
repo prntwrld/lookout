@@ -175,7 +175,18 @@ h1 i,.sci{font-style:italic}
 
 /* ---------- Living things: the season ---------- */
 .sec-sub{margin:-10px 0 16px}
-.scope{margin:16px 0 0}
+/* ---------- Salmon runs ---------- */
+.now-tag{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-left:4px}
+.card .months{margin:6px 0 6px}
+
+/* ---------- Near you ---------- */
+.near-map{height:460px}
+.you-dot{display:block;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--paper);box-shadow:0 0 0 2px var(--accent)}
+.photo-pin{display:block;width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid var(--paper);box-shadow:0 1px 5px var(--shade);background:var(--soft)}
+.photo-pin img{width:100%;height:100%;object-fit:cover}
+.near-pop img{width:100%;border-radius:4px;margin-bottom:6px}
+.kind[aria-expanded="true"] .pics{outline:2px solid var(--accent);outline-offset:2px}
+#hab-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
 /* tabs: words on a rule, the chosen one underlined in the accent */
 .tabs{display:flex;flex-wrap:wrap;gap:0 24px;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .tabs button{flex:none;background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;color:var(--muted);font-size:17px;cursor:pointer;white-space:nowrap}
@@ -447,6 +458,8 @@ footer a{color:inherit}
   .wall a:nth-child(n+16){display:none}
   .pair{margin:42px 0}
   #spot-map{height:340px}
+  .near-map{height:340px}
+  #hab-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .spots-box{max-height:480px}
   .track-box{max-height:480px}
   .week-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px}
