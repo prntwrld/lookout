@@ -555,3 +555,27 @@ footer a{color:inherit}
 .warn{color:#b8402f}
 .trip-pin{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;color:#fff;font:600 12px/1 var(--book);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);box-sizing:border-box}
 .add-trip{margin-top:16px}.add-trip p{margin:0 0 4px}.add-trip select{font:inherit;font-size:14px;margin-left:6px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+
+/* ---------- the Atlas ---------- */
+.atlas-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0 36px;align-items:start;margin-top:8px}
+.atlas-mapcol{position:sticky;top:12px}
+.atlas-map{height:min(calc(100vh - 110px),860px);min-height:420px}
+.atlas-drop{padding:18px 20px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);margin:0 0 30px}
+.atlas-drop h3{font:400 26px/1.15 var(--display);margin:4px 0 10px}
+.atlas-drop p{margin:0 0 10px}
+.atlas-drop .row{margin-top:4px}
+.atlas-layers{margin:0 0 16px}
+.month-pick{display:flex;align-items:center;gap:12px;margin:0 0 6px}
+.month-pick b{font:400 21px/1 var(--display);min-width:6.2em;text-align:center}
+.month-pick + p{margin:0 0 8px}
+.leaflet-tooltip.ws-label{background:none;border:0;box-shadow:none;padding:0;color:var(--muted);font:italic 14px var(--book);text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 3px var(--bg)}
+.leaflet-tooltip.ws-label::before{display:none}
+.chapter{margin:0 0 34px;max-width:40em}
+.chapter p{margin:0 0 12px}
+#primer .section{margin-top:44px}
+@media (max-width:880px){
+  .atlas-grid{grid-template-columns:minmax(0,1fr)}
+  .atlas-mapcol{top:0;z-index:5;background:var(--bg);padding:6px 0 2px;margin:0 0 18px}
+  .atlas-map{height:46vh;min-height:280px}
+  .atlas-drop{scroll-margin-top:calc(46vh + 70px)}
+}
