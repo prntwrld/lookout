@@ -420,47 +420,56 @@ const kept = async (key, hours, make) => {
   if(v && (!Array.isArray(v) || v.length)) L.store.set(k, {day: L.today(), at: Date.now(), v});
   return v;
 };
-const counts = async params => (await L.nat("observations/species_counts", {place_id: L.PNW, quality_grade: "research", ...params})).results
+/* the most-seen species for a query, in the Pacific Northwest (or, given lat, lng and radius, around a point) */
+const counts = async params => (await L.nat("observations/species_counts", {...(params.lat ? {} : {place_id: L.PNW}), quality_grade: "research", ...params})).results
   .filter(r => r.taxon && ["species", "subspecies", "variety"].includes(r.taxon.rank)).map(r => ({t: L.taxonCard(r.taxon), count: r.count}));
 const tileOf = (F, x, note) => F?.byId[x.t.id] ? L.speciesTile(F.byId[x.t.id], `<span class="note">${esc(note)}</span>`) : L.liveTile(x.t, `<span class="note">${esc(note)}</span>`);
 
 /* Out in <Month>: mushrooms, blooming, migrating, and mammals, amphibians and reptiles */
-async function outNow(F){
-  const at = {month: L.month()};
-  const [fungi, bloomNative, bloomAll, birdsNow, birdsYear, animals] = (await kept("out", 24, () => Promise.all([
+/* Out in the month and Seen this week also serve the Near you page (living/?f=near), given a point and a radius */
+const nearTag = w => w ? `-${w.lat},${w.lng},${w.radius}` : "";
+async function outNow(F, where = null){
+  const at = {month: L.month(), ...(where || {})};
+  const sec = $("out"); sec.querySelector("h2").textContent = `Out in ${MONTH}${where ? " near you" : ""}`;
+  const [fungi, bloomNative, bloomAll, birdsNow, birdsYear, animals] = (await kept("out" + nearTag(where), 24, () => Promise.all([
     counts({...at, taxon_id: "50814", per_page: 40}),
     counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, native: "true", per_page: 40}),
     counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, per_page: 40}),
     counts({...at, taxon_id: "3", per_page: 200}),
-    counts({taxon_id: "3", per_page: 400}),
+    counts({taxon_id: "3", per_page: 400, ...(where || {})}),
     counts({...at, taxon_id: "40151,20978,26036", per_page: 40})].map(p => p.catch(() => []))).then(l => l.some(x => x.length) ? l : null))) || [[], [], [], [], [], []];
   const bloom = bloomNative.length >= 8 ? bloomNative : bloomAll;
   /* migrating: birds whose share of this month's sightings is well above their share of the year's */
   const sum = l => l.reduce((a, x) => a + x.count, 0) || 1;
   const nowT = sum(birdsNow), yearT = sum(birdsYear), yearOf = Object.fromEntries(birdsYear.map(x => [x.t.id, x.count]));
-  const migr = birdsNow.filter(x => x.count >= 25 && yearOf[x.t.id]).map(x => ({...x, lift: (x.count / nowT) / (yearOf[x.t.id] / yearT)}))
+  const migr = birdsNow.filter(x => x.count >= (where ? 4 : 25) && yearOf[x.t.id]).map(x => ({...x, lift: (x.count / nowT) / (yearOf[x.t.id] / yearT)}))
     .filter(x => x.lift >= 1.9).sort((a, b) => b.lift - a.lift).slice(0, 30);
   const n = x => `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`;
   const TABS = [
     ["fungi", "Mushrooms", fungi, n, "Mushrooms, brackets and puffballs seen this month"],
     ["bloom", "Blooming", bloom, x => `${L.num(x.count)} in flower`, "Wildflowers and shrubs seen in flower this month"],
     ["migr", "Migrating", migr, x => `${x.lift >= 10 ? "10" : x.lift.toFixed(1).replace(/\.0$/, "")}× its usual`, "Birds seen far more this month than the rest of the year: arriving, leaving or passing through"],
-    ["animals", "Animals", animals, n, "Mammals, amphibians and reptiles seen this month"]].filter(t => t[2].length >= 6);
-  if(!TABS.length) return;
-  const sec = $("out"), m = L.month();
+    ["animals", "Animals", animals, n, "Mammals, amphibians and reptiles seen this month"]].filter(t => t[2].length >= (where ? 3 : 6));
+  const within = where ? `, within ${where.radius} km of you` : "";
+  if(!TABS.length){
+    if(where){ sec.querySelector(".body").innerHTML = `<p class="muted">Little has been recorded within ${where.radius} km of you this month yet.</p>`; sec.hidden = false; }
+    else sec.hidden = true;
+    return;
+  }
+  const m = L.month();
   /* open on the most seasonal: mushrooms in autumn, flowers in spring and summer */
   const pref = [9, 10, 11].includes(m) ? ["fungi", "migr", "animals", "bloom"] : [3, 4, 5, 6, 7, 8].includes(m) ? ["bloom", "migr", "animals", "fungi"] : ["migr", "animals", "fungi", "bloom"];
   let on = pref.find(k => TABS.some(t => t[0] === k));
   const draw = () => {
     const [, , list, note, sub] = TABS.find(t => t[0] === on);
     sec.querySelector(".body").innerHTML = `<div class="tabs" role="group" aria-label="Out in ${MONTH}">${TABS.map(([k, label, l]) => `<button type="button" data-tab="${k}" aria-pressed="${k === on}">${label} <span>${l.length}</span></button>`).join("")}</div>
-      <p class="muted small tab-note">${esc(sub)}</p><div class="row">${list.slice(0, 30).map(x => tileOf(F, x, note(x))).join("")}</div>`;
+      <p class="muted small tab-note">${esc(sub + within)}</p><div class="row">${list.slice(0, 30).map(x => tileOf(F, x, note(x))).join("")}</div>`;
     L.fillPhotos(sec);
     /* on a phone the tabs scroll sideways: keep the chosen one in view */
     const tabs = sec.querySelector(".tabs"), b = tabs.querySelector('[aria-pressed="true"]');
     if(b && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = Math.max(0, b.offsetLeft - tabs.offsetLeft - 8);
   };
-  sec.addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b){ on = b.dataset.tab; draw(); } });
+  sec.onclick = e => { const b = e.target.closest("[data-tab]"); if(b){ on = b.dataset.tab; draw(); } };
   draw(); sec.hidden = false;
 }
 
@@ -510,14 +519,22 @@ async function songs(){
 }
 
 /* Seen this week: the most-sighted species over the last seven days, with their names */
-async function week(F){
-  const list = (await kept("week", 3, () => counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160}).catch(() => []))).filter(x => x.t.photo);
-  if(list.length < 8) return;
+async function week(F, where = null){
   const sec = $("week"), body = sec.querySelector(".body");
+  sec.querySelector("h2").textContent = `Seen this week${where ? " near you" : ""}`;
+  const sub = sec.querySelector(".sec-sub"); if(sub) sub.textContent = where ? `The most-sighted species within ${where.radius} km of you over the last seven days` : "The most-sighted species in Washington, Oregon and British Columbia over the last seven days";
+  const list = (await kept("week" + nearTag(where), 3, () => counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160, ...(where || {})}).catch(() => []))).filter(x => x.t.photo);
+  if(list.length < (where ? 3 : 8)){
+    if(where){ body.innerHTML = `<p class="muted">Little has been recorded within ${where.radius} km of you this week yet.</p>`; sec.hidden = false; } else sec.hidden = true;
+    return;
+  }
   const tile = x => { const name = x.t.common || x.t.sci;
     return `<a class="sp" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
       <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy"></div><b>${esc(name)}</b></a>`; };
   sec.hidden = false;
+  /* the Near you card on Explore takes this week's most-seen species as its picture */
+  const nc = !where && $("explore-cards")?.querySelector('[data-k="near"] .pic .ph'), p0 = list[0].t.photo;
+  if(nc) nc.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p0, "medium"), alt: "", loading: "lazy", title: `Photo © ${p0.by} · ${p0.lic}`}));
   /* twelve, with their names; twelve more at a time on request */
   let n = 12;
   const draw = () => {
@@ -526,10 +543,10 @@ async function week(F){
       + `<span class="muted small">${n < list.length ? `${n} of ${list.length}` : `All ${list.length}`}${n > 12 ? ` · <button type="button" class="linkish" data-less>Show fewer</button>` : ""}</span></p>`;
   };
   draw();
-  body.addEventListener("click", e => {
+  body.onclick = e => {
     if(e.target.closest("[data-more]")){ n += 12; draw(); }
     if(e.target.closest("[data-less]")){ n = 12; draw(); sec.scrollIntoView({block: "nearest"}); }
-  });
+  };
 }
 
 async function guidePage(F){
@@ -828,15 +845,79 @@ async function foragingPage(F){
   }
 }
 
+/* ---------- Near you (living/?f=near): what's been recorded around you, from iNaturalist's observers. Your location is
+   kept on this device a few hours, shared with the key's "Use my location". ---------- */
+const NEAR_GROUPS = ["birds", "plants", "fungi", "mammals", "insects", "tidepools", "molluscs", "amphibians", "reptiles", "spiders", "seaweeds"];
+async function nearPage(F){
+  document.title = "Near you — Lookout";
+  const quiet = (id, title, sub) => `<section class="section" id="${id}" hidden><h2>${title}</h2>${sub ? `<p class="muted small sec-sub">${sub}</p>` : ""}<div class="body"></div></section>`;
+  let r = String(L.store.get("lookout-near-km", 10));
+  main.innerHTML = `<section class="hero"><p class="eyebrow"><a href="./" class="crumb">Living things</a></p><h1>Near you</h1>
+      <p class="sub-line">What iNaturalist's observers have recorded around where you are</p>
+      <div class="filters" style="margin:16px 0 0"><div class="chips" id="radius" role="group" aria-label="How far">${[["2", "Within 2 km"], ["10", "10 km"], ["25", "25 km"]].map(([v, l]) => `<button type="button" class="chip" data-r="${v}" aria-pressed="${v === r}">${l}</button>`).join("")}</div>
+      <button type="button" class="btn ghost" id="locate">Use my location</button><span class="muted small" id="where-note"></span></div></section>
+    <div id="near-body" hidden>
+      ${quiet("out", `Out in ${MONTH}`, "")}
+      <div class="split pair solo">${quiet("week", "Seen this week", "Around you")}</div>
+      <section class="section" id="n-groups" hidden><h2>Recorded around you</h2><p class="muted small sec-sub">Any time of year, the most recorded first. Each opens in the key, to name what you've found.</p><div class="body"></div></section>
+      <section class="section" id="n-places" hidden><h2>Your places nearby</h2><div class="cards"></div></section>
+    </div>`;
+  const here = () => { const h = L.store.get("lookout-near", null); return h && Date.now() - h.t < 6 * 36e5 ? h : null; };
+  const show = async () => {
+    const h = here(); if(!h) return;
+    const where = {lat: h.lat, lng: h.lon, radius: r};
+    $("where-note").textContent = "";
+    /* the place's name: the smallest of iNaturalist's places around the point (a park, a beach), else the county */
+    L.nat("places/nearby", {nelat: h.lat + .001, nelng: h.lon + .001, swlat: h.lat - .001, swlng: h.lon - .001, per_page: 20}).then(j => {
+      const c = (j.results?.community || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0], st = (j.results?.standard || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0];
+      const name = c && c.bbox_area < .05 ? c.name.trim() : st ? `${st.name}${st.admin_level === 20 ? " County" : ""}` : "";
+      if(name) $("where-note").textContent = ` Around ${name}`;
+    }).catch(() => {});
+    $("locate").textContent = "Update my location";
+    $("near-body").hidden = false;
+    outNow(F, where).catch(() => {}); week(F, where).catch(() => {});
+    /* group by group: what's been recorded here, any time */
+    const box = $("n-groups"), body = box.querySelector(".body"); body.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`; box.hidden = false;
+    const rows = await Promise.all(NEAR_GROUPS.map(k => { const g = L.group(k);
+      return L.nat("observations/species_counts", {...where, taxon_id: g.taxa, verifiable: "true", per_page: 20}).then(j => ({g, total: j.total_results,
+        l: j.results.filter(x => ["species", "subspecies", "variety"].includes(x.taxon.rank)).map(x => ({t: L.taxonCard(x.taxon), count: x.count}))})).catch(() => null); }));
+    const ok = rows.filter(x => x && x.l.length >= 3).sort((a, b) => b.total - a.total);
+    body.innerHTML = ok.length ? ok.map(({g, total, l}) => `<h3 class="kind-h">${esc(g.name)} <span class="muted small">${L.num(total)} species</span>
+        <a class="small" style="margin-left:10px" href="${L.ROOT}key/#key=here&g=${g.k}&at=${h.lat},${h.lon}&r=${r === "2" ? "1" : r === "25" ? "25" : "5"}&when=year">Name one in the key →</a></h3>
+        <div class="row">${l.map(x => tileOf(F, x, `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`)).join("")}</div>`).join("")
+      : `<p class="muted">Little has been recorded within ${r} km of you yet. Try a wider circle.</p>`;
+    L.fillPhotos(body);
+    /* your places within 50 km, nearest first */
+    const P = await L.data.places().catch(() => null);
+    const near = (P?.list || []).map(p => ({p, d: L.km({lat: h.lat, lon: h.lon}, {lat: p.pin.lat, lon: p.pin.lon})})).filter(x => x.d <= 50).sort((a, b) => a.d - b.d).slice(0, 6);
+    if(near.length){ const pl = $("n-places"); pl.querySelector(".cards").innerHTML = near.map(x => L.placeCard(x.p, P.region[x.p.region])).join(""); pl.hidden = false; L.ownPhotos(pl); }
+  };
+  const locate = () => {
+    if(!navigator.geolocation){ $("where-note").textContent = " This browser can't share a location."; return; }
+    $("where-note").textContent = " Finding you…";
+    navigator.geolocation.getCurrentPosition(pos => {
+      L.store.set("lookout-near", {lat: +pos.coords.latitude.toFixed(3), lon: +pos.coords.longitude.toFixed(3), t: Date.now()}); show();
+    }, () => { $("where-note").textContent = " No location: allow it in your browser, or use the key's regions instead."; }, {timeout: 15000, maximumAge: 600000});
+  };
+  $("locate").addEventListener("click", locate);
+  $("radius").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if(!b) return; r = b.dataset.r; L.store.set("lookout-near-km", +r);
+    $("radius").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); show(); });
+  if(navigator.onLine === false){ $("where-note").textContent = " Near you needs a connection to iNaturalist."; return; }
+  if(here()) show(); else locate();
+}
+
 /* ---------- Explore: a card for each group, in place of one long wall ---------- */
 async function explore(F){
   const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
   const groups = L.GROUPS.filter(g => g.k !== "all");
-  $("explore-cards").innerHTML = `<a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
+  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
     <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
   /* each card's picture: its first classic */
-  /* foraging's card: the chanterelle (or what's in season) */
-  L.data.json("foraging.json").then(Fo => { const w = Fo.wild.find(x => x.months.includes(L.month()) && x.kind === "mushrooms") || Fo.wild.find(x => x.months.includes(L.month())) || Fo.wild[0];
+  /* near you's card: the most-seen species this week, if the week is known in this browser */
+  const wk = L.store.get("lookout-kept-week", null)?.v?.find(x => x.t.photo)?.t.photo, nc = $("explore-cards").querySelector('[data-k="near"] .pic');
+  if(wk && nc) nc.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(wk, "medium"), alt: "", loading: "lazy", title: `Photo © ${wk.by} · ${wk.lic}`}));
+  /* foraging's card: the salmonberry, the first wild fruit of the year (not a mushroom: Fungi has the chanterelle) */
+  L.data.json("foraging.json").then(Fo => { const w = Fo.wild.find(x => x.sci === "Rubus spectabilis") || Fo.wild.find(x => x.kind === "berries");
     return w?.id && L.nat("taxa/" + w.id); }).then(j => { const p = j && L.taxonCard(j.results[0]).photo, c = $("explore-cards").querySelector('[data-k="foraging"] .pic');
     if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
   const ids = groups.map(g => D[g.k]?.ids?.[0]).filter(Boolean);
@@ -875,6 +956,7 @@ L.data.flowers().catch(() => null).then(async F => {
     return groupPage(F, gk);
   }
   if(new URLSearchParams(location.search).get("f") === "foraging") return foragingPage(F);
+  if(new URLSearchParams(location.search).get("f") === "near") return nearPage(F);
   if(!id) return guidePage(F);
   /* a number above species level (a genus, a family…) has a page of its own */
   if(/^\d+$/.test(id) && !F?.byId[id]){

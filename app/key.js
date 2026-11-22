@@ -70,7 +70,7 @@ const bsw = c => `<i class="sw" style="background:${BIRD_COLOUR[c]?.[1] || "#999
 let REG = [];
 const near = (list, m) => { const n = [m, m === 1 ? 12 : m - 1, m === 12 ? 1 : m + 1]; return n.some(x => list.includes(x)); };
 const KEYS = {
-  flowers: {name: "Wildflowers", what: "Cascades wildflowers", load: () => L.data.flowers(), months: s => s.bloom,
+  flowers: {name: "Wildflowers", what: "Cascades wildflowers", load: () => L.data.flowers(), months: s => s.bloom, taxa: "47126",
     Q: () => [
       {k: "colour", title: "Flower colour", multi: true, opts: Object.entries(L.COLOUR).map(([v, [name]]) => ({v, label: name, icon: L.sw(v)}))},
       {k: "petals", title: "Petals", multi: true, opts: [["3","3"],["4","4"],["5","5"],["6","6"],["many","Many"],["daisy","Daisy-like"],["irregular","Irregular"],["tiny","Tiny, clustered"]].map(([v, label]) => ({v, label, icon: PETAL_ICON[v]}))},
@@ -80,7 +80,7 @@ const KEYS = {
       {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
       {k: "elev", title: "Elevation", opts: BANDS.map((b, i) => ({v: String(i), label: b[2]}))},
       {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]},
-  birds: {name: "Birds", what: "Pacific Northwest birds", load: () => L.data.birds(), months: s => s.months, byId: true,
+  birds: {name: "Birds", what: "Pacific Northwest birds", load: () => L.data.birds(), months: s => s.months, byId: true, taxa: "3",
     Q: () => [
       {k: "size", title: "Size", multi: true, opts: [["s","Sparrow or smaller"],["m","Robin to jay"],["l","Crow to duck"],["xl","Goose or bigger"]].map(([v, label]) => ({v, label, icon: SIZE_ICON[v]}))},
       {k: "colour", title: "Colours you can see", multi: true, opts: Object.entries(BIRD_COLOUR).map(([v, [name]]) => ({v, label: name, icon: bsw(v)}))},
@@ -94,7 +94,7 @@ let K = null, F = null, mode = "flowers";
 /* the other trait keys come from data/packs.json; their questions are in each pack's trait file */
 const HEX = {w: "#f3f2ec", y: "#e8c43a", o: "#e48a3a", r: "#c8402f", p: "#e08aa8", v: "#8a5bb0", b: "#4a78c8", gr: "#3e8a4e", n: "#8a5f3c", g: "#8a9096", k: "#1d1d1d", t: "#c9a46c", s: "#c9ced3"};
 const HEXNAME = {w: "white", y: "yellow", o: "orange", r: "red", p: "pink", v: "purple", b: "blue", gr: "green", n: "brown", g: "grey", k: "black", t: "tan", s: "silver"};
-const genericKey = p => ({name: p.name, what: p.what, load: () => L.data.trait(p.id), months: s => s.months, byId: true, qs: [],
+const genericKey = p => ({name: p.name, what: p.what, load: () => L.data.trait(p.id), months: s => s.months, byId: true, qs: [], taxa: p.taxa,
   Q(){ return [...this.qs.map(q => ({k: q.k, title: q.title, multi: q.multi !== false, opts: Object.entries(q.opts).map(([v, label]) => ({v, label,
       icon: q.swatch && HEXNAME[v] === label ? `<i class="sw" style="background:${HEX[v]}"></i>` : ""}))})),
     {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
@@ -110,10 +110,28 @@ function fits(s, k, vals){
     return s.elev[1] + 500 >= a && s.elev[0] - 500 <= b;
   }
   if(k === "region") return !s.regions?.length || s.regions.includes(vals[0]);
+  if(k === "near"){ const set = NEAR.sets[vals[0]]; return !set || set.has(s.id); }
   const have = s[k] || [];
   return !have.length || vals.some(v => have.includes(v));
 }
 const tile = (s, extra) => L.speciesTile(K.byId ? {...s, slug: String(s.id)} : s, extra);
+
+/* ---------- near here: what iNaturalist observers have recorded within 2, 10 or 50 km of you, for the key in use.
+   Your location is kept on this device for a few hours, so changing keys or reloading keeps it. ---------- */
+const RADII = [["2", "Within 2 km"], ["10", "Within 10 km"], ["50", "Within 50 km"]];
+const NEAR = {at: null, key: "", sets: {}};
+const nearQ = () => ({k: "near", title: "Recorded near here", opts: RADII.map(([v, label]) => ({v, label}))});
+async function loadNear(){
+  const here = NEAR.at || L.store.get("lookout-near", null);
+  if(!here || Date.now() - here.t > 6 * 36e5 || !K?.taxa || navigator.onLine === false){ NEAR.sets = {}; return; }
+  NEAR.at = here;
+  const key = `${mode}|${here.lat}|${here.lon}`; if(NEAR.key === key) return;
+  NEAR.key = key; NEAR.sets = {};
+  const got = await Promise.all(RADII.map(([r]) => L.nat("observations/species_counts", {lat: here.lat, lng: here.lon, radius: r, taxon_id: K.taxa, verifiable: "true", per_page: 500})
+    .then(j => [r, new Set(j.results.map(x => x.taxon.id))]).catch(() => null)));
+  if(NEAR.key !== key) return;
+  for(const x of got) if(x) NEAR.sets[x[0]] = x[1];
+}
 
 /* ---------- the state: the key and its answers, kept in the address so the back button and a reload keep them ---------- */
 let A = {}, auto = {};
@@ -133,6 +151,7 @@ function draw(){
   if(mode === "pick") return drawPick();
   if(mode === "here") return drawHere();
   const qs = K.Q();
+  if(Object.keys(NEAR.sets).length) qs.unshift(nearQ()); else delete A.near;
   const others = k => F.list.filter(s => Object.entries(A).every(([k2, v]) => k2 === k || fits(s, k2, v)));
   $("qs").innerHTML = qs.map(q => {
     const base = others(q.k), sel = A[q.k] || [];
@@ -165,7 +184,7 @@ function draw(){
 /* ---------- Here & now: everything recorded near you (or in a region), by group, live from iNaturalist ---------- */
 let packs = {}, page = 1, token = 0;
 async function drawHere(more = false){
-  const g = A.g?.[0] || "all", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
+  const g = A.g?.[0] || "all", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.length === 2 ? A.at.join(",") : A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
   const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
     <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
   const alt = KEYS[g] || PRESET[g] ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${g}">Answer questions about it instead</button></p>`
@@ -211,6 +230,10 @@ function locate(){
     if(mode === "here"){ A.at = [`${lat.toFixed(4)},${lon.toFixed(4)}`]; delete A.region; write(); return draw(); }
     const r = regionAt(lat, lon);
     if(r){ A.region = [r.id]; auto.region = "from your location"; } else L.toast("You're outside the regions in this guide");
+    /* and what's been recorded around you, if there's signal: 10 km to start */
+    NEAR.at = {lat: +lat.toFixed(3), lon: +lon.toFixed(3), t: Date.now()}; L.store.set("lookout-near", NEAR.at); NEAR.key = "";
+    await loadNear();
+    if(NEAR.sets["10"]){ A.near = ["10"]; auto.near = "from your location"; }
     if(mode === "flowers"){
       let ft = altitude != null ? altitude * 3.28084 : null;
       if(ft == null && navigator.onLine){
@@ -227,12 +250,13 @@ function locate(){
 async function setMode(m){
   mode = m; auto = {};
   /* month and region carry over; the rest belongs to the key you were using */
-  A = Object.fromEntries(Object.entries(A).filter(([k]) => k === "region" || (k === "month" && m !== "here")));
+  A = Object.fromEntries(Object.entries(A).filter(([k]) => k === "region" || k === "near" || (k === "month" && m !== "here")));
   if(m !== "here" && m !== "pick"){
     K = KEYS[m];
     try { F = packs[m] ||= await K.load(); }
     catch(e){ mode = "here"; A.g = [m]; write(); return draw(); }   /* a pack that isn't built yet: show what's recorded instead */
     if(F.questions) K.qs = F.questions;
+    await loadNear();
   }
   if(m !== "here" && m !== "pick" && !A.month){ A.month = [String(L.month())]; auto.month = "today"; }
   write(); draw();
@@ -309,7 +333,7 @@ async function start(){
     if(h){ const {h: k, v} = h.dataset; A[k] = v ? [v] : []; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
     const c = e.target.closest("[data-clear]"); if(c){ delete A[c.dataset.clear]; delete auto[c.dataset.clear]; write(); return draw(); }
     const b = e.target.closest("[data-k]"); if(!b || b.disabled) return;
-    const {k, v} = b.dataset, q = K.Q().find(q => q.k === k), sel = A[k] || [];
+    const {k, v} = b.dataset, q = [...K.Q(), nearQ()].find(q => q.k === k), sel = A[k] || [];
     A[k] = sel.includes(v) ? sel.filter(x => x !== v) : q.multi ? [...sel, v] : [v];
     if(!A[k].length) delete A[k];
     delete auto[k]; write(); draw();

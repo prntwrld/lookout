@@ -175,6 +175,7 @@ h1 i,.sci{font-style:italic}
 
 /* ---------- Living things: the season ---------- */
 .sec-sub{margin:-10px 0 16px}
+.scope{margin:16px 0 0}
 /* tabs: words on a rule, the chosen one underlined in the accent */
 .tabs{display:flex;flex-wrap:wrap;gap:0 24px;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .tabs button{flex:none;background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;color:var(--muted);font-size:17px;cursor:pointer;white-space:nowrap}
