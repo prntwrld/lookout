@@ -448,14 +448,18 @@ async function week(F){
     return `<a class="sp" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
       <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous"></div><b>${esc(name)}</b></a>`; };
   sec.hidden = false;
-  /* twelve, with their names; the rest on request */
-  let all = false;
+  /* twelve, with their names; twelve more at a time on request */
+  let n = 12;
   const draw = () => {
-    body.innerHTML = `<div class="week-grid">${(all ? list : list.slice(0, 12)).map(tile).join("")}</div>`
-      + `<p style="margin-top:20px"><button type="button" class="btn ghost" data-all>${all ? "Show fewer" : `Show all ${list.length}`}</button></p>`;
+    body.innerHTML = `<div class="week-grid">${list.slice(0, n).map(tile).join("")}</div>`
+      + `<p class="week-more">${n < list.length ? `<button type="button" class="btn ghost" data-more>Show ${Math.min(12, list.length - n)} more</button>` : ""}`
+      + `<span class="muted small">${n < list.length ? `${n} of ${list.length}` : `All ${list.length}`}${n > 12 ? ` · <button type="button" class="linkish" data-less>Show fewer</button>` : ""}</span></p>`;
   };
   draw();
-  body.addEventListener("click", e => { if(e.target.closest("[data-all]")){ all = !all; draw(); if(!all) sec.scrollIntoView({block: "nearest"}); } });
+  body.addEventListener("click", e => {
+    if(e.target.closest("[data-more]")){ n += 12; draw(); }
+    if(e.target.closest("[data-less]")){ n = 12; draw(); sec.scrollIntoView({block: "nearest"}); }
+  });
 }
 
 async function guidePage(F){
@@ -471,7 +475,11 @@ async function guidePage(F){
     <div id="groups" style="margin:0 0 18px">${L.groupChips(st.g)}</div>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>
     <div id="list"></div></section>`;
-  if(navigator.onLine !== false){ outNow(F).catch(() => {}); songs().catch(() => {}); week(F).catch(() => {}); }
+  if(navigator.onLine !== false){
+    outNow(F).catch(() => {});
+    /* once both have answered, a lone one takes the whole width */
+    Promise.all([songs().catch(() => {}), week(F).catch(() => {})]).then(() => main.querySelector(".pair")?.classList.toggle("solo", $("songs").hidden || $("week").hidden));
+  }
   if(st.q || st.g !== "all") requestAnimationFrame(() => $("browse").scrollIntoView());
   let page = 1, token = 0;
   const draw = async (more = false) => {

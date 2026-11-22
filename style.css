@@ -201,12 +201,18 @@ h1 i,.sci{font-style:italic}
 /* songs beside Seen this week; either one alone takes the whole width */
 .pair{margin:56px 0}
 .pair > .section{margin:0}
-.pair:has(> [hidden]){grid-template-columns:minmax(0,1fr)}
+/* Seen this week keeps the right-hand column while the songs are still on their way; only when there are no songs
+   (or no photos) does the other take the whole width, at the usual size */
+.pair > #week{grid-column:2}
+.pair.solo{grid-template-columns:minmax(0,1fr)}
+.pair.solo > #week{grid-column:auto}
+.pair.solo .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 .pair .tracks{columns:auto}
 .track-box{max-height:700px;overflow-y:auto;scrollbar-width:thin;position:relative}
 .track-box.more-down{-webkit-mask-image:linear-gradient(#000 calc(100% - 56px),transparent);mask-image:linear-gradient(#000 calc(100% - 56px),transparent)}
 .week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
 .week-grid .sp b{font-size:15px}
+.week-more{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:20px 0 0}
 
 /* ---------- maps ---------- */
 .mapbox{height:440px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
@@ -365,6 +371,7 @@ footer a{color:inherit}
   .sky dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
   .wall{grid-template-columns:repeat(4,1fr)}
   .split{grid-template-columns:minmax(0,1fr);gap:36px}
+  .pair > #week{grid-column:auto}
   .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
   .key{grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:28px}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
