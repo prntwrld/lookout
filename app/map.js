@@ -9,9 +9,9 @@ const pin = (done, big) => L_.divIcon({className: "", iconSize: big ? [26, 26] :
   html: `<span class="pin${done ? " done" : ""}${big ? " big" : ""}"></span>`});
 const dot = kind => L_.divIcon({className: "", iconSize: [12, 12], iconAnchor: [6, 6], html: `<span class="dot-pin" data-kind="${esc(kind)}"></span>`});
 
-function map(el, places, {single = null, around = []} = {}){
+function map(el, places, {single = null, around = [], outline = null} = {}){
   if(!L_ || !el) return null;
-  const m = L_.map(el, {scrollWheelZoom: false, zoomControl: true, attributionControl: true, tap: true});
+  const m = L_.map(el, {scrollWheelZoom: false, zoomControl: true, attributionControl: true, tap: true, zoomSnap: outline ? .25 : 1});
   L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, crossOrigin: "anonymous",
     attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`}).addTo(m);
   const marks = [];
@@ -34,12 +34,36 @@ function map(el, places, {single = null, around = []} = {}){
   if(single){
     const pts = [[single.pin.lat, single.pin.lon], ...around.map(a => [a.lat, a.lon])];
     pts.length > 1 ? m.fitBounds(pts, {padding: [30, 30], maxZoom: 14}) : m.setView(pts[0], 13);
+  } else if(outline){
+    m.setView([51, -126.5], 4);
+    cascadia(m, outline);
   } else if(places.length){
     m.fitBounds(places.map(p => [p.pin.lat, p.pin.lon]), {padding: [24, 24]});
   }
   /* the map is often drawn before its box has its final size */
   new ResizeObserver(() => m.invalidateSize()).observe(el);
   return m;
+}
+
+/* Cascadia (British Columbia, Washington and Oregon, data/cascadia.json): the land outside it faded, the edge drawn
+   in the accent, and the map framed on it */
+function cascadia(m, c){
+  const [w, s, e, n] = c.bounds, flip = ring => ring.map(([lon, lat]) => [lat, lon]);
+  const css = getComputedStyle(document.documentElement), tok = k => css.getPropertyValue(k).trim();
+  const rings = c.geometry.coordinates.map(poly => flip(poly[0]));
+  const shade = L_.polygon([[[85, -200], [85, 20], [-10, 20], [-10, -200]], ...rings], {stroke: false, fillColor: tok("--bg") || "#eef1ed", fillOpacity: .62, interactive: false}).addTo(m);
+  const edge = L_.polygon(rings, {color: tok("--accent") || "#2d5c43", weight: 1.6, opacity: .9, fill: false, interactive: false}).addTo(m);
+  /* the colours follow the theme */
+  document.addEventListener("lookout-theme", () => { const k = getComputedStyle(document.documentElement);
+    shade.setStyle({fillColor: k.getPropertyValue("--bg").trim()}); edge.setStyle({color: k.getPropertyValue("--accent").trim()}); });
+  /* frame it once the box has its size, and again if the box changes, until the reader moves the map */
+  let moved = false;
+  const fit = () => { if(moved || !m.getContainer().clientHeight) return; m.invalidateSize(); m.setMinZoom(0);
+    m.fitBounds([[s, w], [n, e]], {padding: [6, 6], animate: false}); m.setMinZoom(m.getZoom() - 1); };
+  ["mousedown", "touchstart", "wheel", "keydown"].forEach(k => m.getContainer().addEventListener(k, () => moved = true, {passive: true}));
+  m.setMaxBounds([[s - 8, w - 14], [n + 6, e + 14]]);
+  fit(); requestAnimationFrame(fit);
+  new ResizeObserver(fit).observe(m.getContainer());
 }
 
 /* where a species has been seen: iNaturalist's grid of research-grade sightings over the map, with your places pinned */

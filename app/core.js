@@ -364,8 +364,8 @@ const placeCard = (p, region) => {
 const ownPhotos = async root => {
   for(const a of (root || document).querySelectorAll("[data-place]")){
     if(!log.get(a.dataset.place)?.photo) continue;
-    const url = await photos.get(a.dataset.place), pic = a.querySelector(".pic");
-    if(!url || !pic) continue;
+    const url = await photos.get(a.dataset.place), pic = a.querySelector(".pic") || a;
+    if(!url) continue;
     pic.querySelector("img, .ph")?.remove(); pic.insertAdjacentHTML("afterbegin", `<img src="${url}" alt="">`);
   }
 };

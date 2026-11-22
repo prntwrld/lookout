@@ -138,6 +138,18 @@ h1 i,.sci{font-style:italic}
   background:linear-gradient(transparent,rgba(8,12,10,.62));opacity:0;transition:opacity .25s}
 .wall a:hover span,.wall a:focus span{opacity:1}
 
+/* ---------- the front page ---------- */
+.almanac{margin:4px 0 22px}
+.almanac .eyebrow{margin:0 0 4px}
+.almanac p.muted{margin:0;max-width:62em}
+.wall.go{grid-auto-rows:170px}
+.go-next{margin:16px 0 0}
+/* Cascadia: the tall map beside your progress */
+.atlas{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:44px;align-items:start}
+.atlas .progress{grid-template-columns:1fr;gap:26px}
+.atlas-h{font:400 22px/1.2 var(--display);margin:0 0 14px}
+.mapbox.tall{height:auto;aspect-ratio:5/6;max-height:86vh}
+
 /* ---------- maps ---------- */
 .mapbox{height:440px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
 .mapbox.small{height:300px}
@@ -282,6 +294,9 @@ footer a{color:inherit}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
 }
 @media (max-width: 760px){
+  .atlas{grid-template-columns:1fr;gap:30px}
+  .mapbox.tall{aspect-ratio:4/5}
+  .wall.go{grid-auto-rows:120px}
   .key{grid-template-columns:minmax(0,1fr)}
   .qs{position:static;max-height:none;overflow:visible;padding:0}
   .peek{display:inline-flex;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:20;box-shadow:0 4px 14px var(--shade);transition:opacity .2s,transform .2s}
