@@ -1,0 +1,11 @@
+{
+  "_note": "Your hiking books. A place's \"books\" list names these ids; the page shows \"in 3 of 6 books\". These six and the picks in places.json are samples: replace them with your own shelf.",
+  "books": [
+    {"id": "classic", "title": "100 Classic Hikes: Washington", "short": "Classic Hikes"},
+    {"id": "ncascades", "title": "Day Hiking: North Cascades", "short": "Day Hiking N. Cascades"},
+    {"id": "central", "title": "Day Hiking: Central Cascades", "short": "Day Hiking Central"},
+    {"id": "south", "title": "Day Hiking: Mount Rainier & South Cascades", "short": "Day Hiking South"},
+    {"id": "lookouts", "title": "Hiking Washington's Fire Lookouts", "short": "Fire Lookouts"},
+    {"id": "oregon", "title": "100 Hikes in Oregon", "short": "Oregon Hikes"}
+  ]
+}

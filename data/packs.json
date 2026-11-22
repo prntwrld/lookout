@@ -1,0 +1,243 @@
+{
+ "_note": "The trait keys beyond wildflowers and birds. Each pack: an iNaturalist group (taxa), how many of its most-recorded Pacific Northwest species to include, species to leave out, and which Living-things group it keys. tools/build_pack.py builds data/packs/<id>.json; the questions and each species' answers are in data/traits/<id>.json.",
+ "packs": [
+  {
+   "id": "mammals",
+   "name": "Mammals",
+   "group": "mammals",
+   "taxa": "40151",
+   "count": 70,
+   "skip": [
+    "Felis catus",
+    "Equus caballus"
+   ],
+   "what": "Pacific Northwest mammals"
+  },
+  {
+   "id": "amphibians",
+   "name": "Amphibians",
+   "group": "amphibians",
+   "taxa": "20978",
+   "count": 30,
+   "what": "Pacific Northwest frogs, toads and salamanders"
+  },
+  {
+   "id": "reptiles",
+   "name": "Reptiles",
+   "group": "reptiles",
+   "taxa": "26036",
+   "count": 25,
+   "what": "Pacific Northwest snakes, lizards and turtles"
+  },
+  {
+   "id": "conifers",
+   "name": "Conifers",
+   "group": "conifers",
+   "taxa": "136329",
+   "count": 24,
+   "what": "Pacific Northwest conifers"
+  },
+  {
+   "id": "ferns",
+   "name": "Ferns",
+   "group": "ferns",
+   "taxa": "121943",
+   "count": 35,
+   "what": "Pacific Northwest ferns and horsetails"
+  },
+  {
+   "id": "mushrooms",
+   "name": "Mushrooms",
+   "group": "mushrooms",
+   "taxa": "50814",
+   "count": 120,
+   "what": "Pacific Northwest mushrooms and brackets"
+  },
+  {
+   "id": "lichens",
+   "name": "Lichens",
+   "group": "lichens",
+   "taxa": "54743",
+   "count": 50,
+   "what": "Pacific Northwest lichens"
+  },
+  {
+   "id": "butterflies",
+   "name": "Butterflies and moths",
+   "group": "butterflies",
+   "taxa": "47157",
+   "count": 80,
+   "skip": [
+    "Marmara arbutiella",
+    "Phyllocnistis populiella",
+    "Cameraria gaultheriella"
+   ],
+   "what": "Pacific Northwest butterflies and moths"
+  },
+  {
+   "id": "dragonflies",
+   "name": "Dragonflies",
+   "group": "dragonflies",
+   "taxa": "47792",
+   "count": 45,
+   "what": "Pacific Northwest dragonflies and damselflies"
+  },
+  {
+   "id": "tidepools",
+   "name": "Tide pools",
+   "group": "tidepools",
+   "taxa": "47549,47534,85493,48824,47113,47429,47811",
+   "count": 100,
+   "skip": [
+    "Armadillidium vulgare",
+    "Porcellio scaber",
+    "Oniscus asellus",
+    "Philoscia muscorum",
+    "Pacifastacus leniusculus"
+   ],
+   "what": "Pacific Northwest tide-pool and shore life"
+  },
+  {
+   "id": "seaweeds",
+   "name": "Seaweeds and kelp",
+   "group": "seaweeds",
+   "taxa": "48220,57774,50863",
+   "count": 45,
+   "skip": [
+    "Chlamydomonas nivalis"
+   ],
+   "what": "Pacific Northwest seaweeds and kelp"
+  },
+  {
+   "id": "fish",
+   "name": "Fish",
+   "group": "fish",
+   "taxa": "47178,47273",
+   "count": 50,
+   "what": "Pacific Northwest fish"
+  },
+  {
+   "id": "beetles",
+   "name": "Beetles",
+   "group": "beetles",
+   "taxa": "47208",
+   "count": 70,
+   "what": "Pacific Northwest beetles"
+  },
+  {
+   "id": "flies",
+   "name": "Flies",
+   "group": "flies",
+   "taxa": "47822",
+   "count": 50,
+   "what": "Pacific Northwest flies",
+   "skip": [
+    "Phytomyza ilicis",
+    "Rhopalomyia medusa",
+    "Agromyza vockerothi",
+    "Phytomyza tiarellae",
+    "Rhopalomyia pomum",
+    "Phytomyza agromyzina",
+    "Rhopalomyia obovata"
+   ]
+  },
+  {
+   "id": "bees",
+   "name": "Bees, wasps and ants",
+   "group": "bees",
+   "taxa": "47201",
+   "count": 60,
+   "what": "Pacific Northwest bees, wasps, ants and galls"
+  },
+  {
+   "id": "bugs",
+   "name": "True bugs",
+   "group": "bugs",
+   "taxa": "47744",
+   "count": 45,
+   "what": "Pacific Northwest true bugs, hoppers and aphids"
+  },
+  {
+   "id": "grasshoppers",
+   "name": "Grasshoppers and crickets",
+   "group": "grasshoppers",
+   "taxa": "47651",
+   "count": 25,
+   "what": "Pacific Northwest grasshoppers, katydids and crickets"
+  },
+  {
+   "id": "spiders",
+   "name": "Spiders and kin",
+   "group": "spiders",
+   "taxa": "47119",
+   "count": 60,
+   "what": "Pacific Northwest spiders, harvestmen, ticks and scorpions",
+   "skip": [
+    "Aceria calaceris",
+    "Aceria genistae",
+    "Aceria parapopuli",
+    "Aceria caliberberis",
+    "Eriophyes sorbi"
+   ]
+  },
+  {
+   "id": "mosses",
+   "name": "Mosses and liverworts",
+   "group": "mosses",
+   "taxa": "311249,64615",
+   "count": 50,
+   "what": "Pacific Northwest mosses and liverworts"
+  },
+  {
+   "id": "grasses",
+   "name": "Grasses and sedges",
+   "group": "grasses",
+   "taxa": "47434,47161",
+   "count": 50,
+   "what": "Pacific Northwest grasses and sedges",
+   "skip": [
+    "Triticum aestivum"
+   ]
+  },
+  {
+   "id": "snails",
+   "name": "Slugs and snails",
+   "group": "snails",
+   "taxa": "47114",
+   "count": 55,
+   "what": "Pacific Northwest slugs, snails and sea slugs"
+  },
+  {
+   "id": "clams",
+   "name": "Clams and mussels",
+   "group": "clams",
+   "taxa": "47584",
+   "count": 30,
+   "what": "Pacific Northwest clams, mussels, oysters and scallops"
+  },
+  {
+   "id": "octopus",
+   "name": "Octopus and squid",
+   "group": "octopus",
+   "taxa": "47459",
+   "count": 12,
+   "what": "Pacific Northwest octopuses and squids"
+  },
+  {
+   "id": "worms",
+   "name": "Worms, centipedes and millipedes",
+   "group": "worms",
+   "taxa": "47491,144128",
+   "count": 35,
+   "what": "Pacific Northwest worms, centipedes and millipedes"
+  },
+  {
+   "id": "slime",
+   "name": "Slime moulds",
+   "group": "slime",
+   "taxa": "47685",
+   "count": 30,
+   "what": "Pacific Northwest slime moulds"
+  }
+ ]
+}
