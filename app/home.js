@@ -130,8 +130,8 @@ async function render(){
   const outline = await L.data.json("cascadia.json").catch(() => null);
   main.innerHTML = hero(P, F, r)
     + L.section(`Where to go in ${L.MONTHS[L.month() - 1]}`, goNow(P, r))
-    + L.section("Cascadia", `<div class="atlas"><div><div class="mapbox tall" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p></div>
-      <div id="progress"><h3 class="atlas-h">Your progress</h3>${progress(P)}</div></div>`, {aside: `<span class="muted">British Columbia, Washington and Oregon</span>`})
+    + L.section("Cascadia", `<div class="atlas"><div><div class="mapbox tall" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span><button type="button" class="chip" data-rivers aria-pressed="false">Rivers in blue</button></p></div>
+      <div id="progress"><h3 class="atlas-h">Your progress</h3>${progress(P)}</div></div>`, {aside: `<span class="muted">Every river to the Pacific, Copper River to Cape Mendocino</span>`})
     + L.section("Lately", lately(P), {id: "lately"});
   L.map($("map"), P.list, {outline});
   L.ownPhotos(main);
