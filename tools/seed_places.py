@@ -27,17 +27,22 @@ NOMINATIM = "https://nominatim.openstreetmap.org/search"
 # kind: what it's called, the Overpass filters (any of), the Nominatim search (a category phrase, or None to wait
 # for Overpass), the OSM tags a Nominatim hit must have, and a test on the name
 MARKET = re.compile(r"farm|market|grange|growers|harvest", re.I)
+# a marketplace that's a farmers market, not a grocery or a flea market: it says so, or it's a market named for a day or a place's public market
+FARMERS = re.compile(r"farm|grange|growers|harvest|producers|saturday market|sunday market|wednesday market|thursday market|public market|night market|community market", re.I)
+# ferry terminals worth a trip, not industrial piers, berths and slips
+FERRY_JUNK = re.compile(r"^(pier|pct|us oil|blair|berth|slip|dolphin|barge|dock [a-z0-9]$)\b|\bberth\b|^[A-Z]{2,4} ?\d+$|^[a-z0-9 #-]{1,4}$", re.I)
 # navigation lights and markers tagged as lighthouses: not somewhere to go
 NAV_AID = re.compile(r"range (front|rear)|aid to navigation|daybeacon|beacon|buoy|\blight \d|\b[A-Z]{1,3}\d{2,}\b|\bdolphin\b", re.I)
 KINDS = {
     "lighthouse": {"name": "Lighthouse", "osm": ['nwr["man_made"="lighthouse"]["name"]'], "nom": "lighthouse", "tags": {("man_made", "lighthouse")},
                    "test": lambda n: not NAV_AID.search(n)},
     "market": {"name": "Farmers market", "osm": ['nwr["amenity"="marketplace"]["name"~"farm|market|grange|growers|harvest",i]'],
-               "nom": "marketplace", "tags": {("amenity", "marketplace")}, "test": MARKET.search},
+               "nom": "marketplace", "tags": {("amenity", "marketplace")}, "test": FARMERS.search},
     "farm": {"name": "Farm stand", "osm": ['nwr["shop"="farm"]["name"]'], "nom": "farm shop", "tags": {("shop", "farm")}},
     "camera-obscura": {"name": "Camera obscura", "osm": ['nwr["name"~"camera obscura",i]'], "nom": "", "tags": None,
                        "test": re.compile(r"camera obscura", re.I).search},
-    "ferry": {"name": "Ferry", "osm": ['nwr["amenity"="ferry_terminal"]["name"]'], "nom": "ferry terminal", "tags": {("amenity", "ferry_terminal")}},
+    "ferry": {"name": "Ferry", "osm": ['nwr["amenity"="ferry_terminal"]["name"]'], "nom": "ferry terminal", "tags": {("amenity", "ferry_terminal")},
+              "test": lambda n: not FERRY_JUNK.search(n.strip())},
     "campground": {"name": "Campground", "osm": ['nwr["tourism"="camp_site"]["name"]["access"!~"private|no"]'], "nom": None},
     "hot-spring": {"name": "Hot spring", "osm": ['nwr["natural"="hot_spring"]["name"]'], "nom": None},
     "waterfall": {"name": "Waterfall", "osm": ['nwr["waterway"="waterfall"]["name"]["wikidata"]', 'nwr["waterway"="waterfall"]["name"]["wikipedia"]'], "nom": None},

@@ -15,7 +15,7 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const MON = MONTHS.map(m => m.slice(0, 3));
 
 /* ---------- the header ---------- */
-const NAV = [["places", "Places"], ["living", "Living things"], ["key", "Key"]];
+const NAV = [["places", "Places"], ["trips", "Trips"], ["living", "Living things"], ["key", "Key"]];
 document.currentScript.insertAdjacentHTML("afterend", `<header class="top wrap">
   <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg><span class="word">Lookout</span></a>
   <nav aria-label="Sections">${NAV.map(([id, name]) => `<a href="${ROOT}${id}/"${id === here ? ` aria-current="page"` : ""}>${name}</a>`).join("")}</nav>
@@ -333,7 +333,7 @@ const log = {
   /* everything, photos included, as one JSON file */
   async export(){
     const pics = await photos.all();
-    const blob = new Blob([JSON.stringify({lookout: 1, exported: new Date().toISOString(), log: log.all(), saved: saved.all(), photos: pics}, null, 1)], {type: "application/json"});
+    const blob = new Blob([JSON.stringify({lookout: 1, exported: new Date().toISOString(), log: log.all(), saved: saved.all(), trips: trips.all(), photos: pics}, null, 1)], {type: "application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `lookout-${today()}.json`;
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
@@ -350,6 +350,13 @@ const log = {
       for(const [id, r] of Object.entries(j.saved)) if(r && typeof r === "object" && typeof r.name === "string" && isFinite(r.lat) && isFinite(r.lon)) sv[id] = r;
       store.set(SAVED, sv); document.dispatchEvent(new CustomEvent("lookout-saved"));
     }
+    if(j.trips && typeof j.trips === "object"){
+      const tv = trips.all();
+      for(const [id, t] of Object.entries(j.trips)) if(t && typeof t === "object" && typeof t.name === "string" && Array.isArray(t.stops))
+        tv[id] = {name: t.name, start: String(t.start || ""), end: String(t.end || ""), regions: Array.isArray(t.regions) ? t.regions.map(String) : [],
+          stops: t.stops.filter(x => x && typeof x.ref === "string").map(x => ({ref: x.ref, day: +x.day || 0})), note: String(t.note || ""), made: t.made || Date.now()};
+      store.set(TRIPS, tv); document.dispatchEvent(new CustomEvent("lookout-trips"));
+    }
     document.dispatchEvent(new CustomEvent("lookout-log"));
     return Object.keys(j.log).length;
   }
@@ -363,6 +370,17 @@ const saved = {
   add(rec){ const a = saved.all(); const {id, ...rest} = rec; a[id] = {...rest, at: Date.now()}; store.set(SAVED, a); document.dispatchEvent(new CustomEvent("lookout-saved")); },
   remove(id){ const a = saved.all(); delete a[id]; store.set(SAVED, a); document.dispatchEvent(new CustomEvent("lookout-saved")); },
   toggle(rec){ saved.has(rec.id) ? saved.remove(rec.id) : saved.add(rec); return saved.has(rec.id); }
+};
+
+/* ---------- trips: {id: {name, start, end, regions: [ids], stops: [{ref, day}], note, made}} ---------- */
+const TRIPS = "lookout-trips";
+const trips = {
+  all: () => store.get(TRIPS, {}),
+  get: id => trips.all()[id] || null,
+  set(id, t){ const a = trips.all(); a[id] = t; store.set(TRIPS, a); document.dispatchEvent(new CustomEvent("lookout-trips")); },
+  remove(id){ const a = trips.all(); delete a[id]; store.set(TRIPS, a); document.dispatchEvent(new CustomEvent("lookout-trips")); },
+  /* put something on a trip (unplaced, day 0), once */
+  add(id, ref){ const t = trips.get(id); if(!t || t.stops.some(s => s.ref === ref)) return false; t.stops.push({ref, day: 0}); trips.set(id, t); return true; }
 };
 
 /* ---------- offline ---------- */
@@ -459,7 +477,7 @@ navigator.serviceWorker?.addEventListener("message", e => {
 document.addEventListener("DOMContentLoaded", () => { const n = store.get("lookout-offline", 0), el = $("offline-state"); if(el && n) el.textContent = `Saved for offline · ${n} species`; });
 
 window.Lookout = {ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
-  month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, regionsAt, saved, today, hash, rng, shuffle, photos, shrink, log, theme,
+  month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, regionsAt, saved, trips, today, hash, rng, shuffle, photos, shrink, log, theme,
   sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw,
   NAT, PNW, LICENSES, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap, GROUPS, group, groupChips, photoSrc, photoCredit, wikiLead, rankPhotos};
 }

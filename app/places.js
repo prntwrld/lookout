@@ -183,6 +183,15 @@ async function liveSeen(p, F){
   L.fillPhotos(box);
 }
 
+/* put this place on one of your trips that's still to come */
+const tripPick = p => {
+  const ts = Object.entries(L.trips.all()).filter(([, t]) => t.end >= L.today());
+  const on = ts.filter(([, t]) => t.stops.some(s => s.ref === "place:" + p.id));
+  return `<div class="add-trip">${on.map(([id, t]) => `<p class="small">On <a href="../trips/?id=${encodeURIComponent(id)}">${esc(t.name)}</a></p>`).join("")}
+    ${ts.length > on.length ? `<label class="small muted">Add to a trip <select id="add-trip"><option value="">Pick one</option>${ts.filter(x => !on.includes(x)).map(([id, t]) => `<option value="${esc(id)}">${esc(t.name)}</option>`).join("")}</select></label>`
+      : ts.length ? "" : `<p class="small muted"><a href="../trips/">Plan a trip</a> and this can go on it.</p>`}</div>`;
+};
+
 async function placePage(P, p){
   const F = await L.data.flowers().catch(() => null);
   const reg = P.region[p.region], e = L.log.get(p.id), mine = e?.photo ? await L.photos.get(p.id) : null;
@@ -202,7 +211,7 @@ async function placePage(P, p){
       <dl class="stats">${[["Distance", p.distance_mi != null && L.miles(p.distance_mi), "round trip"], ["Gain", p.gain_ft != null && L.feet(p.gain_ft)],
         ["High point", p.high_ft != null && L.feet(p.high_ft)], ["Season", L.seasonText(p.season), L.inSeason(p) ? "now" : ""], ["Pass", p.pass]]
         .filter(x => x[1]).map(([k, v, s]) => `<div${k === "Pass" ? ` class="wide"` : ""}><dt>${k}</dt><dd>${esc(v)}${s ? ` <small>${esc(s)}</small>` : ""}</dd></div>`).join("")}</dl></section>
-      <div class="split"><div>${books}${cond}</div><div>${await logBox(p)}</div></div>`
+      <div class="split"><div>${books}${cond}${tripPick(p)}</div><div>${await logBox(p)}</div></div>`
       + `<section class="section" id="seen"${seenRow(p, P, F) ? "" : " hidden"}><h2>You might see here in ${L.MONTHS[L.month() - 1]}<span class="aside"><a href="https://www.inaturalist.org/observations?lat=${p.pin.lat}&lng=${p.pin.lon}&radius=3&month=${L.month()}" target="_blank" rel="noopener">On iNaturalist ↗</a></span></h2><div class="row">${seenRow(p, P, F)}</div></section>`
       + L.section("The map", `<div class="mapbox small" id="map"></div>`)
       + L.section("Around here", around ? around + `<p class="credit">From OpenStreetMap</p>` : "")
@@ -211,6 +220,7 @@ async function placePage(P, p){
     L.map($("map"), P.list, {single: p, around: p.around || []});
     liveSeen(p, F);
     wireLog(p, () => placePage(P, p));
+    $("add-trip")?.addEventListener("change", e => { const t = e.target.value; if(t && L.trips.add(t, "place:" + p.id)){ L.toast(`On ${L.trips.get(t).name}`); placePage(P, p); } });
     L.ownPhotos(main);
   };
   await render();

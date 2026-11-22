@@ -505,3 +505,50 @@ footer a{color:inherit}
 .seed-pop .links{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 8px}
 .seed-pop .links a{font-size:13px}
 .seed-pop .btn{padding:5px 14px;font-size:14px}
+
+/* ---------- trips ---------- */
+.trip-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.trip-card{display:flex;flex-direction:column;gap:2px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);color:var(--ink);text-decoration:none}
+.trip-card:hover{border-color:var(--muted)}
+.trip-card b{font:400 21px/1.2 var(--display);margin-bottom:4px}
+.trip-card span{font-size:14px;color:var(--muted);line-height:1.4}
+.trip-form{max-width:760px}
+.trip-form label{display:block;font-size:14px;color:var(--muted);margin:0 0 10px}
+.trip-form input{display:block;width:100%;box-sizing:border-box;margin-top:4px;font:inherit;font-size:17px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.trip-form .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.trip-form .acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-top:18px}
+.trip-regions > div{margin:0 0 12px}
+.trip-regions b{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:400;margin-bottom:6px}
+.trip-regions .chip{font-size:14px;padding:4px 11px}
+.linkish.danger{color:#b8402f}
+.trip-acts{font-size:15px;margin:6px 0 0}
+#t-editbox:not(:empty){margin-top:20px;padding:20px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
+.trip-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:0 36px;align-items:start}
+.trip-side{position:sticky;top:12px}
+.trip-map{height:min(72vh,620px)}
+@media (max-width:880px){ .trip-grid{grid-template-columns:minmax(0,1fr)} .trip-side{position:static} .trip-map{height:420px} }
+.legend i.idea{background:var(--muted);opacity:.5;border-color:transparent}
+.day{margin:0 0 22px}
+.day h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font:400 20px var(--display);margin:0 0 6px}
+.day h3 .muted{font:400 15px var(--book)}
+.day h3 .total{margin-left:auto}
+.day .swatch{width:12px;height:12px;border-radius:50%;align-self:center}
+.stops{list-style:none;margin:0;padding:0}
+.stops li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.stops li:first-child{border-top:1px solid var(--line)}
+.stops .n{flex:none;width:22px;height:22px;border-radius:50%;color:#fff;font-size:12px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.stops .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;margin:0 6px}
+.stops .what{flex:1;min-width:0}
+.stops .what a,.stops .what .linkish{color:var(--ink);text-decoration:none;font-size:16px;line-height:1.3;text-align:left}
+.stops .what a:hover,.stops .what .linkish:hover{text-decoration:underline}
+.stops small{display:block;color:var(--muted);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.stops .ctl{display:flex;align-items:center;gap:4px;flex:none}
+.stops select{font:inherit;font-size:13px;padding:3px 4px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);max-width:9.5em}
+.ic{width:28px;height:28px;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0}
+.ic:hover:not(:disabled){color:var(--ink);border-color:var(--muted)}
+.ic:disabled{opacity:.3;cursor:default}
+@media (max-width:520px){ .stops li{flex-wrap:wrap} .stops .ctl{width:100%;justify-content:flex-end;padding-left:32px;box-sizing:border-box} .stops select{max-width:none;flex:1} }
+.ok{color:var(--accent)}
+.warn{color:#b8402f}
+.trip-pin{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;color:#fff;font:600 12px/1 var(--book);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);box-sizing:border-box}
+.add-trip{margin-top:16px}.add-trip p{margin:0 0 4px}.add-trip select{font:inherit;font-size:14px;margin-left:6px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}

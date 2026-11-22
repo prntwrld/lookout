@@ -6,11 +6,11 @@
    - Photos from iNaturalist and Wikimedia, and map tiles, are kept as you see them (up to a limit), so a page
      you've opened before still has its pictures and map offline.
    Bump VERSION when the list of shell files changes. */
-const VERSION = "lookout-v14";
+const VERSION = "lookout-v15";
 const SHELL = VERSION + "-shell", PACK = VERSION + "-pack", IMG = "lookout-img", TILES = "lookout-tiles";
 const BASE = new URL("./", self.location).href;
-const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.webmanifest",
-  "app/core.js", "app/sky.js", "app/map.js", "app/home.js", "app/places.js", "app/living.js", "app/sound.js", "app/key.js",
+const SHELL_FILES = ["", "places/", "trips/", "living/", "key/", "style.css", "manifest.webmanifest",
+  "app/core.js", "app/sky.js", "app/map.js", "app/home.js", "app/places.js", "app/trips.js", "app/living.js", "app/sound.js", "app/key.js",
   "vendor/leaflet/leaflet.js", "vendor/leaflet/leaflet.css", "vendor/leaflet/images/layers.png", "vendor/leaflet/images/marker-icon.png",
   "icons/icon.svg", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png",
   "fonts/fraunces-latin-wght-normal.woff2", "fonts/fraunces-latin-wght-italic.woff2",
