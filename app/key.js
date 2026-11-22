@@ -110,7 +110,7 @@ function fits(s, k, vals){
     return s.elev[1] + 500 >= a && s.elev[0] - 500 <= b;
   }
   if(k === "region") return !s.regions?.length || s.regions.includes(vals[0]);
-  if(k === "near"){ const set = NEAR.sets[vals[0]]; return !set || set.has(s.id); }
+  if(k === "near") return true;   /* near here doesn't rule anything out: what's been seen near you comes first (see draw) */
   const have = s[k] || [];
   return !have.length || vals.some(v => have.includes(v));
 }
@@ -119,7 +119,7 @@ const tile = (s, extra) => L.speciesTile(K.byId ? {...s, slug: String(s.id)} : s
 /* ---------- near here: what iNaturalist observers have recorded within 2, 10 or 50 km of you, for the key in use.
    Your location is kept on this device for a few hours, so changing keys or reloading keeps it. ---------- */
 const RADII = [["2", "Within 2 km"], ["10", "Within 10 km"], ["50", "Within 50 km"]];
-const NEAR = {at: null, key: "", sets: {}};
+const NEAR = {at: null, key: "", sets: {}, name: "", msg: ""};
 const nearQ = () => ({k: "near", title: "Recorded near here", opts: RADII.map(([v, label]) => ({v, label}))});
 async function loadNear(){
   const here = NEAR.at || L.store.get("lookout-near", null);
@@ -127,6 +127,12 @@ async function loadNear(){
   NEAR.at = here;
   const key = `${mode}|${here.lat}|${here.lon}`; if(NEAR.key === key) return;
   NEAR.key = key; NEAR.sets = {};
+  /* the place's name: the smallest of iNaturalist's places around you (a park, a beach), else the county */
+  L.nat("places/nearby", {nelat: here.lat + .001, nelng: here.lon + .001, swlat: here.lat - .001, swlng: here.lon - .001, per_page: 20}).then(j => {
+    const c = (j.results?.community || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0], st = (j.results?.standard || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0];
+    NEAR.name = c && c.bbox_area < .05 ? c.name.trim() : st ? `${st.name}${st.admin_level === 20 ? " County" : ""}` : "";
+    if(NEAR.name && mode !== "here" && mode !== "pick") draw();
+  }).catch(() => {});
   const got = await Promise.all(RADII.map(([r]) => L.nat("observations/species_counts", {lat: here.lat, lng: here.lon, radius: r, taxon_id: K.taxa, verifiable: "true", per_page: 500})
     .then(j => [r, new Set(j.results.map(x => x.taxon.id))]).catch(() => null)));
   if(NEAR.key !== key) return;
@@ -151,7 +157,8 @@ function draw(){
   if(mode === "pick") return drawPick();
   if(mode === "here") return drawHere();
   const qs = K.Q();
-  if(Object.keys(NEAR.sets).length) qs.unshift(nearQ()); else delete A.near;
+  const nearOn = !!Object.keys(NEAR.sets).length;
+  if(!nearOn) delete A.near;
   const others = k => F.list.filter(s => Object.entries(A).every(([k2, v]) => k2 === k || fits(s, k2, v)));
   $("qs").innerHTML = qs.map(q => {
     const base = others(q.k), sel = A[q.k] || [];
@@ -159,15 +166,36 @@ function draw(){
       <div class="chips">${q.opts.map(o => {
         const on = sel.includes(o.v), n = base.filter(s => fits(s, q.k, [o.v])).length;
         return `<button type="button" class="chip" data-k="${q.k}" data-v="${o.v}" aria-pressed="${on}"${!n && !on ? " disabled" : ""}>${o.icon || ""}${esc(o.label)} <span class="c">${n}</span></button>`;
-      }).join("")}</div>${q.k === "region" ? `<button type="button" class="linkish here-btn" id="here">Use my location</button>` : ""}</div>`;
+      }).join("")}</div></div>`;
   }).join("");
+  /* where you are: one switch, and once it's on, how far around you to look */
+  const pool = F.list.filter(s => Object.entries(A).every(([k, v]) => k === "near" || fits(s, k, v)));
+  $("qs").insertAdjacentHTML("afterbegin", `<div class="q here-q"><h3><span>Where you are</span>${nearOn || NEAR.at ? `<button class="linkish" data-loc-off>Stop using it</button>` : ""}</h3>
+    ${nearOn ? `<p class="small here-on"><b>Using your location</b>${NEAR.name ? ` · ${esc(NEAR.name)}` : ""}</p>
+      <div class="chips">${RADII.map(([v, label]) => `<button type="button" class="chip" data-nr="${v}" aria-pressed="${A.near?.[0] === v}">Seen ${label.toLowerCase()} <span class="c">${pool.filter(s => NEAR.sets[v]?.has(s.id)).length}</span></button>`).join("")}</div>
+      <p class="muted small" style="margin:8px 0 0">What's been seen near you comes first; everything else that fits stays in the list, after it.</p>`
+    : `<button type="button" class="chip" id="here">Use my location</button><p class="muted small" style="margin:8px 0 0">Fills in your region and elevation, and puts what's been seen around you first.</p>`}
+    ${NEAR.msg ? `<p class="small" style="margin:8px 0 0">${esc(NEAR.msg)}</p>` : ""}</div>`);
   if(mode !== "flowers") $("qs").insertAdjacentHTML("afterbegin", `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${mode}" data-near>Or see ${esc(K.name.toLowerCase())} recorded near you</button></p>`);
   const hits = F.list.filter(s => Object.entries(A).every(([k, v]) => fits(s, k, v))).sort((a, b) => b.obs - a.obs);
   const chosen = qs.flatMap(q => (A[q.k] || []).map(v => ({q, o: q.opts.find(o => o.v === v)}))).filter(x => x.o);
-  $("left").innerHTML = `<span class="count">${hits.length}<small>left</small></span>
+  const seenN = nearOn && A.near?.[0] ? hits.filter(s => NEAR.sets[A.near[0]]?.has(s.id)).length : null;
+  $("left").innerHTML = `<span class="count">${hits.length}<small>left${seenN != null ? `, ${seenN} seen near you` : ""}</small></span>
     <span class="answered">${chosen.map(({q, o}) => `<button type="button" class="chip on" data-k="${q.k}" data-v="${o.v}" title="Remove">${esc(o.label)}</button>`).join("")}</span>
     ${chosen.length ? `<button type="button" class="linkish small" id="reset">Start again</button>` : ""}`;
-  let body = hits.length ? `<div class="grid">${hits.slice(0, 120).map(s => tile(s)).join("")}</div>${hits.length > 120 ? `<p class="muted">and ${hits.length - 120} more — answer another question</p>` : ""}` : "";
+  const set = nearOn && A.near?.[0] ? NEAR.sets[A.near[0]] : null;
+  const seen = set ? hits.filter(s => set.has(s.id)) : [], rest = set ? hits.filter(s => !set.has(s.id)) : hits;
+  const grid = (l, n) => `<div class="grid">${l.slice(0, n).map(s => tile(s)).join("")}</div>${l.length > n ? `<p class="muted">and ${l.length - n} more — answer another question</p>` : ""}`;
+  const radius = set ? RADII.find(r => r[0] === A.near[0])[1].toLowerCase() : "";
+  let body = !hits.length ? "" : set ? (seen.length ? `<h3 class="near-head">Seen ${radius} of you <span class="muted">${seen.length}</span></h3>${grid(seen, 120)}` : `<p class="muted">Nothing that fits has been recorded ${radius} of you yet.</p>`)
+      + (!rest.length ? "" : A.region?.length
+        /* a region is known: the rest are in its range here */
+        ? `<h3 class="near-head">Also in its range here <span class="muted">${rest.length}</span></h3><p class="muted small" style="margin:-6px 0 12px">Not recorded nearby yet, but they fit your answers and live in this region.</p>${grid(rest, Math.max(24, 120 - seen.length))}`
+        /* no region (you're outside the guide's): what's been seen a little farther out, then the rest */
+        : (() => { const wide = NEAR.sets["50"] && A.near[0] !== "50" ? rest.filter(s => NEAR.sets["50"].has(s.id)) : [], far = rest.filter(s => !wide.includes(s));
+            return (wide.length ? `<h3 class="near-head">Seen farther out, within 50 km <span class="muted">${wide.length}</span></h3>${grid(wide, 60)}` : "")
+              + (far.length ? `<h3 class="near-head">Elsewhere in the Northwest <span class="muted">${far.length}</span></h3><p class="muted small" style="margin:-6px 0 12px">Not recorded near you; they fit your other answers.</p>${grid(far, 24)}` : ""); })())
+    : grid(hits, 120);
   if(!hits.length){
     /* nothing fits everything: show what misses by the fewest answers, and say which */
     const keys = Object.keys(A).filter(k => A[k]?.length);
@@ -224,16 +252,18 @@ const bandFor = ft => String(Math.max(0, BANDS.findIndex(([a, b]) => ft >= a && 
 
 function locate(){
   if(!navigator.geolocation){ L.toast("This browser can't share a location"); return; }
-  L.toast("Finding you…");
+  if(mode === "here") L.toast("Finding you…"); else { NEAR.msg = "Finding you…"; draw(); }
   navigator.geolocation.getCurrentPosition(async pos => {
     const {latitude: lat, longitude: lon, altitude} = pos.coords;
     if(mode === "here"){ A.at = [`${lat.toFixed(4)},${lon.toFixed(4)}`]; delete A.region; write(); return draw(); }
     const r = regionAt(lat, lon);
-    if(r){ A.region = [r.id]; auto.region = "from your location"; } else L.toast("You're outside the regions in this guide");
+    NEAR.msg = r ? "" : `You're outside the mountain regions this guide is built around, so region is left open. What's been seen near you comes first.`;
+    if(r){ A.region = [r.id]; auto.region = "from your location"; }
     /* and what's been recorded around you, if there's signal: 10 km to start */
     NEAR.at = {lat: +lat.toFixed(3), lon: +lon.toFixed(3), t: Date.now()}; L.store.set("lookout-near", NEAR.at); NEAR.key = "";
     await loadNear();
     if(NEAR.sets["10"]){ A.near = ["10"]; auto.near = "from your location"; }
+    else if(navigator.onLine === false) NEAR.msg = (NEAR.msg ? NEAR.msg + " " : "") + "With no signal, what's been seen near you can't be looked up; region and elevation still work.";
     if(mode === "flowers"){
       let ft = altitude != null ? altitude * 3.28084 : null;
       if(ft == null && navigator.onLine){
@@ -244,7 +274,7 @@ function locate(){
       if(ft != null){ A.elev = [bandFor(ft)]; auto.elev = `about ${L.num(Math.round(ft / 100) * 100)} ft, from your location`; }
     }
     write(); draw();
-  }, () => L.toast("No location — that's fine, pick a region instead"), {enableHighAccuracy: true, timeout: 15000, maximumAge: 600000});
+  }, () => { NEAR.msg = "Your browser didn't share a location. Allow it for this site, or pick a region below."; draw(); }, {enableHighAccuracy: true, timeout: 15000, maximumAge: 600000});
 }
 
 async function setMode(m){
@@ -314,7 +344,7 @@ async function start(){
   const [fl, bi] = await Promise.all([L.data.flowers().catch(() => null), L.data.birds().catch(() => null)]);
   packs = {flowers: fl, birds: bi};
   const r = L.rng("key " + L.today()), pool = [...(fl?.list || []), ...(bi?.list || [])].filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
-  main.innerHTML = `${pic ? `<section class="hero short"><div class="frame" data-hide-broken><a href="${L.speciesHref(bi?.byId[pic.id] ? {id: pic.id} : pic)}"><img src="${L.photoSrc(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="${esc(pic.common || pic.sci)}" crossorigin="anonymous"></a>${L.photoCredit(pic.photos[0])}</div>` : `<section class="hero">`}
+  main.innerHTML = `${pic ? `<section class="hero short"><div class="frame" data-hide-broken><a href="${L.speciesHref(bi?.byId[pic.id] ? {id: pic.id} : pic)}"><img src="${L.photoSrc(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="${esc(pic.common || pic.sci)}"></a>${L.photoCredit(pic.photos[0])}</div>` : `<section class="hero">`}
     <h1>The key</h1><p class="sub-line" id="what"></p></section>
     <div class="kgroups" id="kgroups"></div>
     <div class="key"><div class="qs" id="qs"></div><div id="results"><div class="left" id="left"></div><div id="hits"></div></div></div>
@@ -329,6 +359,12 @@ async function start(){
   main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b){ pickGroup(b.dataset.kg, b.hasAttribute("data-near")); if(b.closest("#hits")) $("kgroups").scrollIntoView({behavior: "smooth"}); } });
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
+    if(e.target.closest("[data-loc-off]")){
+      NEAR.at = null; NEAR.sets = {}; NEAR.key = ""; NEAR.name = ""; NEAR.msg = ""; L.store.set("lookout-near", null);
+      for(const k of ["near", "region", "elev"]) if(auto[k] || k === "near"){ delete A[k]; delete auto[k]; }
+      write(); return draw();
+    }
+    const nr = e.target.closest("[data-nr]"); if(nr){ A.near = [nr.dataset.nr]; delete auto.near; write(); return draw(); }
     const h = e.target.closest("[data-h]");
     if(h){ const {h: k, v} = h.dataset; A[k] = v ? [v] : []; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
     const c = e.target.closest("[data-clear]"); if(c){ delete A[c.dataset.clear]; delete auto[c.dataset.clear]; write(); return draw(); }
