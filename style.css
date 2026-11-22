@@ -140,20 +140,20 @@ h1 i,.sci{font-style:italic}
 
 /* ---------- the front page ---------- */
 /* Where to go, with the sky and the season beside it */
-.go-row{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:clamp(24px,3.4vw,40px);align-items:start}
-.go-row .cards{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.go-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:clamp(28px,4vw,56px);align-items:start}
+.go-row .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 .go-h{margin:0 0 12px}
-.cards + .go-h{margin-top:28px}
-.sky{padding:16px 18px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
-.sky .eyebrow{margin:0 0 2px}
-.sky-season{font:400 22px/1.2 var(--display);margin:0 0 10px}
-.sky-season small,.sky dd small{font:400 14px var(--book);color:var(--muted)}
-.sky-season small{display:block;margin-top:2px}
-.sky dl{margin:0;display:grid;gap:0}
-.sky dl div{display:grid;grid-template-columns:5.6em minmax(0,1fr);gap:10px;padding:6px 0;border-top:1px solid var(--line)}
-.sky dt{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:2px}
-.sky dd{margin:0;font-size:16px;line-height:1.35}
-.sky-where{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.cards + .go-h{margin-top:32px}
+.sky{padding:24px 28px 20px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
+.sky .eyebrow{margin:0 0 6px}
+.sky-season{font:400 30px/1.15 var(--display);margin:0 0 18px}
+.sky-season small{display:block;margin-top:6px;font:400 16px var(--book);color:var(--muted)}
+.sky dd small{font:400 15px var(--book);color:var(--muted);margin-left:4px}
+.sky dl{margin:0}
+.sky dl div{display:grid;grid-template-columns:6.6em minmax(0,1fr);gap:12px;padding:11px 0;border-top:1px solid var(--line);align-items:baseline}
+.sky dt{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sky dd{margin:0;font-size:17px;line-height:1.4}
+.sky-where{margin:12px 0 0;font-size:14px;color:var(--muted)}
 .wall.go{grid-auto-rows:170px}
 /* Cascadia: the tall map beside your progress */
 .atlas{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:44px;align-items:start}
@@ -299,13 +299,15 @@ footer a{color:inherit}
 
 /* ---------- narrower screens ---------- */
 @media (max-width: 980px){
+  .go-row{grid-template-columns:minmax(0,1fr);gap:36px}
+  .sky dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
   .wall{grid-template-columns:repeat(4,1fr)}
   .split{grid-template-columns:minmax(0,1fr);gap:36px}
   .key{grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:28px}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
 }
 @media (max-width: 760px){
-  .go-row{grid-template-columns:minmax(0,1fr);gap:32px}
+  .go-row .cards{gap:16px}
   .atlas{grid-template-columns:1fr;gap:30px}
   .mapbox.tall{aspect-ratio:4/5}
   .wall.go{grid-auto-rows:120px}
@@ -315,6 +317,7 @@ footer a{color:inherit}
   .peek.away{opacity:0;transform:translateY(12px);pointer-events:none}
 }
 @media (max-width: 640px){
+  .sky dl{grid-template-columns:minmax(0,1fr)}
   body{font-size:17px}
   .wrap{padding:0 16px}
   .top{flex-wrap:wrap;gap:10px 18px;padding-top:14px;padding-bottom:12px}

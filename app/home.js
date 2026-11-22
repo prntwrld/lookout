@@ -78,7 +78,7 @@ function almanac(){
       ${row("Daylight", dur && `${Math.floor(dur / 36e5)} h ${Math.round(dur % 36e5 / 60e3)} min${change}`)}
       ${row("Moon", esc(S.phaseName(m.phase).replace(/ moon$/i, "")))}
       ${row("Tonight", up.length && esc(list(up)))}
-      ${row("Meteors", shower && esc(`${shower.n}, ${shower.in < 0 ? "just peaked" : shower.in <= 1 ? "peak tonight" : "peak " + fmt(shower.t, {month: "short", day: "numeric"})}`))}</dl>
+      ${row("Meteors", shower && `${esc(shower.n)} <small>${shower.in < 0 ? "just peaked" : shower.in <= 1 ? "peak tonight" : "peak " + esc(fmt(shower.t, {month: "short", day: "numeric"}))}</small>`)}</dl>
     <p class="sky-where">In ${esc(HERE.name)}</p></aside>`;
 }
 
@@ -98,8 +98,8 @@ function goNow(P, r){
     /* plenty in season: two rows of six, one big tile (four cells) and eight small */
     body = `<div class="wall go">${now.slice(0, 9).map((p, i) => tile(p, i ? "" : "w2")).join("")}</div>`;
   } else {
-    /* fewer: the ones in season, then enough of those opening next to make two rows of three */
-    const next = soon.slice(0, Math.max(3, 6 - now.length));
+    /* fewer: the ones in season, then a row of two opening next (two rows when nothing's in season) */
+    const next = soon.slice(0, now.length ? 2 : 4);
     body = (now.length ? `<p class="eyebrow go-h">In season now</p>${cards(now)}` : "")
       + (next.length ? `<p class="eyebrow go-h">Opening next</p>${cards(next, true)}` : "");
   }
