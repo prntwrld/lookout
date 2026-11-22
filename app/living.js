@@ -233,24 +233,28 @@ async function speciesPage(F, s){
     ["Pojar", s.pojar ? `p. ${esc(s.pojar)}` : ""]
   ].filter(x => x[1]);
   const kind = ONE[s.group] || "";
-  main.innerHTML = `<section class="hero">${ph.length ? `<div class="frame" data-hide-broken id="big"><img src="${L.photoSrc(ph[0], "large")}"${s.pack ? ` data-fallback="${L.thumb(s)}"` : ""} alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.photoCredit(ph[0])}</div>
-      ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.photoSrc(p, "small")}" alt="" loading="lazy" crossorigin="anonymous"></button>`).join("")}</div>` : ""}` : ""}
+  /* like an encyclopedia: the name and the facts on the left; the photograph, the map of where it lives and where to
+     see it on the right (on a phone: the photograph first) */
+  const where_ = where.length ? `<h2 class="side-h">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
+        ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>`
+    : P ? `<h2 class="side-h">Where to see it</h2><p class="muted small">Not recorded near any of your places yet. A place shows here once iNaturalist observers have seen it near the trailhead${s.pack ? ", or when the place is in its range, elevation and flowering season" : ""}. The map shows where it lives.</p>` : "";
+  main.innerHTML = `<div class="sp-layout"><div class="sp-main">
       <p class="eyebrow">${esc([kind, s.family].filter(Boolean).join(" · "))}${s.pack && L.blooming(s, m) ? " · In bloom now" : ""}</p><h1>${esc(s.common || s.sci)}</h1>
-      <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
-    <div class="split"><div><dl class="facts">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
+      <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p>
+      <dl class="facts" style="margin-top:22px">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
       ${s.summary ? `<div class="about" style="margin-top:24px"><p>${esc(s.summary)}</p><p class="credit">From ${s.wiki ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>` : "Wikipedia"}, CC BY-SA</p></div>` : ""}
-      <div class="about" id="marks" style="margin-top:24px" hidden><h2 class="side-h">Field marks</h2><div></div><p class="credit">From the <a href="https://en.wikipedia.org/wiki/${encodeURIComponent((s.wiki || "").replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia article</a>'s description, CC BY-SA</p></div>
+      <div class="about" id="marks" style="margin-top:24px" hidden><h2 class="side-h">Field marks</h2><div></div><p class="credit"></p></div>
       <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : s.bird ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=birds">Name a bird with the key</a>` : s.packKey ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=${s.packKey.id}">Name one with the key</a>` : ""}</p></div>
-      <div>${where.length ? `<h2 class="side-h">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
-        ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>`
-        : P ? `<h2 class="side-h">Where to see it</h2><p class="muted small">Not recorded near any of your places yet. A place shows here once iNaturalist observers have seen it near the trailhead${s.pack ? ", or when the place is in its range, elevation and flowering season" : ""}. The map below shows where it lives.</p>` : ""}
-      ${mapBlock(where.length || P)}</div></div>
+    <aside class="sp-side">${ph.length ? `<figure class="plate"><div class="frame" data-hide-broken id="big"><img src="${L.photoSrc(ph[0], "large")}"${s.pack ? ` data-fallback="${L.thumb(s)}"` : ""} alt="${esc(s.common || s.sci)}">${L.photoCredit(ph[0])}</div>
+      ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.photoSrc(p, "small")}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}</figure>` : ""}
+      ${mapBlock(ph.length)}
+      ${where_ ? `<div class="where-box">${where_}</div>` : ""}</aside></div>
     <section class="section" id="alike" hidden><h2>Often confused with</h2><div class="row"></div></section>
     <section class="section" id="rel" hidden><h2>Relatives</h2><div class="row"></div></section>`;
   main.querySelector(".strip")?.addEventListener("click", e => {
     const b = e.target.closest("[data-i]"); if(!b) return;
     const p = ph[+b.dataset.i];
-    $("big").innerHTML = `<img src="${L.photoSrc(p, "large")}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.photoCredit(p)}`;
+    $("big").innerHTML = `<img src="${L.photoSrc(p, "large")}" alt="${esc(s.common || s.sci)}">${L.photoCredit(p)}`;
     main.querySelectorAll(".strip button").forEach(x => x.setAttribute("aria-current", x === b));
   });
   const show = el => { el.hidden = false; el.previousElementSibling?.removeAttribute("hidden"); };
@@ -270,7 +274,15 @@ async function speciesPage(F, s){
     show(el.parentElement);
   }).catch(() => {});
   rangeText(s.id).then(html => { const el = $("range-text"); if(el && html){ el.innerHTML = html; show(el.parentElement); } }).catch(() => {});
-  fieldMarks(s.wiki).then(ps => { if(!ps.length) return; $("marks").querySelector("div").innerHTML = ps.map(p => `<p>${esc(p)}</p>`).join(""); $("marks").hidden = false; }).catch(() => {});
+  /* field marks: the article iNaturalist links, or else the one under its scientific name (many fungi have only that) */
+  (async () => {
+    let title = s.wiki, ps = await fieldMarks(title).catch(() => []);
+    if(!ps.length && s.sci && s.sci !== s.wiki){ title = s.sci; ps = await fieldMarks(title).catch(() => []); }
+    if(!ps.length) return;
+    const box = $("marks"); box.querySelector("div").innerHTML = ps.map(p => `<p>${esc(p)}</p>`).join("");
+    box.querySelector(".credit").innerHTML = `From the <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia article</a>'s description, CC BY-SA`;
+    box.hidden = false;
+  })();
   /* look-alikes: the species iNaturalist's identifiers here most often mix it up with */
   L.nat("identifications/similar_species", {taxon_id: s.id, place_id: L.PNW}).then(j => {
     const l = (j.results || []).filter(r => r.taxon && r.taxon.id !== s.id && r.taxon.rank_level <= 10 && r.count >= 2).slice(0, 12);
@@ -292,6 +304,36 @@ async function speciesPage(F, s){
   } else fill(local.map(x => L.speciesTile(x)).join(""));
 }
 
+/* ---------- the kinds within a group or a taxon: its families (or orders, or genera) recorded here, the most seen first ---------- */
+const CHILD = {kingdom: "phylum", phylum: "class", subphylum: "class", class: "order", subclass: "order", superorder: "order", order: "family", suborder: "family", infraorder: "family",
+  superfamily: "family", family: "genus", subfamily: "genus", tribe: "genus"};
+const KINDS = {phylum: "Phyla", class: "Classes", order: "Orders", family: "Families", genus: "Genera"};
+async function kindsOf(taxa, rank){
+  /* this region's species (the 500 most recorded), each counted towards every taxon above it */
+  const sp = await L.nat("observations/species_counts", {place_id: L.PNW, taxon_id: taxa, quality_grade: "research", per_page: 500}).then(j => j.results).catch(() => []);
+  if(!sp.length) return [];
+  const up = new Map();
+  for(const r of sp) for(const a of r.taxon.ancestor_ids || []){ const e = up.get(a) || {n: 0, obs: 0, top: r.taxon}; e.n++; e.obs += r.count; up.set(a, e); }
+  /* then which of those are at the rank wanted: that rank's taxa within it, worldwide, most observed first */
+  const ranked = (await Promise.all(String(taxa).split(",").map(id => L.nat("taxa", {taxon_id: id, rank, per_page: 200, order_by: "observations_count", is_active: "true"}).then(j => j.results).catch(() => [])))).flat();
+  return ranked.filter(x => up.has(x.id)).map(x => ({t: x, ...up.get(x.id)})).sort((a, b) => b.obs - a.obs);
+}
+async function showKinds(sec, taxa, rank){
+  if(!sec || navigator.onLine === false) return;
+  const l = await kindsOf(taxa, rank); if(l.length < 2) return;
+  const box = sec.querySelector(".cards"), FEW = 12;
+  const card = x => { const c = L.taxonCard(x.t), p = L.taxonCard(x.top).photo || c.photo, name = c.common || x.t.name;   /* its most-seen species here, not a picture from elsewhere */
+    return `<a class="card" href="${L.speciesHref(x.t)}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(name)}</span>`}</div>
+      <h3>${esc(name)}</h3><p>${c.common ? `${sciName(x.t)} · ` : ""}${L.num(x.n)} ${x.n === 1 ? "species" : "species"} here</p></a>`; };
+  let all = false;
+  const draw = () => { box.innerHTML = (all ? l : l.slice(0, FEW)).map(card).join("");
+    sec.querySelector(".more-kinds")?.remove();
+    if(l.length > FEW) box.insertAdjacentHTML("afterend", `<p class="more-kinds" style="margin-top:20px"><button type="button" class="btn ghost">${all ? "Show fewer" : `Show all ${l.length}`}</button></p>`); };
+  sec.addEventListener("click", e => { if(e.target.closest(".more-kinds button")){ all = !all; draw(); if(!all) sec.scrollIntoView({block: "nearest"}); } });
+  sec.querySelector("h2 .n").textContent = l.length;
+  draw(); sec.hidden = false;
+}
+
 /* ---------- a genus, family, order or class: its picture, where it sits, and its species recorded here ---------- */
 async function rankPage(F, t){
   const name = L.cap(t.preferred_common_name || "") || t.name, rank = RANK[t.rank] || L.cap(t.rank);
@@ -299,13 +341,24 @@ async function rankPage(F, t){
   const photo = L.taxonCard(t).photo || await L.wikiLead(wikiTitle(t.wikipedia_url));
   const summary = shorten(plain(t.wikipedia_summary)), wiki = wikiTitle(t.wikipedia_url), up = treeLine(t.ancestors);
   const kind = ONE[t.iconic_taxon_name] || "";
-  main.innerHTML = `<section class="hero">${photo ? `<div class="frame" data-hide-broken><img src="${L.photoSrc(photo, "large")}" alt="${esc(name)}" crossorigin="anonymous">${L.photoCredit(photo)}</div>` : ""}
+  const below = CHILD[t.rank];
+  main.innerHTML = `<div class="sp-layout"><div class="sp-main">
       <p class="eyebrow">${esc([rank, kind].filter(Boolean).join(" · "))}</p><h1>${esc(name)}</h1>
-      <p class="sub-line">${sciName(t)}</p></section>
-    <div class="split"><div><dl class="facts">${up ? `<dt>Classification</dt><dd>${up}</dd>` : ""}${statusText(t.conservation_statuses) ? `<dt>Status</dt><dd>${statusText(t.conservation_statuses)}</dd>` : ""}<dt hidden>Sightings</dt><dd hidden><span id="sightings"></span></dd></dl>
+      <p class="sub-line">${sciName(t)}</p>
+      <dl class="facts" style="margin-top:22px">${up ? `<dt>Classification</dt><dd>${up}</dd>` : ""}${statusText(t.conservation_statuses) ? `<dt>Status</dt><dd>${statusText(t.conservation_statuses)}</dd>` : ""}<dt hidden>Recorded here</dt><dd hidden id="g-species"></dd><dt hidden>Sightings</dt><dd hidden><span id="sightings"></span></dd></dl>
       ${summary ? `<div class="about" style="margin-top:24px"><p>${esc(summary)}</p><p class="credit">From <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</p></div>` : ""}
-      <p style="margin-top:18px"><a href="${L.inatTaxon(t.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a></p></div><div>${mapBlock(false)}</div></div>
+      <p style="margin-top:18px"><a href="${L.inatTaxon(t.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a></p></div>
+    <aside class="sp-side">${photo ? `<figure class="plate"><div class="frame" data-hide-broken><img src="${L.photoSrc(photo, "large")}" alt="${esc(name)}">${L.photoCredit(photo)}</div></figure>` : ""}${mapBlock(!!photo)}</aside></div>
+    <section class="section" id="g-now" hidden><h2>Out in ${MONTH}</h2><div class="row"></div></section>
+    ${below ? `<section class="section" id="kinds-sec" hidden><h2>${KINDS[below]} <span class="n"></span></h2><div class="cards" id="kind-cards"></div></section>` : ""}
     <section class="section" id="members"><h2 id="members-h">Species recorded in the Pacific Northwest</h2><div id="list"><p class="status muted">Asking iNaturalist…</p></div></section>`;
+  L.nat("observations/species_counts", {place_id: L.PNW, taxon_id: t.id, quality_grade: "research", per_page: 0}).then(j => {
+    const el = $("g-species"); if(!el || !j.total_results) return; el.innerHTML = `${L.num(j.total_results)} species in the Pacific Northwest`; el.hidden = false; el.previousElementSibling.hidden = false; }).catch(() => {});
+  counts({month: L.month(), taxon_id: t.id, per_page: 30}).then(l => {
+    if(l.length < 4) return;
+    const sec = $("g-now"); sec.querySelector(".row").innerHTML = l.map(x => tileOf(F, x, `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`)).join(""); sec.hidden = false; L.fillPhotos(sec);
+  }).catch(() => {});
+  if(below) showKinds($("kinds-sec"), String(t.id), below);
   L.nat("observations", {taxon_id: t.id, place_id: L.PNW, verifiable: "true", per_page: 0}).then(j => {
     const el = $("sightings"); if(!el || !j.total_results) return;
     el.innerHTML = `${L.num(j.total_results)} in the Pacific Northwest <a class="small" href="https://www.inaturalist.org/observations?taxon_id=${t.id}&place_id=${L.PNW}" target="_blank" rel="noopener">see them ↗</a>`;
@@ -457,7 +510,7 @@ async function week(F){
   const sec = $("week"), body = sec.querySelector(".body");
   const tile = x => { const name = x.t.common || x.t.sci;
     return `<a class="sp" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
-      <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous"></div><b>${esc(name)}</b></a>`; };
+      <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy"></div><b>${esc(name)}</b></a>`; };
   sec.hidden = false;
   /* twelve, with their names; twelve more at a time on request */
   let n = 12;
@@ -477,7 +530,7 @@ async function guidePage(F){
   const r = L.rng("living " + L.today()), st = state();
   const pick = await heroPick(F, r);
   const quiet = (id, title, sub) => `<section class="section" id="${id}" hidden><h2>${title}</h2>${sub ? `<p class="muted small sec-sub">${sub}</p>` : ""}<div class="body"></div></section>`;
-  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.photoSrc(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.photoCredit(pick.photo)}</div>` : `<section class="hero">`)
+  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.photoSrc(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}"></a>${L.photoCredit(pick.photo)}</div>` : `<section class="hero">`)
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
     ${quiet("out", `Out in ${MONTH}`, "")}
     <div class="split pair">${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
@@ -532,7 +585,7 @@ async function groupPage(F, key){
   const packTop = g.pack && F ? [...F.list].sort((a, b) => b.obs - a.obs).find(x => x.photos?.length) : null;
   if(packTop) photo = packTop.photos[0];
   const kinds = top.sub && !sub ? top.sub : [];
-  main.innerHTML = `<section class="hero">${photo ? `<div class="frame" data-hide-broken><a href="${packTop ? L.speciesHref(packTop) : L.speciesHref(ht)}"><img src="${L.photoSrc(photo, "large")}"${packTop ? ` data-fallback="${L.thumb(packTop)}"` : ""} alt="" crossorigin="anonymous"></a>${L.photoCredit(photo)}</div>` : ""}
+  main.innerHTML = `<section class="hero">${photo ? `<div class="frame" data-hide-broken><a href="${packTop ? L.speciesHref(packTop) : L.speciesHref(ht)}"><img src="${L.photoSrc(photo, "large")}"${packTop ? ` data-fallback="${L.thumb(packTop)}"` : ""} alt=""></a>${L.photoCredit(photo)}</div>` : ""}
       <p class="eyebrow"><a href="./" class="crumb">Living things</a>${sub ? ` · <a href="?g=${top.k}" class="crumb">${esc(top.name)}</a>` : ""}</p>
       <h1>${esc(g.name)}</h1>${words.hook ? `<p class="sub-line">${esc(words.hook)}</p>` : ""}</section>
     <div class="split"><div>
@@ -544,6 +597,7 @@ async function groupPage(F, key){
     <section class="section" id="classics" hidden><h2>Northwest classics</h2><div class="row"></div></section>
     <section class="section" id="g-now" hidden><h2>Out in ${MONTH}</h2><div class="row"></div></section>
     ${kinds.length ? `<section class="section"><h2>Kinds of ${esc(g.name.toLowerCase())}</h2><div class="cards" id="kinds">${kinds.map(k => `<a class="card" href="?g=${k.k}" data-k="${k.k}"><div class="pic"><span class="ph">${L.initials(k.name)}</span></div><h3>${esc(k.name)}</h3>${D[k.k]?.hook ? `<p>${esc(D[k.k].hook)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
+    ${taxa ? `<section class="section" id="kinds-sec" hidden><h2>${kinds.length ? "Families" : `Kinds of ${esc(g.name.toLowerCase())}`} <span class="n"></span></h2><div class="cards"></div></section>` : ""}
     ${top.k === "tidepools" && !sub ? `<section class="section" id="care" hidden><h2>Looking without harming</h2><ul class="around"></ul></section>` : ""}
     <section class="section" id="most"><h2 id="most-h">Most recorded</h2>
       ${g.pack ? "" : `<div class="filters"><input type="search" id="gq" placeholder="Find ${esc(g.name.toLowerCase())}" aria-label="Find ${esc(g.name.toLowerCase())}"></div>`}<div id="list"></div></section>`;
@@ -578,16 +632,17 @@ async function groupPage(F, key){
     L.nat("taxa/" + ids.join(",")).then(j => {
       const by = Object.fromEntries(j.results.map(t => [String(t.id), L.taxonCard(t).photo]));
       for(const k of kinds){ const p = by[(k.taxa || "").split(",")[0]], c = main.querySelector(`#kinds [data-k="${k.k}"] .pic`);
-        if(p && c) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" crossorigin="anonymous" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }
+        if(p && c) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }
       /* a kind whose own picture isn't openly licensed: its most-recorded species' instead */
       for(const k of kinds){ const c = main.querySelector(`#kinds [data-k="${k.k}"] .pic`); if(!c || c.querySelector("img") || !k.taxa) continue;
-        counts({taxon_id: k.taxa, per_page: 5}).then(l => { const p = l.find(x => x.t.photo)?.t.photo; if(p) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" crossorigin="anonymous" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }).catch(() => {}); }
+        counts({taxon_id: k.taxa, per_page: 5}).then(l => { const p = l.find(x => x.t.photo)?.t.photo; if(p) c.innerHTML = `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">`; }).catch(() => {}); }
     }).catch(() => {});
     /* the wildflowers are the pack: their card uses one of its thumbnails */
     const fl = main.querySelector('#kinds [data-k="flowers"] .pic'), s0 = F?.list?.[0];
     if(fl && s0) fl.innerHTML = `<img src="${L.thumb(s0)}" alt="" loading="lazy">`;
   }
   if(top.k === "tidepools" && !sub) tidePools().catch(() => {});
+  if(taxa) showKinds($("kinds-sec"), taxa, "family");
 
   /* most recorded, a page at a time; the search looks only within the group */
   if(g.pack) return flowerGrid(F, $("list"), $("most-h"));
@@ -683,18 +738,85 @@ async function tidePools(){
   setStation(saved);
 }
 
+/* ---------- Foraging and the harvest (living/?f=foraging): wild food by the month, the look-alikes that can kill,
+   shellfish safety, and the market's and the garden's year (data/foraging.json) ---------- */
+const KIND_ORDER = ["berries", "greens", "mushrooms", "nuts", "shore"];
+async function taxaById(ids){
+  const out = {}, u = [...new Set(ids.filter(Boolean))];
+  for(let i = 0; i < u.length; i += 30) try { (await L.nat("taxa/" + u.slice(i, i + 30).join(","))).results.forEach(t => out[t.id] = t); } catch(e){}
+  return out;
+}
+async function foragingPage(F){
+  const D = await L.data.json("foraging.json").catch(() => null);
+  if(!D){ main.innerHTML = `<h1>Foraging</h1><p class="muted">The foraging guide didn't load.</p>`; return; }
+  document.title = "Foraging and the harvest — Lookout";
+  const m = L.month(), T = navigator.onLine === false ? {} : await taxaById([...D.wild.flatMap(w => [w.id, w.dangerId]), ...D.deadly.map(d => d.id)]);
+  const card = id => T[id] ? L.taxonCard(T[id]) : null;
+  /* the picture: the first thing in season now that has an open photo */
+  const now = D.wild.filter(w => w.months.includes(m));
+  const lead = [...now.filter(w => w.kind === "mushrooms"), ...now.filter(w => w.kind === "berries"), ...now, ...D.wild].map(w => card(w.id)).find(c => c?.photo);
+  const inMonth = (list, mm) => list.filter(x => x.months.includes(mm)).map((x, i) => i ? x.name.toLowerCase() : x.name);
+  main.innerHTML = `<section class="hero">${lead ? `<div class="frame" data-hide-broken><a href="${L.speciesHref(lead)}"><img src="${L.inat(lead.photo, "large")}" alt="${esc(lead.common || lead.sci)}"></a>${L.photoCredit(lead.photo)}</div>` : ""}
+      <p class="eyebrow"><a href="./" class="crumb">Living things</a></p><h1>Foraging and the harvest</h1><p class="sub-line">${esc(D.hook)}</p></section>
+    <div class="split"><div><div class="about">${D.intro.map(p => `<p>${esc(p)}</p>`).join("")}</div>
+      <h2 class="side-h" style="margin-top:28px">First, the rules</h2><ul class="around rules">${D.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>
+      <div><h2 class="side-h">At the market in ${MONTH}</h2><p>${esc(inMonth(D.harvest, m).join(", ") || "Little fresh; stored apples, squash and roots")}.</p>
+        <h2 class="side-h" style="margin-top:28px">Sow or plant now</h2><p>${esc(inMonth(D.sow, m).join(", ") || "Nothing outdoors yet west of the Cascades; plan, and order seed")}.</p>
+        <p class="muted small">For gardens west of the Cascades; a month or so later east of the mountains and up high.</p></div></div>
+    <section class="section" id="wild"><h2>Wild food in <span id="wild-m">${MONTH}</span></h2>
+      <div class="chips" id="months" style="margin:0 0 18px">${L.MON.map((n, i) => `<button type="button" class="chip" data-m="${i + 1}" aria-pressed="${i + 1 === m}">${n}</button>`).join("")}</div><div id="wild-list"></div></section>
+    <section class="section" id="doubles" hidden><h2>Don't confuse them</h2><p class="muted small sec-sub">Good to eat on the left; on the right, the look-alike that grows in the same places.</p><div class="doubles"></div></section>
+    <section class="section" id="deadly" hidden><h2>The deadly ones</h2><div class="cards"></div></section>
+    <section class="section"><h2>Shellfish</h2><p>Clams, mussels and oysters can carry toxins from algal blooms that cooking doesn't destroy, and a beach that was fine last week can close today. Check before every trip:</p>
+      <ul class="around">${D.shellfish.map(x => `<li><a href="${esc(x.href)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a></li>`).join("")}</ul></section>
+    <div class="split section"><div><h2 class="side-h">The year at the market</h2><dl class="facts">${D.harvest.map(x => `<dt>${esc(x.name)}</dt><dd>${monthBar(x.months, m)}</dd>`).join("")}</dl></div>
+      <div><h2 class="side-h">When to sow</h2><dl class="facts">${D.sow.map(x => `<dt>${esc(x.name)}</dt><dd>${monthBar(x.months, m)}</dd>`).join("")}</dl></div></div>`;
+
+  /* wild food for a month, kind by kind */
+  const tile = (w, extra = "") => { const c = card(w.id); if(!c) return "";
+    return F?.byId[c.id] ? L.speciesTile(F.byId[c.id], extra) : L.liveTile(c, extra); };
+  const drawWild = mm => {
+    $("wild-m").textContent = L.MONTHS[mm - 1];
+    const l = D.wild.filter(w => w.months.includes(mm));
+    $("wild-list").innerHTML = l.length ? KIND_ORDER.map(k => { const ks = l.filter(w => w.kind === k); if(!ks.length) return "";
+      return `<h3 class="kind-h">${esc(D.groups[k])}</h3><div class="row">${ks.map(w => tile(w, `<span class="note">${esc(L.bloomText(w.months))}</span>`)).join("")}</div>`; }).join("")
+      : `<p class="muted">Little to pick wild in ${L.MONTHS[mm - 1]}. Try another month.</p>`;
+    L.fillPhotos($("wild-list"));
+  };
+  $("months").addEventListener("click", e => { const b = e.target.closest("[data-m]"); if(!b) return;
+    $("months").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x === b)); drawWild(+b.dataset.m); });
+  drawWild(m);
+  /* the doubles: each edible with the dangerous plant or mushroom it's taken for */
+  const pairs = D.wild.filter(w => w.danger && card(w.id) && card(w.dangerId));
+  if(pairs.length){
+    $("doubles").querySelector(".doubles").innerHTML = pairs.map(w => `<div class="double"><div class="two">${tile(w, `<span class="note">Edible</span>`)}${tile({id: w.dangerId}, `<span class="note danger">Dangerous</span>`)}</div><p class="small">${esc(w.dangerNote)}</p></div>`).join("");
+    $("doubles").hidden = false; L.fillPhotos($("doubles"));
+  }
+  /* the deadly */
+  const dl = D.deadly.filter(d => card(d.id));
+  if(dl.length){
+    $("deadly").querySelector(".cards").innerHTML = dl.map(d => { const c = card(d.id), p = c.photo;
+      return `<a class="card" href="${L.speciesHref(c)}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(c.common || c.sci)}</span>`}</div><h3>${esc(c.common || c.sci)}</h3><p>${esc(d.note)}</p></a>`; }).join("");
+    $("deadly").hidden = false;
+  }
+}
+
 /* ---------- Explore: a card for each group, in place of one long wall ---------- */
 async function explore(F){
   const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
   const groups = L.GROUPS.filter(g => g.k !== "all");
-  $("explore-cards").innerHTML = groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
+  $("explore-cards").innerHTML = `<a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a>` + groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
     <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
   /* each card's picture: its first classic */
+  /* foraging's card: the chanterelle (or what's in season) */
+  L.data.json("foraging.json").then(Fo => { const w = Fo.wild.find(x => x.months.includes(L.month()) && x.kind === "mushrooms") || Fo.wild.find(x => x.months.includes(L.month())) || Fo.wild[0];
+    return w?.id && L.nat("taxa/" + w.id); }).then(j => { const p = j && L.taxonCard(j.results[0]).photo, c = $("explore-cards").querySelector('[data-k="foraging"] .pic');
+    if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }).catch(() => {});
   const ids = groups.map(g => D[g.k]?.ids?.[0]).filter(Boolean);
   if(ids.length && navigator.onLine !== false) L.nat("taxa/" + ids.join(",")).then(j => {
     const by = Object.fromEntries(j.results.map(t => [t.id, L.taxonCard(t).photo]));
     for(const g of groups){ const p = by[D[g.k]?.ids?.[0]], c = $("explore-cards").querySelector(`[data-k="${g.k}"] .pic`);
-      if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", crossOrigin: "anonymous", title: `Photo © ${p.by} · ${p.lic}`})); }
+      if(p && c) c.querySelector(".ph")?.replaceWith(Object.assign(document.createElement("img"), {src: L.inat(p, "medium"), alt: "", loading: "lazy", title: `Photo © ${p.by} · ${p.lic}`})); }
   }).catch(() => {});
 }
 
@@ -725,6 +847,7 @@ L.data.flowers().catch(() => null).then(async F => {
     if(location.hash) history.replaceState(null, "", location.pathname + "?g=" + gk);
     return groupPage(F, gk);
   }
+  if(new URLSearchParams(location.search).get("f") === "foraging") return foragingPage(F);
   if(!id) return guidePage(F);
   /* a number above species level (a genus, a family…) has a page of its own */
   if(/^\d+$/.test(id) && !F?.byId[id]){

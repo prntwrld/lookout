@@ -72,7 +72,7 @@ function trackList(host, tracks, {chain = false} = {}){
   const list = {host, tracks, chain};
   host.innerHTML = `<ol class="tracks">${tracks.map((t, i) => `<li class="track" data-i="${i}">
       <button type="button" class="play" data-play="${i}" aria-label="Play ${esc(t.name || "recording")}">${PLAY}</button>
-      <a class="tr-img" href="${esc(t.href || "#")}">${t.img ? `<img src="${esc(t.img)}" alt="" loading="lazy" crossorigin="anonymous">` : ""}</a>
+      <a class="tr-img" href="${esc(t.href || "#")}">${t.img ? `<img src="${esc(t.img)}" alt="" loading="lazy">` : ""}</a>
       <div class="tr-text"><span class="tr-name">${t.href ? `<a href="${esc(t.href)}">${esc(t.name)}</a>` : esc(t.name)}</span>
         <span class="tr-meta">${esc([t.note, `© ${t.by}`, t.lic].filter(Boolean).join(" · "))}${t.page ? ` · <a href="${esc(t.xc ? "https://xeno-canto.org/" + t.xc : t.page)}" ${ext}>${esc(t.xc ? "XC" + t.xc : t.from)}</a>` : ""}</span>
         <span class="tr-bar"><i></i></span></div>
