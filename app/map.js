@@ -3,7 +3,7 @@
    done it, hollow when you haven't. Leaflet is kept in vendor/, so the pins still draw offline; tiles you've
    already seen come from the offline worker's cache, and the rest show as plain ground. */
 {
-const L_ = window.L, {esc, placeHref, log, KIND, feet, miles} = window.Lookout;
+const L_ = window.L, {esc, placeHref, log, KIND, feet, miles, ROOT, store} = window.Lookout;
 
 const pin = (done, big) => L_.divIcon({className: "", iconSize: big ? [26, 26] : [18, 18], iconAnchor: big ? [13, 13] : [9, 9],
   html: `<span class="pin${done ? " done" : ""}${big ? " big" : ""}"></span>`});
@@ -12,8 +12,9 @@ const dot = kind => L_.divIcon({className: "", iconSize: [12, 12], iconAnchor: [
 function map(el, places, {single = null, around = [], outline = null} = {}){
   if(!L_ || !el) return null;
   const m = L_.map(el, {scrollWheelZoom: false, zoomControl: true, attributionControl: true, tap: true, zoomSnap: outline ? .25 : 1});
-  L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, crossOrigin: "anonymous",
-    attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`}).addTo(m);
+  const osm = L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, crossOrigin: "anonymous",
+    attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>`});
+  if(!outline?.relief) osm.addTo(m);
   const marks = [];
   const draw = () => {
     marks.forEach(k => k.remove()); marks.length = 0;
@@ -36,6 +37,7 @@ function map(el, places, {single = null, around = [], outline = null} = {}){
     pts.length > 1 ? m.fitBounds(pts, {padding: [30, 30], maxZoom: 14}) : m.setView(pts[0], 13);
   } else if(outline){
     m.setView([51, -126.5], 4);
+    if(outline.relief) relief(m, outline, osm);
     cascadia(m, outline);
   } else if(places.length){
     m.fitBounds(places.map(p => [p.pin.lat, p.pin.lon]), {padding: [24, 24]});
@@ -45,8 +47,85 @@ function map(el, places, {single = null, around = [], outline = null} = {}){
   return m;
 }
 
-/* Cascadia (British Columbia, Washington, Oregon and Idaho, data/cascadia.json): the land outside it faded, the edge drawn
-   in the accent, and the map framed on it */
+/* Cascadia's ground under the front page's map: the relief (data/cascadia-relief.webp, grey for the light on the land,
+   alpha for land) coloured from the theme's tokens on a canvas, and Natural Earth's rivers and lakes (data/rivers.json)
+   in --muted, or in --water when the reader switches "Rivers in blue" on; and, with the "Borders" switch, the country,
+   state and province lines (data/borders.json) in the ink, dashed for states and provinces. From zoom 7 OpenStreetMap's tiles take over. */
+const RIVERS = "lookout-rivers", BORDERS = "lookout-borders";
+function relief(m, c, osm){
+  const [w, s, e, n] = c.relief.bounds;
+  for(const [k, z] of [["relief", 150], ["rivers", 350], ["borders", 360]]){ m.createPane(k).style.zIndex = z; m.getPane(k).style.pointerEvents = "none"; }
+  let ground = null;   /* made once the first colouring is ready, so it never shows as a broken picture */
+  const show = u => ground ? ground.setUrl(u) : ground = L_.imageOverlay(u, [[s, w], [n, e]], {pane: "relief", interactive: false,
+    attribution: `<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> · <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>`}).addTo(m);
+  const water = L_.layerGroup().addTo(m), lines = L_.layerGroup();
+  const img = new Image();
+  let url = null, rivers = null;
+  const rgb = h => { h = h.replace("#", ""); if(h.length === 3) h = [...h].map(x => x + x).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) || 0); };
+  const paint = () => {
+    if(!img.naturalWidth) return;
+    const css = getComputedStyle(document.documentElement), tok = k => rgb(css.getPropertyValue(k).trim());
+    const bg = tok("--bg"), ink = tok("--ink"), sea = tok("--soft"), dark = bg[0] + bg[1] + bg[2] < 384;
+    /* light: shadows toward the ink, the lit slopes toward white; dark: shadows toward black, lit slopes toward the ink */
+    const lo = dark ? [0, 0, 0] : ink, hi = dark ? ink : [255, 255, 255], kl = dark ? .8 : .58, kh = dark ? .22 : .8;
+    const cv = Object.assign(document.createElement("canvas"), {width: img.naturalWidth, height: img.naturalHeight});
+    const cx = cv.getContext("2d"); cx.drawImage(img, 0, 0);
+    const d = cx.getImageData(0, 0, cv.width, cv.height), p = d.data;
+    for(let i = 0; i < p.length; i += 4){
+      const t = p[i] / 255 - .625, a = p[i + 3] / 255, to = t < 0 ? lo : hi, f = t < 0 ? -t / .625 * kl : t / .375 * kh;
+      for(let j = 0; j < 3; j++){ const land = bg[j] + (to[j] - bg[j]) * f; p[i + j] = sea[j] + (land - sea[j]) * a; }
+      p[i + 3] = 255;
+    }
+    cx.putImageData(d, 0, 0);
+    cv.toBlob(b => { if(!b) return; const old = url; url = URL.createObjectURL(b); show(url); if(old) setTimeout(() => URL.revokeObjectURL(old), 1000); });
+  };
+  const blue = () => !!store.get(RIVERS, false);
+  const tint = () => {
+    if(!rivers) return;
+    const css = getComputedStyle(document.documentElement), col = css.getPropertyValue(blue() ? "--water" : "--muted").trim(), sea = css.getPropertyValue("--soft").trim();
+    water.eachLayer(k => k.options.fill ? k.setStyle({fillColor: blue() ? col : sea, fillOpacity: blue() ? .45 : 1, color: col}) : k.setStyle({color: col, opacity: blue() ? .9 : .75}));
+  };
+  img.onload = paint; img.src = ROOT + "data/" + c.relief.file;
+  window.Lookout.data.json("rivers.json").then(r => {
+    rivers = r;
+    const flip = ring => ring.map(([lon, lat]) => [lat, lon]);
+    for(const l of r.lakes) L_.polygon(flip(l), {pane: "rivers", weight: .6, fill: true, interactive: false}).addTo(water);
+    for(const v of r.rivers) L_.polyline(flip(v.c), {pane: "rivers", weight: Math.max(.6, 2.3 - v.r * .2), lineCap: "round", lineJoin: "round", interactive: false}).addTo(water);
+    tint();
+  }).catch(() => {});
+  const edges = () => !!store.get(BORDERS, false);
+  let drawn = false;
+  const outlines = () => {
+    if(!edges()){ lines.remove(); return; }
+    lines.addTo(m);
+    const col = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+    lines.eachLayer(k => k.setStyle({color: col}));
+    if(drawn) return;
+    drawn = true;
+    window.Lookout.data.json("borders.json").then(b => {
+      const flip = ring => ring.map(([lon, lat]) => [lat, lon]);
+      for(const l of b.state) L_.polyline(flip(l), {pane: "borders", color: col, weight: 1.1, opacity: .5, dashArray: "5 4", interactive: false}).addTo(lines);
+      for(const l of b.country) L_.polyline(flip(l), {pane: "borders", color: col, weight: 1.4, opacity: .6, interactive: false}).addTo(lines);
+    }).catch(() => { drawn = false; });
+  };
+  outlines();
+  /* the switches beside the legend */
+  const box = m.getContainer().parentElement;
+  for(const [sel, key, after] of [["[data-rivers]", RIVERS, tint], ["[data-borders]", BORDERS, outlines]]){
+    const btn = box?.querySelector(sel); if(!btn) continue;
+    btn.setAttribute("aria-pressed", !!store.get(key, false));
+    btn.addEventListener("click", () => { const on = !store.get(key, false); store.set(key, on); btn.setAttribute("aria-pressed", on); after(); });
+  }
+  /* close in, OpenStreetMap's tiles show the trails and roads; the relief and the rivers step back */
+  const sync = () => { const near = m.getZoom() >= 7;
+    if(near && !m.hasLayer(osm)) osm.addTo(m); else if(!near && m.hasLayer(osm)) osm.remove();
+    for(const k of ["rivers", "borders"]) m.getPane(k).style.display = near ? "none" : ""; };
+  m.on("zoomend", sync); sync();
+  document.addEventListener("lookout-theme", () => { paint(); tint(); outlines(); });
+}
+
+/* Cascadia (data/cascadia.json): every river that reaches the Pacific from the Copper River to Cape Mendocino. The land
+   outside it faded, the edge drawn in the accent, and the map framed on it */
 function cascadia(m, c, frame = true){
   const [w, s, e, n] = c.bounds, flip = ring => ring.map(([lon, lat]) => [lat, lon]);
   const css = getComputedStyle(document.documentElement), tok = k => css.getPropertyValue(k).trim();
@@ -62,7 +141,8 @@ function cascadia(m, c, frame = true){
   const fit = () => { if(moved || !m.getContainer().clientHeight) return; m.invalidateSize(); m.setMinZoom(0);
     m.fitBounds([[s, w], [n, e]], {padding: [6, 6], animate: false}); m.setMinZoom(m.getZoom() - 1); };
   ["mousedown", "touchstart", "wheel", "keydown"].forEach(k => m.getContainer().addEventListener(k, () => moved = true, {passive: true}));
-  m.setMaxBounds([[s - 8, w - 14], [n + 6, e + 14]]);
+  const [rw, rs, re, rn] = c.relief?.bounds || [w - 14, s - 8, e + 14, n + 6];
+  m.setMaxBounds([[rs, rw], [rn, re]]);
   fit(); requestAnimationFrame(fit);
   new ResizeObserver(fit).observe(m.getContainer());
 }
