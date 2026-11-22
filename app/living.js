@@ -337,7 +337,7 @@ function pickPlate(pages, names, needWork = false){
     if(!(WORKS.test(text) || (!needWork && ART.test(title + " " + desc) && year))) continue;
     const score = (WORKS.test(text) ? 6 : 0) + (/plate|tafel/i.test(text) ? 2 : 0) + (year ? 1 : 0) - ((ii.width || 0) < 700);
     if(score > top){ top = score; const by = v("Artist").slice(0, 90);
-      best = {src: ii.thumburl, page: ii.descriptionurl || "", title: (v("ObjectName") || title).replace(/\.\w+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120), by: /^(unknown|anonymous)/i.test(by) ? "" : by, year}; }
+      best = {src: ii.thumburl, page: ii.descriptionurl || "", title: (v("ObjectName") || title).replace(/\.\w+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120), by: /^(unknown|anonymous|not stated)/i.test(by) ? "" : by, year}; }
   }
   return best;
 }

@@ -1,0 +1,59 @@
+{
+ "note": "Public-domain plates from Wikimedia Commons, found by tools/build_plates.py. Set a species to null to drop its plate.",
+ "plates": {
+  "8234": null,
+  "145088": null,
+  "5305": null,
+  "4531": {
+   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Brachyramphus_marmoratus_-_1700-1880_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ17800275.tif/lossy-page1-960px-Brachyramphus_marmoratus_-_1700-1880_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ17800275.tif.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "page": "https://commons.wikimedia.org/wiki/File:Brachyramphus_marmoratus_-_1700-1880_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ17800275.tif",
+   "title": "Brachyramphus marmoratus   1700 1880   Print   Iconographia Zoologica   Special Collections University of Amsterdam   UB",
+   "by": "",
+   "year": 1880
+  },
+  "17855": null,
+  "6363": null,
+  "7643": null,
+  "4956": null,
+  "144820": null,
+  "41521": null,
+  "204114": null,
+  "41638": null,
+  "46093": null,
+  "43188": null,
+  "41860": null,
+  "46259": null,
+  "42414": null,
+  "41777": null,
+  "48256": null,
+  "48252": null,
+  "68131": null,
+  "51046": {
+   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Arbutus_menziesii_135-8249.jpg/960px-Arbutus_menziesii_135-8249.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "page": "https://commons.wikimedia.org/wiki/File:Arbutus_menziesii_135-8249.jpg",
+   "title": "Arbutus menziesii 135 8249",
+   "by": "M.S. del., J.N.Fitch lith.",
+   "year": 1909
+  },
+  "48227": null,
+  "48441": {
+   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b1/Loddiges_1372_Gaultheria_shallon.jpg/960px-Loddiges_1372_Gaultheria_shallon.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "page": "https://commons.wikimedia.org/wiki/File:Loddiges_1372_Gaultheria_shallon.jpg",
+   "title": "Loddiges 1372 Gaultheria shallon",
+   "by": "not stated",
+   "year": 1828
+  },
+  "60505": {
+   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Avalanche_Lily_%28Erythronium_montanum%29_by_Mary_Vaux_Walcott-saam1970.355.540.jpg/960px-Avalanche_Lily_%28Erythronium_montanum%29_by_Mary_Vaux_Walcott-saam1970.355.540.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "page": "https://commons.wikimedia.org/wiki/File:Avalanche_Lily_(Erythronium_montanum)_by_Mary_Vaux_Walcott-saam1970.355.540.jpg",
+   "title": "Avalanche Lily (Erythronium montanum)",
+   "by": "Mary Vaux Walcott",
+   "year": 1925
+  },
+  "48537": null,
+  "120443": null,
+  "48715": null,
+  "48215": null,
+  "118057": null
+ }
+}
