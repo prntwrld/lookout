@@ -159,23 +159,21 @@ async function drawHere(more = false){
   const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
     <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
   const alt = g === "birds" && packs.birds ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="birds" data-ask>Answer questions about it instead</button></p>` : "";
-  if(!more) $("qs").innerHTML = alt + q("region", "Where", REG.map(x => [x.id, x.name]), at ? "" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
+  if(!more) $("qs").innerHTML = alt + q("region", "Where", [["", "All of the Pacific Northwest"], ...REG.map(x => [x.id, x.name])], at ? "-" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
     + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
     + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
-  if(!at && !reg){
-    $("left").innerHTML = `<span class="count small" style="font-size:22px">Share your location or pick a region</span>`;
-    $("hits").innerHTML = ""; $("peek").innerHTML = "Where? ↓"; return;
-  }
   const me = ++token;
-  if(!more){ page = 1; $("hits").innerHTML = `<p class="muted">Asking iNaturalist what's been seen ${at ? "near you" : "in " + esc(reg.name)}…</p>`; }
+  /* nowhere chosen: the whole region (Washington, Oregon and British Columbia) */
+  const placeName = at ? "near you" : reg ? "in " + reg.name : "in the Pacific Northwest";
+  if(!more){ page = 1; $("hits").innerHTML = `<p class="muted">Asking iNaturalist what's been seen ${esc(placeName)}…</p>`; }
   const [lat, lng] = at ? at.split(",").map(Number) : [];
-  const where = at ? {lat, lng, radius: r} : {swlat: reg.bbox[0], swlng: reg.bbox[1], nelat: reg.bbox[2], nelng: reg.bbox[3]};
+  const where = at ? {lat, lng, radius: r} : reg ? {swlat: reg.bbox[0], swlng: reg.bbox[1], nelat: reg.bbox[2], nelng: reg.bbox[3]} : {place_id: L.PNW};
   try {
     const j = await L.nat("observations/species_counts", {...where, verifiable: "true", per_page: 60, page, ...(L.group(g).taxa ? {taxon_id: L.group(g).taxa} : {}), ...(when === "month" ? {month: L.month()} : {})});
     if(me !== token) return;
     const pick = t => packs.flowers?.byId[t.id] ? L.speciesTile(packs.flowers.byId[t.id]) : packs.birds?.byId[t.id] ? L.speciesTile({...packs.birds.byId[t.id], slug: String(t.id)}) : L.liveTile(L.taxonCard(t));
     const tiles = j.results.filter(x => ["species", "subspecies", "variety", "form"].includes(x.taxon.rank)).map(x => pick(x.taxon)).join("");
-    $("left").innerHTML = `<span class="count">${L.num(j.total_results)}<small>recorded ${at ? `within ${r} km` : "in " + esc(reg.name)}</small></span>`;
+    $("left").innerHTML = `<span class="count">${L.num(j.total_results)}<small>recorded ${at ? `within ${r} km` : esc(placeName)}</small></span>`;
     if(!more) $("hits").innerHTML = `<div class="grid" id="hgrid"></div><p id="hmore-p" style="margin-top:22px"><button type="button" class="btn ghost" id="hmore">More</button></p>`;
     $("hgrid").insertAdjacentHTML("beforeend", tiles);
     $("hmore-p").hidden = page * 60 >= j.total_results;
@@ -229,7 +227,7 @@ const groupSel = () => mode === "here" ? A.g?.[0] || "all" : mode;
 const drawGroups = () => {
   $("kgroups").innerHTML = L.groupChips(groupSel(), "data-kg");
   const g = L.group(groupSel());
-  $("what").textContent = mode === "here" ? (g.k === "all" ? "Anything recorded where you are" : `${g.name} recorded where you are`) : `${F.list.length} ${K.what}`;
+  $("what").textContent = mode === "here" ? (g.k === "all" ? "Anything recorded around you" : `${g.name} recorded around you`) : `${F.list.length} ${K.what}`;
 };
 async function pickGroup(v, ask){
   if(v === "flowers" || (v === "birds" && ask)) await setMode(v);
@@ -262,7 +260,7 @@ async function start(){
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
     const h = e.target.closest("[data-h]");
-    if(h){ const {h: k, v} = h.dataset; A[k] = A[k]?.[0] === v && k === "region" ? [] : [v]; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
+    if(h){ const {h: k, v} = h.dataset; A[k] = v ? [v] : []; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
     const c = e.target.closest("[data-clear]"); if(c){ delete A[c.dataset.clear]; delete auto[c.dataset.clear]; write(); return draw(); }
     const b = e.target.closest("[data-k]"); if(!b || b.disabled) return;
     const {k, v} = b.dataset, q = K.Q().find(q => q.k === k), sel = A[k] || [];
