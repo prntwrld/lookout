@@ -91,6 +91,14 @@ const KEYS = {
       {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]}
 };
 let K = null, F = null, mode = "flowers";
+/* the other trait keys come from data/packs.json; their questions are in each pack's trait file */
+const HEX = {w: "#f3f2ec", y: "#e8c43a", o: "#e48a3a", r: "#c8402f", p: "#e08aa8", v: "#8a5bb0", b: "#4a78c8", gr: "#3e8a4e", n: "#8a5f3c", g: "#8a9096", k: "#1d1d1d", t: "#c9a46c", s: "#c9ced3"};
+const HEXNAME = {w: "white", y: "yellow", o: "orange", r: "red", p: "pink", v: "purple", b: "blue", gr: "green", n: "brown", g: "grey", k: "black", t: "tan", s: "silver"};
+const genericKey = p => ({name: p.name, what: p.what, load: () => L.data.trait(p.id), months: s => s.months, byId: true, qs: [],
+  Q(){ return [...this.qs.map(q => ({k: q.k, title: q.title, multi: q.multi !== false, opts: Object.entries(q.opts).map(([v, label]) => ({v, label,
+      icon: q.swatch && HEXNAME[v] === label ? `<i class="sw" style="background:${HEX[v]}"></i>` : ""}))})),
+    {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
+    {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]; }});
 
 /* does species s fit answer(s) vals for question k? An unknown never rules a species out. */
 function fits(s, k, vals){
@@ -132,7 +140,7 @@ function draw(){
         return `<button type="button" class="chip" data-k="${q.k}" data-v="${o.v}" aria-pressed="${on}"${!n && !on ? " disabled" : ""}>${o.icon || ""}${esc(o.label)} <span class="c">${n}</span></button>`;
       }).join("")}</div>${q.k === "region" ? `<button type="button" class="linkish here-btn" id="here">Use my location</button>` : ""}</div>`;
   }).join("");
-  if(mode === "birds") $("qs").insertAdjacentHTML("afterbegin", `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="birds" data-near>Or see birds recorded near you</button></p>`);
+  if(mode !== "flowers") $("qs").insertAdjacentHTML("afterbegin", `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${mode}" data-near>Or see ${esc(K.name.toLowerCase())} recorded near you</button></p>`);
   const hits = F.list.filter(s => Object.entries(A).every(([k, v]) => fits(s, k, v))).sort((a, b) => b.obs - a.obs);
   const chosen = qs.flatMap(q => (A[q.k] || []).map(v => ({q, o: q.opts.find(o => o.v === v)}))).filter(x => x.o);
   $("left").innerHTML = `<span class="count">${hits.length}<small>left</small></span>
@@ -158,7 +166,7 @@ async function drawHere(more = false){
   const g = A.g?.[0] || "all", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
   const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
     <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
-  const alt = g === "birds" && packs.birds ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="birds" data-ask>Answer questions about it instead</button></p>` : "";
+  const alt = KEYS[g] && g !== "flowers" ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${g}" data-ask>Answer questions about it instead</button></p>` : "";
   if(!more) $("qs").innerHTML = alt + q("region", "Where", [["", "All of the Pacific Northwest"], ...REG.map(x => [x.id, x.name])], at ? "-" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
     + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
     + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
@@ -217,12 +225,17 @@ async function setMode(m){
   mode = m; auto = {};
   /* month and region carry over; the rest belongs to the key you were using */
   A = Object.fromEntries(Object.entries(A).filter(([k]) => k === "region" || (k === "month" && m !== "here")));
-  if(m !== "here"){ K = KEYS[m]; F = packs[m] ||= await K.load(); }
+  if(m !== "here"){
+    K = KEYS[m];
+    try { F = packs[m] ||= await K.load(); }
+    catch(e){ mode = "here"; A.g = [m]; write(); return draw(); }   /* a pack that isn't built yet: show what's recorded instead */
+    if(F.questions) K.qs = F.questions;
+  }
   if(m !== "here" && !A.month){ A.month = [String(L.month())]; auto.month = "today"; }
   write(); draw();
 }
-/* "What is it?": the same groups as Living things. Wildflowers and Birds have keys of their own; everything else
-   narrows to what's been recorded where you are */
+/* "What is it?": the same groups as Living things. A group with a trait key (wildflowers, birds, mammals, mushrooms…)
+   asks questions; everything else narrows to what's been recorded where you are */
 const groupSel = () => mode === "here" ? A.g?.[0] || "all" : mode;
 const drawGroups = () => {
   $("kgroups").innerHTML = L.groupChips(groupSel(), "data-kg");
@@ -230,7 +243,7 @@ const drawGroups = () => {
   $("what").textContent = mode === "here" ? (g.k === "all" ? "Anything recorded around you" : `${g.name} recorded around you`) : `${F.list.length} ${K.what}`;
 };
 async function pickGroup(v, ask){
-  if(v === "flowers" || (v === "birds" && ask)) await setMode(v);
+  if(v === "flowers" || (KEYS[v] && ask)) await setMode(v);
   else {
     if(mode !== "here") await setMode("here");
     if(v === "all") delete A.g; else A.g = [v];
@@ -241,6 +254,7 @@ async function pickGroup(v, ask){
 
 async function start(){
   const regions = await L.data.json("regions.json"); REG = regions.regions;
+  for(const p of await L.data.packList()) KEYS[p.id] = genericKey(p);
   const [fl, bi] = await Promise.all([L.data.flowers().catch(() => null), L.data.birds().catch(() => null)]);
   packs = {flowers: fl, birds: bi};
   const r = L.rng("key " + L.today()), pool = [...(fl?.list || []), ...(bi?.list || [])].filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
@@ -255,8 +269,8 @@ async function start(){
   await setMode(mode);
   if(hadHash){ A = keep; write(); draw(); }
   drawGroups();
-  /* Birds opens on its question-by-question key; a link there switches to "recorded near you", and back */
-  main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b) pickGroup(b.dataset.kg, b.dataset.kg === "birds" && (b.hasAttribute("data-ask") || !b.closest("#qs"))); });
+  /* a group with a trait key opens on its questions; a link there switches to "recorded near you", and back */
+  main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b) pickGroup(b.dataset.kg, !!KEYS[b.dataset.kg] && b.dataset.kg !== "flowers" && (b.hasAttribute("data-ask") || !b.closest("#qs"))); });
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
     const h = e.target.closest("[data-h]");

@@ -41,6 +41,7 @@ async function loadSpecies(key, F){
     s.family ||= anc.find(a => a.rank === "family")?.name || "";
     s.order = anc.find(a => a.rank === "order")?.name || "";
     s.genusId = anc.find(a => a.rank === "genus")?.id;
+    s.ancestorIds = [...(t.ancestor_ids || []), t.id];
     s.summary ||= shorten(plain(t.wikipedia_summary));
     s.wiki ||= wikiTitle(t.wikipedia_url);
     /* photos: iNaturalist's own picks first (chosen to show the species), then Wikipedia's lead picture, then the region's
@@ -93,6 +94,7 @@ async function speciesPage(F, s){
     ["Leaves", [list(s.leaf, LEAF), list(s.arr, ARR)].filter(Boolean).join("; ")],
     ["Habitat", list(s.habitat, HAB)],
     ["Regions", P && s.regions?.length ? s.regions.map(r => esc(P.region[r]?.name || r)).join(", ") : ""],
+    ...(s.packQs || []).map(q => [esc(q.title), esc((s.packEntry[q.k] || []).map(c => q.opts[c]).filter(Boolean).join(", "))]),
     ["Family", s.family ? esc(L.familyName(s.family)) : ""],
     ["Sightings", `<span id="sightings"></span>`],
     ["Size", s.bird ? list(s.bird.size, BIRD.size) : ""],
@@ -108,7 +110,7 @@ async function speciesPage(F, s){
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
     <div class="split"><div><dl class="facts">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
       ${s.summary ? `<div class="about" style="margin-top:24px"><p>${esc(s.summary)}</p><p class="credit">From ${s.wiki ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>` : "Wikipedia"}, CC BY-SA</p></div>` : ""}
-      <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : s.bird ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=birds">Name a bird with the key</a>` : ""}</p></div>
+      <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : s.bird ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=birds">Name a bird with the key</a>` : s.packKey ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=${s.packKey.id}">Name one with the key</a>` : ""}</p></div>
       <div>${where.length ? `<h2 style="font:400 26px var(--display);margin:0 0 14px">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
         ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>` : ""}</div></div>
     <section class="section" id="range" hidden><h2>Where it's been seen</h2><div class="mapbox" id="rangemap"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings</span><span><i></i>Your places</span></p></section>
@@ -248,6 +250,10 @@ L.data.flowers().catch(() => null).then(async F => {
   /* a bird in the bird pack brings the key's traits along */
   const B = s && await L.data.birds().catch(() => null), b = B?.byId[s.id];
   if(b) Object.assign(s, {bird: b, regions: s.regions || b.regions});
+  /* a species in one of the other trait keys brings that key's answers along */
+  const pack = s && !b && (await L.data.packList().catch(() => [])).find(p => p.taxa.split(",").some(x => (s.ancestorIds || []).includes(+x)));
+  if(pack){ const T = await L.data.trait(pack.id).catch(() => null), e = T?.byId[s.id];
+    if(e) Object.assign(s, {packKey: pack, packQs: T.questions, packEntry: e, regions: s.regions || e.regions}); }
   if(!s){ main.innerHTML = `<h1>Not found</h1><p><a href="./">Living things</a></p>`; return; }
   return speciesPage(F, s);
 }).catch(e => { main.innerHTML = `<p class="muted">Couldn't load the field guide (${esc(e.message)}).</p>`; });

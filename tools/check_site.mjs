@@ -24,7 +24,7 @@ const WIDTHS = [1366, 880, 390];
 const flowers = JSON.parse(await (await fetch(BASE + "data/flowers.json")).text()).species;
 const someFlower = flowers[3].slug;
 const PAGES = [["home", ""], ["places", "places/"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
-  ["living", "living/"], ["living-birds", "living/#g=insects&when=year"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"], ["key-birds", "key/#key=birds&size=m&colour=b"], ["key-insects", "key/#key=here&g=beetles&region=central-cascades&when=year"], ["key-here", "key/#key=here&region=olympics&g=tidepools&when=year"]];
+  ["living", "living/"], ["living-birds", "living/#g=insects&when=year"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"], ["key-birds", "key/#key=birds&size=m&colour=b"], ["key-insects", "key/#key=here&g=beetles&region=central-cascades&when=year"], ["key-mammals", "key/#key=mammals&tail=bushy"], ["key-here", "key/#key=here&region=olympics&g=tidepools&when=year"]];
 
 /* things that should never wrap onto a second line */
 const NOWRAP = [".top nav a", ".mark", ".stats dt", ".stats dd", ".chip", ".btn", ".legend span", ".eyebrow", ".left .count", ".regions li > span:first-child", ".section > h2"];

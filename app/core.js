@@ -75,7 +75,18 @@ const data = {
     });
     return {list, bySlug: Object.fromEntries(list.map(s => [s.slug, s])), byId: Object.fromEntries(list.map(s => [s.id, s])), codes: t?.codes || {}};
   },
-  birds(){ return data.pack("birds", "bird-traits.json"); }
+  birds(){ return data.pack("birds", "bird-traits.json"); },
+  /* the other trait keys (data/packs.json): data/packs/<id>.json joined to data/traits/<id>.json, whose questions name each column */
+  async packList(){ return (await opt("packs.json"))?.packs || []; },
+  async trait(id){
+    const [f, t] = await Promise.all([getJSON(`packs/${id}.json`), getJSON(`traits/${id}.json`)]);
+    const qs = t.questions || [], traits = t.traits || {};
+    const list = f.species.map(s => {
+      const parts = (traits[s.sci] || "").split("|").map(x => x.trim().split(/\s+/).filter(Boolean));
+      return {...s, common: cap(s.common), ...Object.fromEntries(qs.map((q, i) => [q.k, parts[i] || []]))};
+    });
+    return {list, bySlug: Object.fromEntries(list.map(s => [s.slug, s])), byId: Object.fromEntries(list.map(s => [s.id, s])), questions: qs};
+  }
 };
 
 /* ---------- pictures ---------- */
