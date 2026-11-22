@@ -16,6 +16,11 @@ const PETALS = {"3": "three", "4": "four", "5": "five", "6": "six", many: "many"
 const LEAF = {linear: "grass-like", lance: "lance-shaped", oval: "oval", heart: "heart-shaped or round", lobed: "lobed", three: "in threes", palmate: "fanned like fingers", pinnate: "feathery or fern-like", none: "no green leaves"};
 const ARR = {basal: "from the base", alt: "alternate", opp: "opposite", whorl: "whorled", none: ""};
 const HAB = {forest: "forest", meadow: "meadows", rocky: "rocks and talus", wet: "wet ground", dry: "dry open slopes", alpine: "near or above treeline"};
+const BIRD = {size: {s: "sparrow-sized or smaller", m: "robin- to jay-sized", l: "crow- to duck-sized", xl: "goose-sized or bigger"},
+  bill: {cone: "short and thick", thin: "thin and pointed", stout: "stout", hook: "hooked", dagger: "long and straight", probe: "long and thin, for probing", duck: "flat, like a duck's", chisel: "a chisel, for drilling wood"},
+  colour: {k: "black", w: "white", g: "grey", n: "brown", r: "red or orange", y: "yellow", b: "blue", gr: "green"},
+  behaviour: {ground: "feeds on the ground", trunk: "climbs tree trunks", swims: "swims", dives: "dives", wades: "wades", soars: "soars", hovers: "hovers", aerial: "catches insects in flight", flocks: "often in flocks", night: "out at night"},
+  habitat: {forest: "forest", open: "fields and open country", water: "lakes and rivers", coast: "coast and salt water", marsh: "marshes", town: "towns and feeders", alpine: "mountains"}};
 const list = (codes, names) => (codes || []).map(c => names[c]).filter(Boolean).join(", ");
 const plain = h => String(h || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 const shorten = (t, n = 520) => { if(t.length <= n) return t; const c = t.slice(0, n), e = c.lastIndexOf(". "); return e > 160 ? c.slice(0, e + 1) : c.replace(/\s\S*$/, "…"); };
@@ -88,6 +93,10 @@ async function speciesPage(F, s){
     ["Regions", P && s.regions?.length ? s.regions.map(r => esc(P.region[r]?.name || r)).join(", ") : ""],
     ["Family", s.family ? esc(L.familyName(s.family)) : ""],
     ["Sightings", `<span id="sightings"></span>`],
+    ["Size", s.bird ? list(s.bird.size, BIRD.size) : ""],
+    ["Bill", s.bird ? list(s.bird.bill, BIRD.bill) : ""],
+    ["Look for", s.bird ? [list(s.bird.colour, BIRD.colour), list(s.bird.behaviour, BIRD.behaviour)].filter(Boolean).join("; ") : ""],
+    ["Where", s.bird ? list(s.bird.habitat, BIRD.habitat) : ""],
     ["Pojar", s.pojar ? `p. ${esc(s.pojar)}` : ""]
   ].filter(x => x[1]);
   const kind = ONE[s.group] || "";
@@ -97,7 +106,7 @@ async function speciesPage(F, s){
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
     <div class="split"><div><dl class="facts">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
       ${s.summary ? `<div class="about" style="margin-top:24px"><p>${esc(s.summary)}</p><p class="credit">From ${s.wiki ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.wiki.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a>` : "Wikipedia"}, CC BY-SA</p></div>` : ""}
-      <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : ""}</p></div>
+      <p style="margin-top:18px"><a href="${L.inatTaxon(s.id)}" target="_blank" rel="noopener">On iNaturalist ↗</a>${s.pack ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/">Name a flower with the key</a>` : s.bird ? ` &nbsp;·&nbsp; <a href="${L.ROOT}key/#key=birds">Name a bird with the key</a>` : ""}</p></div>
       <div>${where.length ? `<h2 style="font:400 26px var(--display);margin:0 0 14px">Where to see it</h2><ul class="where">${where.map(({p, why}) => `<li><a href="${L.placeHref(p.id)}">${p.photo
         ? `<img src="${esc(L.sized(p.photo.src, 330))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph"></span>`}<span><b>${esc(p.name)}</b><span>${esc(why)}</span></span></a></li>`).join("")}</ul>` : ""}</div></div>
     <section class="section" id="range" hidden><h2>Where it's been seen</h2><div class="mapbox" id="rangemap"></div><p class="legend"><span><i class="grid-key"></i>Research-grade sightings</span><span><i></i>Your places</span></p></section>
@@ -235,6 +244,9 @@ function flowerGrid(F, box, head){
 L.data.flowers().catch(() => null).then(async F => {
   if(!id) return guidePage(F);
   const s = await loadSpecies(id, F);
+  /* a bird in the bird pack brings the key's traits along */
+  const B = s && await L.data.birds().catch(() => null), b = B?.byId[s.id];
+  if(b) Object.assign(s, {bird: b, regions: s.regions || b.regions});
   if(!s){ main.innerHTML = `<h1>Not found</h1><p><a href="./">Living things</a></p>`; return; }
   return speciesPage(F, s);
 }).catch(e => { main.innerHTML = `<p class="muted">Couldn't load the field guide (${esc(e.message)}).</p>`; });

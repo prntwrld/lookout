@@ -6,7 +6,7 @@
    - Photos from iNaturalist and Wikimedia, and map tiles, are kept as you see them (up to a limit), so a page
      you've opened before still has its pictures and map offline.
    Bump VERSION when the list of shell files changes. */
-const VERSION = "lookout-v1";
+const VERSION = "lookout-v2";
 const SHELL = VERSION + "-shell", PACK = VERSION + "-pack", IMG = "lookout-img", TILES = "lookout-tiles";
 const BASE = new URL("./", self.location).href;
 const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.webmanifest",
@@ -17,7 +17,7 @@ const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.we
   "fonts/source-serif-4-latin-400-normal.woff2", "fonts/source-serif-4-latin-400-italic.woff2",
   "fonts/source-serif-4-latin-600-normal.woff2", "fonts/source-serif-4-latin-600-italic.woff2",
   "data/places.json", "data/places-extra.json", "data/books.json", "data/regions.json",
-  "data/flowers.json", "data/flower-traits.json", "data/pojar.json"];
+  "data/flowers.json", "data/flower-traits.json", "data/pojar.json", "data/birds.json", "data/bird-traits.json"];
 const REMOTE_IMG = /(^|\.)(inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org|upload\.wikimedia\.org|thumb\.wikimedia\.org)$/;
 const LIMIT = {[IMG]: 500, [TILES]: 1500};
 
@@ -35,12 +35,11 @@ const addAll = async (name, urls) => {
 };
 /* the wildflower pack: every species' thumbnail, listed in flowers.json */
 const savePack = async () => {
-  try {
-    const r = await fetch(new URL("data/flowers.json", BASE), {cache: "no-cache"});
-    const j = await r.json();
-    const n = await addAll(PACK, j.species.map(s => `data/thumbs/${s.id}.jpg`));
-    return n;
-  } catch(e){ return 0; }
+  let ids = [];
+  for(const f of ["data/flowers.json", "data/birds.json"]){
+    try { const r = await fetch(new URL(f, BASE), {cache: "no-cache"}); ids = ids.concat((await r.json()).species.map(s => s.id)); } catch(e){}
+  }
+  return ids.length ? addAll(PACK, ids.map(id => `data/thumbs/${id}.jpg`)) : 0;
 };
 const tell = async msg => { for(const c of await self.clients.matchAll({includeUncontrolled: true})) c.postMessage(msg); };
 

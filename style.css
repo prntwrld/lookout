@@ -237,6 +237,8 @@ input[type=search]{min-width:220px}
 .grid .sp b{font-size:15px}
 .grid .miss{font-size:12px;color:var(--muted);display:block}
 .peek{display:none}
+.modes{margin:6px 0 28px}
+.modes .chip{font-size:16px;padding:7px 18px}
 .near-head{font:400 22px var(--display);margin:30px 0 12px}
 
 /* ---------- footer ---------- */

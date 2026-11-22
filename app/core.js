@@ -64,7 +64,18 @@ const data = {
       return {...s, common: cap(s.common), colour, petals, leaf, arr, habitat, pojar: String(pages[s.sci] || "").trim()};
     });
     return {list, bySlug: Object.fromEntries(list.map(s => [s.slug, s])), byId: Object.fromEntries(list.map(s => [s.id, s])), codes: t?.codes || {}};
-  }
+  },
+  /* any other trait pack (birds, …): <name>.json joined to <name minus s>-traits.json, whose codes.slots names each column */
+  async pack(name, traitsFile){
+    const [f, t] = await Promise.all([getJSON(name + ".json"), opt(traitsFile)]);
+    const traits = t?.traits || {}, slots = t?.codes?.slots || [];
+    const list = f.species.map(s => {
+      const parts = (traits[s.sci] || "").split("|").map(x => x.trim().split(/\s+/).filter(Boolean));
+      return {...s, common: cap(s.common), ...Object.fromEntries(slots.map((k, i) => [k, parts[i] || []]))};
+    });
+    return {list, bySlug: Object.fromEntries(list.map(s => [s.slug, s])), byId: Object.fromEntries(list.map(s => [s.id, s])), codes: t?.codes || {}};
+  },
+  birds(){ return data.pack("birds", "bird-traits.json"); }
 };
 
 /* ---------- pictures ---------- */

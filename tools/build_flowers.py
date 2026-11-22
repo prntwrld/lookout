@@ -213,8 +213,11 @@ def main():
         pages.setdefault(s["sci"], "")
     pj_path.write_text('{"_note": "Page numbers in Pojar & MacKinnon, Plants of the Pacific Northwest Coast (or your edition). Fill in the number; leave blank to hide.",\n"pages": {\n'
                        + ",\n".join(f"  {json.dumps(k)}: {json.dumps(v)}" for k, v in pages.items()) + "\n}}\n")
-    # drop pictures for species no longer in the pack
+    # drop pictures for species no longer in any pack (the bird pack shares data/thumbs/)
     keep = {f"{s['id']}.jpg" for s in out}
+    birds = net.ROOT / "data" / "birds.json"
+    if birds.exists():
+        keep |= {f"{s['id']}.jpg" for s in json.loads(birds.read_text())["species"]}
     for f in THUMBS.glob("*.jpg"):
         if f.name not in keep:
             f.unlink()

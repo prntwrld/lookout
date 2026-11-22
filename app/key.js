@@ -48,27 +48,54 @@ const HAB_ICON = {
 };
 const BANDS = [[0, 2000, "Under 2,000 ft"], [2000, 4000, "2,000–4,000 ft"], [4000, 6000, "4,000–6,000 ft"], [6000, 8000, "6,000–8,000 ft"], [8000, 15000, "Over 8,000 ft"]];
 
-/* ---------- the questions ---------- */
-let F = null, REG = [];
-const Q = () => [
-  {k: "colour", title: "Flower colour", multi: true, opts: Object.entries(L.COLOUR).map(([v, [name]]) => ({v, label: name, icon: L.sw(v)}))},
-  {k: "petals", title: "Petals", multi: true, opts: [["3","3"],["4","4"],["5","5"],["6","6"],["many","Many"],["daisy","Daisy-like"],["irregular","Irregular"],["tiny","Tiny, clustered"]].map(([v, label]) => ({v, label, icon: PETAL_ICON[v]}))},
-  {k: "leaf", title: "Leaf shape", multi: true, opts: [["linear","Grass-like"],["lance","Lance"],["oval","Oval"],["heart","Heart or round"],["lobed","Lobed"],["three","In threes"],["palmate","Fingers"],["pinnate","Feathery"],["none","No leaves"]].map(([v, label]) => ({v, label, icon: LEAF_ICON[v]}))},
-  {k: "arr", title: "Leaves grow", multi: true, opts: [["basal","From the base"],["alt","Alternate"],["opp","Opposite"],["whorl","Whorled"]].map(([v, label]) => ({v, label, icon: ARR_ICON[v]}))},
-  {k: "habitat", title: "Where it's growing", multi: true, opts: [["forest","Forest"],["meadow","Meadow"],["rocky","Rocks"],["wet","Wet ground"],["dry","Dry and open"],["alpine","Alpine"]].map(([v, label]) => ({v, label, icon: HAB_ICON[v]}))},
-  {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
-  {k: "elev", title: "Elevation", opts: BANDS.map((b, i) => ({v: String(i), label: b[2]}))},
-  {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}
-];
+/* birds: size as a silhouette that grows, and the bill's shape */
+const SIZE_ICON = Object.fromEntries([["s", 5], ["m", 7], ["l", 9], ["xl", 11]].map(([k, r]) => [k, svg(`<ellipse cx="12" cy="${20 - r * .7}" rx="${r}" ry="${r * .62}"/><circle cx="${12 + r * .7}" cy="${20 - r * 1.25}" r="${r * .32}"/>`)]));
+const head = bill => svg(`<circle cx="9" cy="12" r="5.5"/><circle cx="10" cy="10.5" r=".9" fill="currentColor"/>${bill}`);
+const BILL_ICON = {
+  cone: head(`<path d="M14.3 10l5 2-5 2z"/>`), thin: head(`<path d="M14.4 11.3 22 12l-7.6.7"/>`), stout: head(`<path d="M14.2 10.3 20 12l-5.8 2"/>`),
+  hook: head(`<path d="M14.2 10.2c3.5-.4 5.6.8 5.3 3.6-.3-1-1-1.6-1.8-1.6l-3.5.9"/>`), dagger: head(`<path d="M14.4 11.1 23 12l-8.6.9"/>`),
+  probe: head(`<path d="M14.4 11.6c3 .2 6 1.2 8.6 3"/>`), duck: head(`<path d="M14.2 10.6c2.5-.2 5.3.3 6.3 1.2.2.6-.1 1.2-1 1.4l-5.3-.2"/>`),
+  chisel: head(`<path d="M14.3 10.8 21 11.5v1l-6.7.7"/>`)
+};
+const BIRD_HAB_ICON = {...HAB_ICON, open: HAB_ICON.meadow, alpine: HAB_ICON.alpine,
+  water: svg(`<path d="M2 14c2 0 2-1.5 4-1.5S8 14 10 14s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 19c2 0 2-1.5 4-1.5S8 19 10 19s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/>`),
+  coast: svg(`<path d="M2 18c3 0 4-2 7-2s4 2 7 2 4-2 6-2M4 13l4-7 3 4 2-2 5 5"/>`),
+  marsh: svg(`<path d="M2 20h20M6 20V9M10 20V6M14 20v-9M18 20V8"/><ellipse cx="6" cy="8" rx="1" ry="2.2"/><ellipse cx="10" cy="5" rx="1" ry="2.2"/>`),
+  town: svg(`<path d="M3 21V11l5-4 5 4v10M13 21V8h8v13M2 21h20M6 21v-4h4v4"/>`)};
+const BIRD_COLOUR = {k: ["black", "#1d1d1d"], w: ["white", "#f3f2ec"], g: ["grey", "#8a9096"], n: ["brown", "#8a5f3c"], r: ["red or orange", "#cf5a2e"],
+  y: ["yellow", "#e8c43a"], b: ["blue", "#4a78c8"], gr: ["green", "#3e8a4e"]};
+const bsw = c => `<i class="sw" style="background:${BIRD_COLOUR[c]?.[1] || "#999"}"></i>`;
 
-/* does species s fit answer(s) vals for question k? null when the guide doesn't know (that never rules it out) */
+/* ---------- the keys: each a pack of species and the questions it can answer ---------- */
+let REG = [];
+const near = (list, m) => { const n = [m, m === 1 ? 12 : m - 1, m === 12 ? 1 : m + 1]; return n.some(x => list.includes(x)); };
+const KEYS = {
+  flowers: {name: "Wildflowers", what: "Cascades wildflowers", load: () => L.data.flowers(), months: s => s.bloom,
+    Q: () => [
+      {k: "colour", title: "Flower colour", multi: true, opts: Object.entries(L.COLOUR).map(([v, [name]]) => ({v, label: name, icon: L.sw(v)}))},
+      {k: "petals", title: "Petals", multi: true, opts: [["3","3"],["4","4"],["5","5"],["6","6"],["many","Many"],["daisy","Daisy-like"],["irregular","Irregular"],["tiny","Tiny, clustered"]].map(([v, label]) => ({v, label, icon: PETAL_ICON[v]}))},
+      {k: "leaf", title: "Leaf shape", multi: true, opts: [["linear","Grass-like"],["lance","Lance"],["oval","Oval"],["heart","Heart or round"],["lobed","Lobed"],["three","In threes"],["palmate","Fingers"],["pinnate","Feathery"],["none","No leaves"]].map(([v, label]) => ({v, label, icon: LEAF_ICON[v]}))},
+      {k: "arr", title: "Leaves grow", multi: true, opts: [["basal","From the base"],["alt","Alternate"],["opp","Opposite"],["whorl","Whorled"]].map(([v, label]) => ({v, label, icon: ARR_ICON[v]}))},
+      {k: "habitat", title: "Where it's growing", multi: true, opts: [["forest","Forest"],["meadow","Meadow"],["rocky","Rocks"],["wet","Wet ground"],["dry","Dry and open"],["alpine","Alpine"]].map(([v, label]) => ({v, label, icon: HAB_ICON[v]}))},
+      {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
+      {k: "elev", title: "Elevation", opts: BANDS.map((b, i) => ({v: String(i), label: b[2]}))},
+      {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]},
+  birds: {name: "Birds", what: "Pacific Northwest birds", load: () => L.data.birds(), months: s => s.months, byId: true,
+    Q: () => [
+      {k: "size", title: "Size", multi: true, opts: [["s","Sparrow or smaller"],["m","Robin to jay"],["l","Crow to duck"],["xl","Goose or bigger"]].map(([v, label]) => ({v, label, icon: SIZE_ICON[v]}))},
+      {k: "colour", title: "Colours you can see", multi: true, opts: Object.entries(BIRD_COLOUR).map(([v, [name]]) => ({v, label: name, icon: bsw(v)}))},
+      {k: "bill", title: "Bill", multi: true, opts: [["cone","Short and thick"],["thin","Thin and pointed"],["stout","Stout"],["hook","Hooked"],["dagger","Long and straight"],["probe","Long, for probing"],["duck","Flat, like a duck"],["chisel","Chisel, drills wood"]].map(([v, label]) => ({v, label, icon: BILL_ICON[v]}))},
+      {k: "habitat", title: "Where it is", multi: true, opts: [["forest","Forest"],["open","Fields, open country"],["water","Lake or river"],["coast","Coast, salt water"],["marsh","Marsh"],["town","Town, feeder"],["alpine","Mountains"]].map(([v, label]) => ({v, label, icon: BIRD_HAB_ICON[v]}))},
+      {k: "behaviour", title: "What it's doing", multi: true, opts: [["ground","On the ground"],["trunk","Climbing a trunk"],["swims","Swimming"],["dives","Diving"],["wades","Wading"],["soars","Soaring"],["hovers","Hovering"],["aerial","Catching insects in the air"],["flocks","In a flock"],["night","At night"]].map(([v, label]) => ({v, label}))},
+      {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
+      {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]}
+};
+let K = null, F = null, mode = "flowers";
+
+/* does species s fit answer(s) vals for question k? An unknown never rules a species out. */
 function fits(s, k, vals){
   if(!vals?.length) return true;
-  if(k === "month"){
-    if(!s.bloom?.length) return true;
-    const m = +vals[0], near = [m, m === 1 ? 12 : m - 1, m === 12 ? 1 : m + 1];   /* a month either side: seasons vary */
-    return near.some(x => s.bloom.includes(x));
-  }
+  if(k === "month"){ const ms = K.months(s); return !ms?.length || near(ms, +vals[0]); }   /* a month either side: seasons vary */
   if(k === "elev"){
     if(!s.elev) return true;
     const [a, b] = BANDS[+vals[0]];
@@ -78,20 +105,24 @@ function fits(s, k, vals){
   const have = s[k] || [];
   return !have.length || vals.some(v => have.includes(v));
 }
+const tile = (s, extra) => L.speciesTile(K.byId ? {...s, slug: String(s.id)} : s, extra);
 
-/* ---------- the state: answers, kept in the address so the back button and a reload keep them ---------- */
+/* ---------- the state: the key and its answers, kept in the address so the back button and a reload keep them ---------- */
 let A = {}, auto = {};
 const read = () => {
   const h = new URLSearchParams(location.hash.slice(1)); A = {};
-  for(const [k, v] of h) if(v) A[k] = v.split(",");
+  mode = KEYS[h.get("key")] || h.get("key") === "here" ? h.get("key") : "flowers";
+  for(const [k, v] of h) if(v && k !== "key") A[k] = v.split(",");
 };
 const write = () => {
-  const h = new URLSearchParams(); for(const [k, v] of Object.entries(A)) if(v?.length) h.set(k, v.join(","));
+  const h = new URLSearchParams(); if(mode !== "flowers") h.set("key", mode);
+  for(const [k, v] of Object.entries(A)) if(v?.length) h.set(k, v.join(","));
   history.replaceState(null, "", location.pathname + location.search + (h.toString() ? "#" + h : ""));
 };
 
 function draw(){
-  const qs = Q();
+  if(mode === "here") return drawHere();
+  const qs = K.Q();
   const others = k => F.list.filter(s => Object.entries(A).every(([k2, v]) => k2 === k || fits(s, k2, v)));
   $("qs").innerHTML = qs.map(q => {
     const base = others(q.k), sel = A[q.k] || [];
@@ -106,18 +137,56 @@ function draw(){
   $("left").innerHTML = `<span class="count">${hits.length}<small>left</small></span>
     <span class="answered">${chosen.map(({q, o}) => `<button type="button" class="chip on" data-k="${q.k}" data-v="${o.v}" title="Remove">${esc(o.label)}</button>`).join("")}</span>
     ${chosen.length ? `<button type="button" class="linkish small" id="reset">Start again</button>` : ""}`;
-  let body = hits.length ? `<div class="grid">${hits.slice(0, 120).map(s => L.speciesTile(s)).join("")}</div>${hits.length > 120 ? `<p class="muted">and ${hits.length - 120} more — answer another question</p>` : ""}` : "";
+  let body = hits.length ? `<div class="grid">${hits.slice(0, 120).map(s => tile(s)).join("")}</div>${hits.length > 120 ? `<p class="muted">and ${hits.length - 120} more — answer another question</p>` : ""}` : "";
   if(!hits.length){
     /* nothing fits everything: show what misses by the fewest answers, and say which */
     const keys = Object.keys(A).filter(k => A[k]?.length);
     const scored = F.list.map(s => ({s, miss: keys.filter(k => !fits(s, k, A[k]))})).filter(x => x.miss.length);
     const least = Math.min(...scored.map(x => x.miss.length));
-    const near = scored.filter(x => x.miss.length === least).sort((a, b) => b.s.obs - a.s.obs).slice(0, 60);
+    const close = scored.filter(x => x.miss.length === least).sort((a, b) => b.s.obs - a.s.obs).slice(0, 60);
     const title = Object.fromEntries(qs.map(q => [q.k, q.title.toLowerCase()]));
-    body = near.length ? `<h3 class="near-head">Nothing fits every answer. Closest:</h3><div class="grid">${near.map(({s, miss}) => L.speciesTile(s, `<span class="miss">except ${esc(miss.map(k => title[k]).join(", "))}</span>`)).join("")}</div>` : "";
+    body = close.length ? `<h3 class="near-head">Nothing fits every answer. Closest:</h3><div class="grid">${close.map(({s, miss}) => tile(s, `<span class="miss">except ${esc(miss.map(k => title[k]).join(", "))}</span>`)).join("")}</div>` : "";
   }
   $("hits").innerHTML = body;
   $("peek").innerHTML = `${hits.length} left <span aria-hidden="true">↓</span>`;
+}
+
+/* ---------- Here & now: everything recorded near you (or in a region), by group, live from iNaturalist ---------- */
+const GROUPS = [["", "Everything"], ["Plantae", "Plants"], ["Fungi", "Fungi"], ["Aves", "Birds"], ["Mammalia", "Mammals"], ["Insecta", "Insects"],
+  ["Arachnida", "Spiders"], ["Amphibia", "Amphibians"], ["Reptilia", "Reptiles"], ["Actinopterygii", "Fish"], ["Mollusca", "Molluscs"]];
+let packs = {}, page = 1, token = 0;
+async function drawHere(more = false){
+  const g = A.g?.[0] || "", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
+  const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
+    <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
+  if(!more) $("qs").innerHTML = q("g", "What is it?", GROUPS, g)
+    + q("region", "Where", REG.map(x => [x.id, x.name]), at ? "" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
+    + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
+    + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
+  if(!at && !reg){
+    $("left").innerHTML = `<span class="count small" style="font-size:22px">Share your location or pick a region</span>`;
+    $("hits").innerHTML = ""; $("peek").innerHTML = "Where? ↓"; return;
+  }
+  const me = ++token;
+  if(!more){ page = 1; $("hits").innerHTML = `<p class="muted">Asking iNaturalist what's been seen ${at ? "near you" : "in " + esc(reg.name)}…</p>`; }
+  const [lat, lng] = at ? at.split(",").map(Number) : [];
+  const where = at ? {lat, lng, radius: r} : {swlat: reg.bbox[0], swlng: reg.bbox[1], nelat: reg.bbox[2], nelng: reg.bbox[3]};
+  try {
+    const j = await L.nat("observations/species_counts", {...where, verifiable: "true", per_page: 60, page, ...(g ? {iconic_taxa: g} : {}), ...(when === "month" ? {month: L.month()} : {})});
+    if(me !== token) return;
+    const pick = t => packs.flowers?.byId[t.id] ? L.speciesTile(packs.flowers.byId[t.id]) : packs.birds?.byId[t.id] ? L.speciesTile({...packs.birds.byId[t.id], slug: String(t.id)}) : L.liveTile(L.taxonCard(t));
+    const tiles = j.results.filter(x => ["species", "subspecies", "variety", "form"].includes(x.taxon.rank)).map(x => pick(x.taxon)).join("");
+    $("left").innerHTML = `<span class="count">${L.num(j.total_results)}<small>recorded ${at ? `within ${r} km` : "in " + esc(reg.name)}</small></span>`;
+    if(!more) $("hits").innerHTML = `<div class="grid" id="hgrid"></div><p id="hmore-p" style="margin-top:22px"><button type="button" class="btn ghost" id="hmore">More</button></p>`;
+    $("hgrid").insertAdjacentHTML("beforeend", tiles);
+    $("hmore-p").hidden = page * 60 >= j.total_results;
+    if(!$("hgrid").children.length) $("hits").innerHTML = `<p class="muted">Nothing recorded here${when === "month" ? " this month" : ""}. Try a wider circle${when === "month" ? " or any time of year" : ""}.</p>`;
+    $("peek").innerHTML = `${L.num(j.total_results)} here <span aria-hidden="true">↓</span>`;
+    L.fillPhotos($("hits"));
+  } catch(e){
+    if(me !== token) return;
+    $("hits").innerHTML = `<p class="muted">Here & now needs a connection to iNaturalist. The Wildflowers and Birds keys work without one.</p>`;
+  }
 }
 
 function regionAt(lat, lon){
@@ -131,39 +200,61 @@ function locate(){
   L.toast("Finding you…");
   navigator.geolocation.getCurrentPosition(async pos => {
     const {latitude: lat, longitude: lon, altitude} = pos.coords;
+    if(mode === "here"){ A.at = [`${lat.toFixed(4)},${lon.toFixed(4)}`]; delete A.region; write(); return draw(); }
     const r = regionAt(lat, lon);
     if(r){ A.region = [r.id]; auto.region = "from your location"; } else L.toast("You're outside the regions in this guide");
-    let ft = altitude != null ? altitude * 3.28084 : null;
-    if(ft == null && navigator.onLine){
-      /* the phone didn't say how high you are: ask a free elevation service, if there's signal */
-      try { const j = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${lat.toFixed(5)},${lon.toFixed(5)}`, {signal: AbortSignal.timeout(6000)}).then(x => x.json());
-        const m = j.results?.[0]?.elevation; if(m != null) ft = m * 3.28084; } catch(e){}
+    if(mode === "flowers"){
+      let ft = altitude != null ? altitude * 3.28084 : null;
+      if(ft == null && navigator.onLine){
+        /* the phone didn't say how high you are: ask a free elevation service, if there's signal */
+        try { const j = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${lat.toFixed(5)},${lon.toFixed(5)}`, {signal: AbortSignal.timeout(6000)}).then(x => x.json());
+          const m = j.results?.[0]?.elevation; if(m != null) ft = m * 3.28084; } catch(e){}
+      }
+      if(ft != null){ A.elev = [bandFor(ft)]; auto.elev = `about ${L.num(Math.round(ft / 100) * 100)} ft, from your location`; }
     }
-    if(ft != null){ A.elev = [bandFor(ft)]; auto.elev = `about ${L.num(Math.round(ft / 100) * 100)} ft, from your location`; }
     write(); draw();
   }, () => L.toast("No location — that's fine, pick a region instead"), {enableHighAccuracy: true, timeout: 15000, maximumAge: 600000});
 }
 
+async function setMode(m){
+  mode = m; auto = {};
+  /* month and region carry over; the rest belongs to the key you were using */
+  A = Object.fromEntries(Object.entries(A).filter(([k]) => k === "region" || (k === "month" && m !== "here")));
+  if(m !== "here"){ K = KEYS[m]; F = packs[m] ||= await K.load(); }
+  if(m !== "here" && !A.month){ A.month = [String(L.month())]; auto.month = "today"; }
+  $("modes").querySelectorAll(".chip").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+  $("what").textContent = m === "here" ? "Anything, from what's been recorded nearby" : `${F.list.length} ${K.what}`;
+  write(); draw();
+}
+
 async function start(){
-  const [fl, regions] = await Promise.all([L.data.flowers(), L.data.json("regions.json")]);
-  F = fl; REG = regions.regions;
-  const r = L.rng("key " + L.today()), pool = F.list.filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
-  main.innerHTML = `${pic ? `<section class="hero short"><div class="frame" data-hide-broken><a href="${L.speciesHref(pic)}"><img src="${L.inat(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="${esc(pic.common || pic.sci)}" crossorigin="anonymous"></a>${L.inatCredit(pic.photos[0])}</div>` : `<section class="hero">`}
-    <h1>The key</h1><p class="sub-line">${F.list.length} Cascades wildflowers</p></section>
+  const regions = await L.data.json("regions.json"); REG = regions.regions;
+  const [fl, bi] = await Promise.all([L.data.flowers().catch(() => null), L.data.birds().catch(() => null)]);
+  packs = {flowers: fl, birds: bi};
+  const r = L.rng("key " + L.today()), pool = [...(fl?.list || []), ...(bi?.list || [])].filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
+  main.innerHTML = `${pic ? `<section class="hero short"><div class="frame" data-hide-broken><a href="${L.speciesHref(bi?.byId[pic.id] ? {id: pic.id} : pic)}"><img src="${L.inat(pic.photos[0], "large")}" data-fallback="${L.thumb(pic)}" alt="${esc(pic.common || pic.sci)}" crossorigin="anonymous"></a>${L.inatCredit(pic.photos[0])}</div>` : `<section class="hero">`}
+    <h1>The key</h1><p class="sub-line" id="what"></p></section>
+    <div class="chips modes" id="modes">${[...Object.entries(KEYS).filter(([k]) => packs[k]).map(([k, v]) => [k, v.name]), ["here", "Here & now"]].map(([k, n]) => `<button type="button" class="chip" data-mode="${k}">${n}</button>`).join("")}</div>
     <div class="key"><div class="qs" id="qs"></div><div id="results"><div class="left" id="left"></div><div id="hits"></div></div></div>
     <button type="button" class="peek btn" id="peek"></button>`;
+  const hadHash = !!location.hash;
   read();
-  if(!location.hash){ A.month = [String(L.month())]; auto.month = "today"; write(); }
-  draw();
+  const keep = {...A};
+  await setMode(mode);
+  if(hadHash){ A = keep; write(); draw(); }
+  $("modes").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if(b && b.dataset.mode !== mode) setMode(b.dataset.mode); });
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
+    const h = e.target.closest("[data-h]");
+    if(h){ const {h: k, v} = h.dataset; A[k] = A[k]?.[0] === v && k === "region" ? [] : [v]; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
     const c = e.target.closest("[data-clear]"); if(c){ delete A[c.dataset.clear]; delete auto[c.dataset.clear]; write(); return draw(); }
     const b = e.target.closest("[data-k]"); if(!b || b.disabled) return;
-    const {k, v} = b.dataset, q = Q().find(q => q.k === k), sel = A[k] || [];
+    const {k, v} = b.dataset, q = K.Q().find(q => q.k === k), sel = A[k] || [];
     A[k] = sel.includes(v) ? sel.filter(x => x !== v) : q.multi ? [...sel, v] : [v];
     if(!A[k].length) delete A[k];
     delete auto[k]; write(); draw();
   });
+  $("hits").addEventListener("click", e => { if(e.target.id === "hmore"){ page++; drawHere(true); } });
   $("peek").addEventListener("click", () => $("results").scrollIntoView({behavior: "smooth"}));
   /* the floating count only shows while the results are off screen */
   new IntersectionObserver(([en]) => $("peek").classList.toggle("away", en.isIntersecting), {rootMargin: "0px 0px -40% 0px"}).observe($("results"));
