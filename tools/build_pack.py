@@ -64,6 +64,8 @@ def main():
     for p in cfg:
         if not want or p["id"] in want:
             build(p)
+    import build_index
+    build_index.main()
 
 
 if __name__ == "__main__":

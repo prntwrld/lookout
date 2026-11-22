@@ -1,0 +1,16 @@
+{"_note":"The octopus and squid key: the questions, then one line per species with its answers in the same order, separated by |. Several answers may share a slot; an empty slot never rules a species out. Written for this guide; correct freely.",
+"questions":[{"k": "kind", "title": "What kind", "multi": true, "opts": {"octopus": "Octopus", "squid": "Squid", "bobtail": "Bobtail (small, round)", "other": "Argonaut (paper shell)"}}, {"k": "colour", "title": "Colours you can see", "multi": true, "opts": {"r": "red", "n": "brown", "w": "white", "p": "pink", "o": "orange"}, "swatch": true}, {"k": "size", "title": "Size", "multi": true, "opts": {"s": "Small, under a foot", "m": "1 to 3 feet", "l": "Big"}}, {"k": "where", "title": "Where it is", "multi": true, "opts": {"shore": "Tide pools, docks", "deep": "Deep water", "open": "Open sea, washed up"}}],
+"traits":{
+  "Doryteuthis opalescens": "squid | w p | m | open shore",
+  "Enteroctopus dofleini": "octopus | r n | l | shore deep",
+  "Octopus rubescens": "octopus | r o | s | shore",
+  "Rossia pacifica": "bobtail | r n | s | shore deep",
+  "Onykia robusta": "squid | r p | l | deep",
+  "Berryteuthis magister": "squid | r p | m | deep",
+  "Muusoctopus leioderma": "octopus | p r | s | deep",
+  "Dosidicus gigas": "squid | r | l | open",
+  "Haliphron atlanticus": "octopus | p w | l | deep",
+  "Argonauta argo": "other | w | m | open",
+  "Architeuthis dux": "squid | r | l | deep",
+  "Onychoteuthis borealijaponica": "squid | r p | m | open"
+}}

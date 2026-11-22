@@ -88,7 +88,7 @@ console.log("offline");
   await ctx.setOffline(true);
   server.kill();   /* and the server too, to be sure */
 
-  await page.goto(BASE + "key/", {waitUntil: "load"}).catch(e => flag("offline", "key page didn't load: " + e.message));
+  await page.goto(BASE + "key/#key=flowers", {waitUntil: "load"}).catch(e => flag("offline", "key page did not load: " + e.message));
   await page.waitForSelector(".left .count", {timeout: 10000}).catch(() => flag("offline", "the key didn't draw"));
   const before = await page.$eval(".left .count", el => parseInt(el.textContent)).catch(() => -1);
   await page.click('[data-k="month"][aria-pressed="true"]').catch(() => {});   /* clear today's month: November has few flowers */

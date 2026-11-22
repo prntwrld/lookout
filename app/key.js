@@ -119,16 +119,18 @@ const tile = (s, extra) => L.speciesTile(K.byId ? {...s, slug: String(s.id)} : s
 let A = {}, auto = {};
 const read = () => {
   const h = new URLSearchParams(location.hash.slice(1)); A = {};
-  mode = KEYS[h.get("key")] || h.get("key") === "here" ? h.get("key") : "flowers";
+  mode = KEYS[h.get("key")] || ["here", "pick"].includes(h.get("key")) ? h.get("key") : "pick";
   for(const [k, v] of h) if(v && k !== "key") A[k] = v.split(",");
 };
 const write = () => {
-  const h = new URLSearchParams(); if(mode !== "flowers") h.set("key", mode);
+  const h = new URLSearchParams(); if(mode !== "pick") h.set("key", mode);
   for(const [k, v] of Object.entries(A)) if(v?.length) h.set(k, v.join(","));
   history.replaceState(null, "", location.pathname + location.search + (h.toString() ? "#" + h : ""));
 };
 
 function draw(){
+  $("results").parentElement.classList.toggle("picking", mode === "pick");
+  if(mode === "pick") return drawPick();
   if(mode === "here") return drawHere();
   const qs = K.Q();
   const others = k => F.list.filter(s => Object.entries(A).every(([k2, v]) => k2 === k || fits(s, k2, v)));
@@ -166,7 +168,8 @@ async function drawHere(more = false){
   const g = A.g?.[0] || "all", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
   const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
     <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
-  const alt = KEYS[g] && g !== "flowers" ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${g}" data-ask>Answer questions about it instead</button></p>` : "";
+  const alt = KEYS[g] || PRESET[g] ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${g}">Answer questions about it instead</button></p>`
+    : g === "all" || L.group(g).sub ? `<p class="small" style="margin:0 0 4px"><button type="button" class="linkish" data-kg="${g}">Pick what kind by picture instead</button></p>` : "";
   if(!more) $("qs").innerHTML = alt + q("region", "Where", [["", "All of the Pacific Northwest"], ...REG.map(x => [x.id, x.name])], at ? "-" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
     + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
     + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
@@ -225,36 +228,65 @@ async function setMode(m){
   mode = m; auto = {};
   /* month and region carry over; the rest belongs to the key you were using */
   A = Object.fromEntries(Object.entries(A).filter(([k]) => k === "region" || (k === "month" && m !== "here")));
-  if(m !== "here"){
+  if(m !== "here" && m !== "pick"){
     K = KEYS[m];
     try { F = packs[m] ||= await K.load(); }
     catch(e){ mode = "here"; A.g = [m]; write(); return draw(); }   /* a pack that isn't built yet: show what's recorded instead */
     if(F.questions) K.qs = F.questions;
   }
-  if(m !== "here" && !A.month){ A.month = [String(L.month())]; auto.month = "today"; }
+  if(m !== "here" && m !== "pick" && !A.month){ A.month = [String(L.month())]; auto.month = "today"; }
   write(); draw();
 }
 /* "What is it?": the same groups as Living things. A group with a trait key (wildflowers, birds, mammals, mushrooms…)
    asks questions; everything else narrows to what's been recorded where you are */
-const groupSel = () => mode === "here" ? A.g?.[0] || "all" : mode;
+const groupSel = () => mode === "here" || mode === "pick" ? A.g?.[0] || "all" : A.sg?.[0] || mode;
 const drawGroups = () => {
   $("kgroups").innerHTML = L.groupChips(groupSel(), "data-kg");
   const g = L.group(groupSel());
-  $("what").textContent = mode === "here" ? (g.k === "all" ? "Anything recorded around you" : `${g.name} recorded around you`) : `${F.list.length} ${K.what}`;
+  $("what").textContent = mode === "pick" ? (g.k === "all" ? "What is it? Pick what it looks like" : `${g.name}: which kind?`)
+    : mode === "here" ? (g.k === "all" ? "Anything recorded around you" : `${g.name} recorded around you`) : `${F.list.length} ${K.what}`;
 };
-async function pickGroup(v, ask){
-  if(v === "flowers" || (KEYS[v] && ask)) await setMode(v);
-  else {
+/* the tide-pool sub-groups open the tide-pool key with their kind already chosen */
+const PRESET = {stars: {kind: ["star", "urchin", "cucumber"]}, anemones: {kind: ["anemone", "jelly", "pen"]}, crabs: {kind: ["crab", "hermit", "small", "barnacle"]},
+  nudibranchs: {kind: ["nudibranch"]}, chitons: {kind: ["chiton"]}, sponges: {kind: ["squirt"]}};
+async function pickGroup(v, near){
+  const g = L.group(v);
+  if(near){                                         /* "recorded near you" for this group */
     if(mode !== "here") await setMode("here");
     if(v === "all") delete A.g; else A.g = [v];
     write(); draw();
+  } else if(PRESET[v] && KEYS[g.top.k]){
+    await setMode(g.top.k); Object.assign(A, PRESET[v], {sg: [v]}); write(); draw();
+  } else if(KEYS[v]) await setMode(v);
+  else if(v === "all" || g.sub){                    /* a broad group: pick which kind, by picture */
+    await setMode("pick"); if(v === "all") delete A.g; else A.g = [v]; write(); draw();
+  } else {
+    await setMode("here"); A.g = [v]; write(); draw();
   }
   drawGroups();
+}
+
+/* ---------- the picture choice: what kind is it? ---------- */
+let IDX = {};
+const idxOf = k => { const g = L.group(k);
+  if(IDX[k]) return IDX[k];
+  const kids = (g.sub || []).map(x => idxOf(x.k)).filter(Boolean);       /* a broad group: its keys added up */
+  return kids.length ? {n: kids.reduce((a, b) => a + b.n, 0), top: kids.flatMap(x => x.top.slice(0, 1)).concat(kids[0].top.slice(1)).slice(0, 4)} : null; };
+function drawPick(){
+  const g = A.g?.[0] || "all", kids = g === "all" ? L.GROUPS.filter(x => x.k !== "all") : L.group(g).sub || [];
+  $("qs").innerHTML = "";
+  $("left").innerHTML = `<span class="count" style="font-size:28px">Pick what it looks like</span>
+    <button type="button" class="linkish small" data-kg="${g}" data-near>Or see ${g === "all" ? "everything" : esc(L.group(g).name.toLowerCase())} recorded near you</button>`;
+  $("hits").innerHTML = `<div class="kinds">${kids.map(x => { const i = idxOf(x.k);
+    return `<button type="button" class="kind" data-kg="${x.k}"><span class="pics">${(i?.top || []).slice(0, 4).map(id => `<img src="${L.thumb({id})}" alt="" loading="lazy">`).join("")}</span>
+      <b>${esc(x.name)}</b>${i ? `<i>${L.num(i.n)} species${x.sub ? ` · ${x.sub.length} kinds` : ""}</i>` : `<i>recorded near you</i>`}</button>`; }).join("")}</div>`;
+  $("peek").innerHTML = "";
 }
 
 async function start(){
   const regions = await L.data.json("regions.json"); REG = regions.regions;
   for(const p of await L.data.packList()) KEYS[p.id] = genericKey(p);
+  IDX = await L.data.json("packs/index.json").catch(() => ({}));
   const [fl, bi] = await Promise.all([L.data.flowers().catch(() => null), L.data.birds().catch(() => null)]);
   packs = {flowers: fl, birds: bi};
   const r = L.rng("key " + L.today()), pool = [...(fl?.list || []), ...(bi?.list || [])].filter(s => s.photos?.length), pic = pool[Math.floor(r() * pool.length)];
@@ -270,7 +302,7 @@ async function start(){
   if(hadHash){ A = keep; auto = {}; write(); draw(); }
   drawGroups();
   /* a group with a trait key opens on its questions; a link there switches to "recorded near you", and back */
-  main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b) pickGroup(b.dataset.kg, !!KEYS[b.dataset.kg] && b.dataset.kg !== "flowers" && (b.hasAttribute("data-ask") || !b.closest("#qs"))); });
+  main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b){ pickGroup(b.dataset.kg, b.hasAttribute("data-near")); if(b.closest("#hits")) $("kgroups").scrollIntoView({behavior: "smooth"}); } });
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
     const h = e.target.closest("[data-h]");
