@@ -15,7 +15,7 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const MON = MONTHS.map(m => m.slice(0, 3));
 
 /* ---------- the header ---------- */
-const NAV = [["places", "Places"], ["trips", "Trips"], ["living", "Living things"], ["key", "Key"]];
+const NAV = [["places", "Places"], ["trips", "Trips"], ["atlas", "Atlas"], ["living", "Living things"], ["key", "Key"]];
 document.currentScript.insertAdjacentHTML("afterend", `<header class="top wrap">
   <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg><span class="word">Lookout</span></a>
   <nav aria-label="Sections">${NAV.map(([id, name]) => `<a href="${ROOT}${id}/"${id === here ? ` aria-current="page"` : ""}>${name}</a>`).join("")}</nav>

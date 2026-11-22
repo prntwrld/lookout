@@ -25,7 +25,7 @@ const flag = (where, what) => { problems.push(`${where}: ${what}`); console.log(
 const WIDTHS = [1366, 880, 390];
 const flowers = JSON.parse(await (await fetch(BASE + "data/flowers.json")).text()).species;
 const someFlower = flowers[3].slug;
-const PAGES = [["home", ""], ["places", "places/"], ["trips", "trips/"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
+const PAGES = [["home", ""], ["places", "places/"], ["trips", "trips/"], ["atlas", "atlas/"], ["atlas-drop", "atlas/#at=46.6,-120.9"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
   ["living", "living/"], ["living-insects", "living/?g=insects"], ["living-tidepools", "living/?g=tidepools"], ["living-flowers", "living/?g=flowers"], ["living-mammals", "living/?g=mammals"], ["foraging", "living/?f=foraging"], ["near", "living/?f=near"], ["salmon", "living/?f=salmon"], ["whales", "living/?f=whales"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["genus", "living/?id=144351"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"], ["key-birds", "key/#key=birds&size=m&colour=b"], ["key-insects", "key/#key=here&g=beetles&region=central-cascades&when=year"], ["key-mammals", "key/#key=mammals&tail=bushy"], ["key-here", "key/#key=here&region=olympics&g=tidepools&when=year"]];
 
 /* things that should never wrap onto a second line */
@@ -195,6 +195,11 @@ if(!ONLY){
     }
     await page.screenshot({path: `${SHOTS}/offline-${name}.png`});
   }
+  /* the Atlas's raindrop runs on files the worker saved */
+  await page.goto(BASE + "atlas/#at=46.6,-120.9", {waitUntil: "load"}).catch(e => flag("offline", `atlas didn't load: ${e.message}`));
+  const drop = await page.waitForFunction(() => /Columbia/.test(document.querySelector("#drop h3")?.textContent || ""), null, {timeout: 15000}).then(() => true).catch(() => false);
+  if(!drop) flag("offline", "the Atlas's raindrop didn't run"); else console.log("  atlas offline: the raindrop reaches the Columbia");
+  await page.screenshot({path: `${SHOTS}/offline-atlas.png`});
   if(errs.length) flag("offline", "script errors: " + errs.join(" | "));
   await ctx.close();
 }

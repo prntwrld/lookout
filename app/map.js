@@ -90,7 +90,7 @@ function relief(m, c, osm){
     rivers = r;
     const flip = ring => ring.map(([lon, lat]) => [lat, lon]);
     for(const l of r.lakes) L_.polygon(flip(l), {pane: "rivers", weight: .6, fill: true, interactive: false}).addTo(water);
-    for(const v of r.rivers) L_.polyline(flip(v.c), {pane: "rivers", weight: Math.max(.6, 2.3 - v.r * .2), lineCap: "round", lineJoin: "round", interactive: false}).addTo(water);
+    for(const v of r.rivers) if(v.r <= 9) L_.polyline(flip(v.c), {pane: "rivers", weight: Math.max(.6, 2.3 - v.r * .2), lineCap: "round", lineJoin: "round", interactive: false}).addTo(water);
     tint();
   }).catch(() => {});
   const edges = () => !!store.get(BORDERS, false);
@@ -212,4 +212,6 @@ window.Lookout.map = map;
 window.Lookout.seedMap = seedMap;
 window.Lookout.SEED_COLOUR = SEED_COLOUR;
 window.Lookout.rangeMap = rangeMap;
+/* for the Atlas, which builds its own map from the same parts */
+window.Lookout.mapParts = {relief, cascadia, pin, dot};
 }
