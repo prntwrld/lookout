@@ -46,7 +46,7 @@ Every request is paced (about one a second for iNaturalist, Nominatim and Open T
 Living things, species pages and "You might see here" ask iNaturalist as you browse (only CC0 and CC BY photos are shown; where iNaturalist's own pick isn't open-licensed, the page looks for an open-licensed sighting photo instead). The wildflower pack, the places and your log are files in the repository and on your device.
 
 ## Offline
-`sw.js` is the service worker. On install it saves the app shell, the data packs and every wildflower thumbnail. Pages, scripts and data load fresh when there's a connection, so your edits show up, and come from the saved copy when there isn't one (or when the network takes more than four seconds). Photos and map tiles are saved as you view them, so a place or species you've opened before still has its pictures offline. When you change the list of shell files in `sw.js`, bump `VERSION` there.
+`sw.js` is the service worker. On install it saves the app shell, the data packs and every wildflower thumbnail. Pages, scripts and data load fresh when there's a connection, so your edits show up, and come from the saved copy only when there's no connection. Photos and map tiles are saved as you view them, so a place or species you've opened before still has its pictures offline. When you change the list of shell files in `sw.js`, bump `VERSION` there.
 
 ## Later, as an iOS app
 The site is built so that a native app can wrap it or read the same data without a rewrite:

@@ -2,11 +2,11 @@
    - On install it saves the app shell (pages, styles, scripts, fonts, Leaflet, icons) and the data packs
      (data/*.json and the wildflower thumbnails in data/thumbs/), so the key and the guide work with no signal.
    - Pages, scripts and data are fetched fresh when there's a connection (so your edits show up) and come from
-     the saved copy when there isn't, or when the network takes longer than a few seconds.
+     the saved copy only when there's no connection at all.
    - Photos from iNaturalist and Wikimedia, and map tiles, are kept as you see them (up to a limit), so a page
      you've opened before still has its pictures and map offline.
    Bump VERSION when the list of shell files changes. */
-const VERSION = "lookout-v2";
+const VERSION = "lookout-v3";
 const SHELL = VERSION + "-shell", PACK = VERSION + "-pack", IMG = "lookout-img", TILES = "lookout-tiles";
 const BASE = new URL("./", self.location).href;
 const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.webmanifest",
@@ -63,7 +63,6 @@ const trim = async name => {
   const c = await caches.open(name), keys = await c.keys(), over = keys.length - (LIMIT[name] || 1e9);
   for(let i = 0; i < over; i++) await c.delete(keys[i]);
 };
-const timeout = (ms, p) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("slow")), ms))]);
 /* a page's address without ?id=…, so every place shares the one saved page */
 const pageKey = url => { const u = new URL(url); u.search = ""; u.hash = ""; return u.href; };
 
@@ -86,7 +85,8 @@ self.addEventListener("fetch", e => {
     const key = nav ? pageKey(req.url) : req.url;
     e.respondWith((async () => {
       try {
-        const r = await timeout(4000, fetch(req));
+        /* online, always wait for the network (a slow host must never mean an old page); the saved copy is only for no connection */
+        const r = await fetch(req, {cache: "no-cache"});
         if(r.ok){ const c = await caches.open(SHELL); c.put(key, r.clone()); }
         return r;
       } catch(err){
