@@ -15,11 +15,14 @@
 <script>try{ const t = JSON.parse(localStorage.getItem("lookout-theme")); if(t) document.documentElement.dataset.theme = t; }catch(e){}</script>
 <link rel="preload" href="../fonts/fraunces-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="../style.css">
 </head>
 <body data-page="living">
 <script src="../app/core.js"></script>
 <main class="wrap" id="main"></main>
+<script src="../vendor/leaflet/leaflet.js"></script>
+<script src="../app/map.js"></script>
 <script src="../app/living.js"></script>
 </body>
 </html>

@@ -80,9 +80,59 @@ document.addEventListener("error", e => {
 const credit = (by, lic, href) => `<span class="credit">${href ? `<a href="${esc(href)}" target="_blank" rel="noopener">` : ""}© ${esc(by)}${href ? "</a>" : ""} · ${esc(lic)}</span>`;
 const inatCredit = p => credit(p.by, p.lic, `https://www.inaturalist.org/photos/${p.id}`);
 
+/* ---------- iNaturalist, live ----------
+   Living things reaches every species recorded in the Pacific Northwest (Washington, Oregon and British Columbia,
+   as in Myriad's Field Guide). Answers are kept for the visit so going back and forth asks nothing twice. */
+const NAT = "https://api.inaturalist.org/v1/", PNW = "46,10,7085";
+const natCache = new Map();
+const fetchJSON = async (url, tries = 2) => {
+  const r = await fetch(url, {signal: AbortSignal.timeout(15000)});
+  if(r.status === 429 && tries > 1){ await new Promise(ok => setTimeout(ok, 1500)); return fetchJSON(url, tries - 1); }
+  if(!r.ok) throw new Error("iNaturalist " + r.status);
+  return r.json();
+};
+const nat = (path, params = {}) => {
+  const url = NAT + path + (Object.keys(params).length ? "?" + new URLSearchParams(params) : "");
+  if(!natCache.has(url)) natCache.set(url, fetchJSON(url).catch(e => { natCache.delete(url); throw e; }));
+  return natCache.get(url);
+};
+/* only CC0 and CC BY photos are shown, each credited */
+const OPEN = {"cc0": "CC0", "cc-by": "CC BY"};
+const openPhoto = p => {
+  const lic = OPEN[(p?.license_code || "").toLowerCase()], m = /photos\/(\d+)\/[a-z]+\.(\w+)/i.exec(p?.url || p?.medium_url || "");
+  if(!lic || !m) return null;
+  const by = String(p.attribution || "").replace(/^\(c\)\s*/, "").split(/, (some|no) rights/)[0].trim();
+  return {id: +m[1], ext: m[2], by: /^no rights/i.test(by) || !by ? "an iNaturalist observer" : by, lic};
+};
+/* a live taxon in the shape the pages use */
+const taxonCard = t => ({id: t.id, sci: t.name, common: cap(t.preferred_common_name || ""), rank: t.rank, group: t.iconic_taxon_name || "",
+  photo: [t.default_photo, ...(t.taxon_photos || []).map(x => x.photo)].map(openPhoto).find(Boolean) || null});
+/* an open photo for each taxon that lacks one: first iNaturalist's own picks (30 taxa a request), then, one at a
+   time and gently, the region's best-voted open-licensed observation */
+const photoMemo = new Map();
+let photoQueue = Promise.resolve();
+async function openPhotos(ids){
+  const need = [...new Set(ids)].filter(id => !photoMemo.has(id));
+  for(let i = 0; i < need.length; i += 30){
+    const batch = need.slice(i, i + 30);
+    try { const j = await nat("taxa/" + batch.join(",")); for(const t of j.results) photoMemo.set(t.id, taxonCard(t).photo); } catch(e){}
+  }
+  return Object.fromEntries(ids.map(id => [id, photoMemo.get(id) || null]));
+}
+const obsPhoto = id => photoQueue = photoQueue.then(async () => {
+  if(photoMemo.get(id)) return photoMemo.get(id);
+  await new Promise(ok => setTimeout(ok, 450));
+  try {
+    const j = await nat("observations", {taxon_id: id, photo_license: "cc0,cc-by", quality_grade: "research", order_by: "votes", per_page: 3, place_id: PNW});
+    const p = j.results.flatMap(o => o.photos || []).map(openPhoto).find(Boolean) || null;
+    photoMemo.set(id, p); return p;
+  } catch(e){ return null; }
+});
+
 /* ---------- links ---------- */
 const placeHref = id => `${ROOT}places/?id=${encodeURIComponent(id)}`;
-const speciesHref = s => `${ROOT}living/?id=${encodeURIComponent(s.slug)}`;
+/* a species in the wildflower pack goes by its name; any other species by its iNaturalist number */
+const speciesHref = s => `${ROOT}living/?id=${encodeURIComponent(s.slug || s.id)}`;
 const inatTaxon = id => `https://www.inaturalist.org/taxa/${id}`;
 
 /* ---------- seasons ---------- */
@@ -197,6 +247,23 @@ const ownPhotos = async root => {
 /* a species as a square tile; local thumbnails, so it works offline */
 const speciesTile = (s, extra = "") => `<a class="sp" href="${speciesHref(s)}"><div class="pic"><img src="${thumb(s)}" alt="" loading="lazy"></div>
   <b>${esc(s.common || s.sci)}</b><i>${esc(s.sci)}</i>${extra}</a>`;
+/* a live species (any taxon from iNaturalist) as a square tile; its photo may arrive later (fillPhotos) */
+const liveTile = (t, extra = "") => `<a class="sp" href="${speciesHref(t)}" data-tid="${t.id}"><div class="pic">${t.photo
+  ? `<img src="${inat(t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${initials(t.common || t.sci)}</span>`}</div>
+  <b>${esc(t.common || t.sci)}</b><i>${esc(t.sci)}</i>${extra}</a>`;
+/* give every live tile under root an open-licensed photo where one exists; tiles left without one keep their initials */
+async function fillPhotos(root){
+  const tiles = [...root.querySelectorAll("[data-tid]")].filter(a => !a.querySelector("img"));
+  if(!tiles.length) return;
+  const put = (a, p) => { if(!p || a.querySelector("img")) return; a.querySelector(".pic").innerHTML = `<img src="${inat(p, "small")}" alt="" loading="lazy" crossorigin="anonymous">`; };
+  const got = await openPhotos(tiles.map(a => +a.dataset.tid));
+  const left = [];
+  for(const a of tiles){ const p = got[+a.dataset.tid]; p ? put(a, p) : left.push(a); }
+  /* the rest, one by one, only as they come into view */
+  const io = new IntersectionObserver(es => es.forEach(e => { if(!e.isIntersecting) return; io.unobserve(e.target);
+    obsPhoto(+e.target.dataset.tid).then(p => put(e.target, p)); }), {rootMargin: "200px"});
+  left.forEach(a => io.observe(a));
+}
 /* a section that only appears if it has something in it */
 const section = (title, body, {id = "", aside = "", n = ""} = {}) => body ? `<section class="section"${id ? ` id="${id}"` : ""}>
   <h2>${title}${n !== "" ? ` <span class="n">${n}</span>` : ""}${aside ? `<span class="aside">${aside}</span>` : ""}</h2>${body}</section>` : "";
@@ -227,5 +294,6 @@ document.addEventListener("DOMContentLoaded", () => { const n = store.get("looko
 
 window.Lookout = {ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
   month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, today, hash, rng, shuffle, photos, shrink, log, theme,
-  sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw};
+  sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw,
+  NAT, PNW, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap};
 }

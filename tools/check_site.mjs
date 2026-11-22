@@ -24,7 +24,7 @@ const WIDTHS = [1366, 880, 390];
 const flowers = JSON.parse(await (await fetch(BASE + "data/flowers.json")).text()).species;
 const someFlower = flowers[3].slug;
 const PAGES = [["home", ""], ["places", "places/"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
-  ["living", "living/"], ["species", `living/?id=${someFlower}`], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"]];
+  ["living", "living/"], ["living-birds", "living/#g=Aves&when=year"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"]];
 
 /* things that should never wrap onto a second line */
 const NOWRAP = [".top nav a", ".mark", ".stats dt", ".stats dd", ".chip", ".btn", ".legend span", ".eyebrow", ".left .count", ".regions li > span:first-child", ".section > h2"];
@@ -39,14 +39,15 @@ for(const w of WIDTHS){
     page.on("console", m => { if(m.type() === "error" && !/Failed to load resource|ERR_|net::/.test(m.text())) errs.push(m.text()); });
     console.log(`${name} @ ${w}`);
     await page.goto(BASE + url, {waitUntil: "load"});
+    if(url.includes("#")) await page.reload({waitUntil: "load"});
     await page.waitForSelector("main > *", {timeout: 15000}).catch(() => flag(`${name}@${w}`, "nothing rendered"));
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(url.startsWith("living") ? 6000 : 1800);
     const r = await page.evaluate(({NOWRAP}) => {
       const out = {};
       out.overflow = document.documentElement.scrollWidth - innerWidth;
       out.wide = [...document.querySelectorAll("main *, header *")].filter(el => { const b = el.getBoundingClientRect(); return b.width && b.right > innerWidth + 1 && !el.closest(".row, .leaflet-container, .qs .chips, .credit"); })
         .slice(0, 5).map(el => `${el.tagName.toLowerCase()}.${el.className} (${Math.round(el.getBoundingClientRect().right)}px)`);
-      out.empty = [...document.querySelectorAll("section.section")].filter(s => [...s.children].filter(c => c.tagName !== "H2").every(c => !c.textContent.trim() && !c.querySelector("img, .leaflet-container, canvas") && !c.classList.contains("mapbox"))).map(s => s.querySelector("h2")?.textContent);
+      out.empty = [...document.querySelectorAll("section.section")].filter(s => s.offsetParent && [...s.children].filter(c => c.tagName !== "H2").every(c => !c.textContent.trim() && !c.querySelector("img, .leaflet-container, canvas") && !c.classList.contains("mapbox"))).map(s => s.querySelector("h2")?.textContent);
       const lines = el => { const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3; const rect = el.getBoundingClientRect(); return rect.height / lh; };
       out.wrapped = NOWRAP.flatMap(sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent && el.getClientRects().length && (
         [...el.getClientRects()].length > 1 || (getComputedStyle(el).display !== "inline" && el.textContent.trim().length < 40 && lines(el) > 1.9 && !el.querySelector("svg, i.sw, .c")))).map(el => `${sel}: "${el.textContent.trim().slice(0, 30)}"`)).slice(0, 8);

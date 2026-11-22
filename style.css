@@ -148,6 +148,7 @@ h1 i,.sci{font-style:italic}
 .legend{display:flex;gap:18px;font-size:14px;color:var(--muted);margin:10px 0 0}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:50%;border:2.5px solid var(--accent);margin-right:6px;vertical-align:-1px}
 .legend i.done{background:var(--accent)}
+.legend i.grid-key{border-radius:2px;background:var(--accent);opacity:.75}
 
 /* ---------- progress ---------- */
 .progress{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:40px;align-items:start}

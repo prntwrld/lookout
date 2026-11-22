@@ -42,5 +42,24 @@ function map(el, places, {single = null, around = []} = {}){
   return m;
 }
 
+/* where a species has been seen: iNaturalist's grid of research-grade sightings over the map, with your places pinned */
+function rangeMap(el, taxonId, places = []){
+  if(!L_ || !el) return null;
+  const m = L_.map(el, {scrollWheelZoom: false, maxZoom: 13});
+  L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 13, crossOrigin: "anonymous",
+    attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · sightings © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a>`}).addTo(m);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2d5c43";
+  L_.tileLayer(`https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.png?taxon_id=${taxonId}&quality_grade=research&color=${encodeURIComponent(accent)}`,
+    {maxZoom: 13, opacity: .75, className: "grid-layer"}).addTo(m);
+  const done = log.all();
+  for(const p of places) L_.marker([p.pin.lat, p.pin.lon], {icon: pin(!!done[p.id]), title: p.name}).addTo(m)
+    .bindPopup(`<a class="pop" href="${placeHref(p.id)}"><b>${esc(p.name)}</b><span>${esc(KIND[p.kind] || "")}</span></a>`);
+  /* Washington, Oregon and southern British Columbia */
+  m.fitBounds([[42, -124.8], [50.8, -116.5]]);
+  new ResizeObserver(() => m.invalidateSize()).observe(el);
+  return m;
+}
+
 window.Lookout.map = map;
+window.Lookout.rangeMap = rangeMap;
 }

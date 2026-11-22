@@ -92,17 +92,20 @@ function wireLog(p, rerender){
   });
 }
 
+/* what's been seen near the trailhead this month: the saved list first, then iNaturalist's latest when there's signal */
 function seenRow(p, P, F){
-  const m = L.month(), ids = p.seen?.[m] || [];
-  const tiles = ids.map(tid => {
-    const s = F?.byId[tid];
-    if(s) return L.speciesTile(s);
-    const t = P.taxa[tid]; if(!t) return "";
-    return `<a class="sp" href="${L.inatTaxon(tid)}" target="_blank" rel="noopener"><div class="pic">${t.photo
-      ? `<img src="${L.inat(t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${L.initials(t.common || t.sci)}</span>`}</div>
-      <b>${esc(t.common || t.sci)}</b><i>${esc(t.sci)}</i></a>`;
-  }).filter(Boolean);
-  return tiles.length ? `<div class="row">${tiles.join("")}</div>` : "";
+  const ids = p.seen?.[L.month()] || [];
+  return ids.map(tid => F?.byId[tid] ? L.speciesTile(F.byId[tid]) : P.taxa[tid] ? L.liveTile({id: tid, ...P.taxa[tid]}) : "").join("");
+}
+async function liveSeen(p, F){
+  const box = $("seen"); if(!box) return;
+  try {
+    const j = await L.nat("observations/species_counts", {lat: p.pin.lat, lng: p.pin.lon, radius: 3, month: L.month(), verifiable: "true", per_page: 18});
+    const tiles = j.results.filter(x => x.count >= 2 && ["species", "subspecies", "variety"].includes(x.taxon.rank))
+      .map(x => F?.byId[x.taxon.id] ? L.speciesTile(F.byId[x.taxon.id]) : L.liveTile(L.taxonCard(x.taxon)));
+    if(tiles.length){ box.querySelector(".row").innerHTML = tiles.join(""); box.hidden = false; }
+  } catch(e){}
+  L.fillPhotos(box);
 }
 
 async function placePage(P, p){
@@ -125,12 +128,13 @@ async function placePage(P, p){
         ["High point", p.high_ft != null && L.feet(p.high_ft)], ["Season", L.seasonText(p.season), L.inSeason(p) ? "now" : ""], ["Pass", p.pass]]
         .filter(x => x[1]).map(([k, v, s]) => `<div${k === "Pass" ? ` class="wide"` : ""}><dt>${k}</dt><dd>${esc(v)}${s ? ` <small>${esc(s)}</small>` : ""}</dd></div>`).join("")}</dl></section>
       <div class="split"><div>${books}${cond}</div><div>${await logBox(p)}</div></div>`
-      + L.section(`You might see here in ${L.MONTHS[L.month() - 1]}`, seenRow(p, P, F), {aside: `<a href="https://www.inaturalist.org/observations?lat=${p.pin.lat}&lng=${p.pin.lon}&radius=3&month=${L.month()}" target="_blank" rel="noopener">On iNaturalist ↗</a>`})
+      + `<section class="section" id="seen"${seenRow(p, P, F) ? "" : " hidden"}><h2>You might see here in ${L.MONTHS[L.month() - 1]}<span class="aside"><a href="https://www.inaturalist.org/observations?lat=${p.pin.lat}&lng=${p.pin.lon}&radius=3&month=${L.month()}" target="_blank" rel="noopener">On iNaturalist ↗</a></span></h2><div class="row">${seenRow(p, P, F)}</div></section>`
       + L.section("The map", `<div class="mapbox small" id="map"></div>`)
       + L.section("Around here", around ? around + `<p class="credit">From OpenStreetMap</p>` : "")
       + L.section("About the area", about)
       + L.section("Nearby", `<div class="cards">${near.map(({q, d}) => L.placeCard(q, P.region[q.region]).replace("</p></a>", ` · ${Math.round(d * 0.621)}\u00a0mi\u00a0away</p></a>`)).join("")}</div>`);
     L.map($("map"), P.list, {single: p, around: p.around || []});
+    liveSeen(p, F);
     wireLog(p, () => placePage(P, p));
     L.ownPhotos(main);
   };
