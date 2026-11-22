@@ -49,15 +49,16 @@ function map(el, places, {single = null, around = [], outline = null} = {}){
 
 /* Cascadia's ground under the front page's map: the relief (data/cascadia-relief.webp, grey for the light on the land,
    alpha for land) coloured from the theme's tokens on a canvas, and Natural Earth's rivers and lakes (data/rivers.json)
-   in --muted, or in --water when the reader switches "Rivers in blue" on. From zoom 7 OpenStreetMap's tiles take over. */
-const RIVERS = "lookout-rivers";
+   in --muted, or in --water when the reader switches "Rivers in blue" on; and, with the "Borders" switch, the country,
+   state and province lines (data/borders.json) in the ink, dashed for states and provinces. From zoom 7 OpenStreetMap's tiles take over. */
+const RIVERS = "lookout-rivers", BORDERS = "lookout-borders";
 function relief(m, c, osm){
   const [w, s, e, n] = c.relief.bounds;
-  for(const [k, z] of [["relief", 150], ["rivers", 350]]){ m.createPane(k).style.zIndex = z; m.getPane(k).style.pointerEvents = "none"; }
+  for(const [k, z] of [["relief", 150], ["rivers", 350], ["borders", 360]]){ m.createPane(k).style.zIndex = z; m.getPane(k).style.pointerEvents = "none"; }
   let ground = null;   /* made once the first colouring is ready, so it never shows as a broken picture */
   const show = u => ground ? ground.setUrl(u) : ground = L_.imageOverlay(u, [[s, w], [n, e]], {pane: "relief", interactive: false,
     attribution: `<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> · <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>`}).addTo(m);
-  const water = L_.layerGroup().addTo(m);
+  const water = L_.layerGroup().addTo(m), lines = L_.layerGroup();
   const img = new Image();
   let url = null, rivers = null;
   const rgb = h => { h = h.replace("#", ""); if(h.length === 3) h = [...h].map(x => x + x).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) || 0); };
@@ -92,18 +93,35 @@ function relief(m, c, osm){
     for(const v of r.rivers) L_.polyline(flip(v.c), {pane: "rivers", weight: Math.max(.6, 2.3 - v.r * .2), lineCap: "round", lineJoin: "round", interactive: false}).addTo(water);
     tint();
   }).catch(() => {});
-  /* the switch beside the legend */
-  const btn = m.getContainer().parentElement?.querySelector("[data-rivers]");
-  if(btn){
-    btn.setAttribute("aria-pressed", blue());
-    btn.addEventListener("click", () => { store.set(RIVERS, !blue()); btn.setAttribute("aria-pressed", blue()); tint(); });
+  const edges = () => !!store.get(BORDERS, false);
+  let drawn = false;
+  const outlines = () => {
+    if(!edges()){ lines.remove(); return; }
+    lines.addTo(m);
+    const col = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+    lines.eachLayer(k => k.setStyle({color: col}));
+    if(drawn) return;
+    drawn = true;
+    window.Lookout.data.json("borders.json").then(b => {
+      const flip = ring => ring.map(([lon, lat]) => [lat, lon]);
+      for(const l of b.state) L_.polyline(flip(l), {pane: "borders", color: col, weight: 1.1, opacity: .5, dashArray: "5 4", interactive: false}).addTo(lines);
+      for(const l of b.country) L_.polyline(flip(l), {pane: "borders", color: col, weight: 1.4, opacity: .6, interactive: false}).addTo(lines);
+    }).catch(() => { drawn = false; });
+  };
+  outlines();
+  /* the switches beside the legend */
+  const box = m.getContainer().parentElement;
+  for(const [sel, key, after] of [["[data-rivers]", RIVERS, tint], ["[data-borders]", BORDERS, outlines]]){
+    const btn = box?.querySelector(sel); if(!btn) continue;
+    btn.setAttribute("aria-pressed", !!store.get(key, false));
+    btn.addEventListener("click", () => { const on = !store.get(key, false); store.set(key, on); btn.setAttribute("aria-pressed", on); after(); });
   }
   /* close in, OpenStreetMap's tiles show the trails and roads; the relief and the rivers step back */
   const sync = () => { const near = m.getZoom() >= 7;
     if(near && !m.hasLayer(osm)) osm.addTo(m); else if(!near && m.hasLayer(osm)) osm.remove();
-    m.getPane("rivers").style.display = near ? "none" : ""; };
+    for(const k of ["rivers", "borders"]) m.getPane(k).style.display = near ? "none" : ""; };
   m.on("zoomend", sync); sync();
-  document.addEventListener("lookout-theme", () => { paint(); tint(); });
+  document.addEventListener("lookout-theme", () => { paint(); tint(); outlines(); });
 }
 
 /* Cascadia (data/cascadia.json): every river that reaches the Pacific from the Copper River to Cape Mendocino. The land

@@ -17,12 +17,13 @@ Writes:
   data/cascadia-relief.webp  shaded relief in Web Mercator: grey is the light on the land, alpha is land (sea is
                              clear). app/map.js colours it from the theme's tokens, so it follows light and dark.
   data/rivers.json           Natural Earth's rivers and lakes around Cascadia, simplified
+  data/borders.json          Natural Earth's country, state and province lines in the same box, for the map's switch
 
   pip install numpy scipy shapely pillow rasterio numba   # numba is optional; without it the flood takes ~an hour
   python3 tools/build_cascadia.py
 
 Sources: Terrain Tiles https://registry.opendata.aws/terrain-tiles/ (attribution in the README), Natural Earth
-rivers and lakes (public domain). Downloads are cached in tools/.cache/.
+rivers, lakes and boundary lines (public domain). Downloads are cached in tools/.cache/.
 """
 import concurrent.futures as cf
 import heapq
@@ -235,6 +236,24 @@ def rivers(area, inside):
     return out
 
 
+def borders(area):
+    """The country lines and the US states' and Canadian provinces' lines in the box."""
+    out = {"country": [], "state": []}
+    for f, k in [("ne_10m_admin_0_boundary_lines_land", "country"), ("ne_10m_admin_1_states_provinces_lines", "state")]:
+        for ft in json.load(open(fetch(NE.format(f), CACHE / f"{f}.geojson")))["features"]:
+            g = ft["geometry"]
+            if not g or (k == "state" and ft["properties"].get("ADM0_A3") not in ("USA", "CAN")):
+                continue
+            g = shape(g)
+            if not g.intersects(area):
+                continue
+            g = g.intersection(area).simplify(.02)
+            for part in (g.geoms if hasattr(g, "geoms") else [g]):
+                if part.geom_type == "LineString" and part.length > .05:
+                    out[k].append([[round(x, 2), round(y, 2)] for x, y in part.coords])
+    return out
+
+
 def main():
     m = outline()
     w, s, e, n = m.bounds
@@ -251,7 +270,8 @@ def main():
                             "coordinates": [[r(p.exterior.coords)] + [r(i.coords) for i in p.interiors if Polygon(i).area > .01] for p in parts]}},
               open(DATA / "cascadia.json", "w"), separators=(",", ":"))
     json.dump(rivers(box(*rb), m.buffer(.3)), open(DATA / "rivers.json", "w"), separators=(",", ":"))
-    for f in ["cascadia.json", "cascadia-relief.webp", "rivers.json"]:
+    json.dump(borders(box(*rb)), open(DATA / "borders.json", "w"), separators=(",", ":"))
+    for f in ["cascadia.json", "cascadia-relief.webp", "rivers.json", "borders.json"]:
         print(f, (DATA / f).stat().st_size // 1024, "KB")
 
 
