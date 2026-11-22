@@ -273,6 +273,19 @@ input[type=search]{min-width:220px}
 .facts dd{margin:0}
 .sw{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-1px;margin-right:5px;border:1px solid var(--shade)}
 .side-h{font:400 26px/1.2 var(--display);margin:0 0 14px}
+/* the classification: family and genus, opening to every rank */
+.tree summary{cursor:pointer;list-style:none;display:block}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::after{content:"";display:inline-block;width:7px;height:7px;margin-left:10px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translateY(-3px)}
+.tree[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+.tree dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:10px 0 2px;font-size:16px}
+.tree dt{color:var(--muted);font-size:14px}
+.tree dd{margin:0}
+/* the range map's streets and fields recede, so the records stand out */
+.base-tiles{filter:saturate(.4) brightness(1.04) contrast(.92)}
+.gbif-tiles{filter:contrast(1.12)}
+#range .legend{flex-wrap:wrap;gap:4px 18px}
+#range .legend span{white-space:nowrap}
 .where{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .where a{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;text-decoration:none;color:var(--ink)}
 .where img,.where .ph{width:64px;height:64px;border-radius:4px;object-fit:cover;background:var(--soft)}
