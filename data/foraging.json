@@ -1,5 +1,5 @@
 {
-  "note": "The Foraging page (living/?f=foraging), written for Lookout; edit freely. months are the usual harvest months west of the Cascades (later up high and east of the mountains). After editing a sci name, run python3 tools/resolve_names.py data/foraging.json to fill in the iNaturalist numbers.",
+  "note": "The Foraging page (living/?f=foraging), written for Lookout; edit freely. months are the usual harvest months west of the Cascades (later up high and east of the mountains). After editing a sci name, run python3 tools/resolve_names.py data/foraging.json to fill in the iNaturalist numbers. harvest lists the main crops of Washington, Oregon and British Columbia farms and markets, not every one; months are typical for the region's markets (east-side fruit comes early, west-side greens late).",
   "hook": "Berries, greens and mushrooms by the month, the market's harvest, and the look-alikes that can kill",
   "intro": [
     "The Northwest feeds anyone who knows where to look. Salmonberries ripen in May as the first fruit of the year, huckleberries cover the mountain slopes in August, and the autumn rains bring chanterelles up through the moss. People here have harvested camas, berries, shellfish and salmon for thousands of years.",
@@ -442,6 +442,17 @@
       ]
     },
     {
+      "name": "Spinach",
+      "months": [
+        4,
+        5,
+        6,
+        9,
+        10,
+        11
+      ]
+    },
+    {
       "name": "Salad greens",
       "months": [
         4,
@@ -451,6 +462,25 @@
         8,
         9,
         10
+      ]
+    },
+    {
+      "name": "Radishes and turnips",
+      "months": [
+        4,
+        5,
+        6,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Fava beans",
+      "months": [
+        5,
+        6,
+        7
       ]
     },
     {
@@ -476,6 +506,13 @@
       ]
     },
     {
+      "name": "Gooseberries and currants",
+      "months": [
+        6,
+        7
+      ]
+    },
+    {
       "name": "Sweet onions",
       "months": [
         6,
@@ -484,7 +521,36 @@
       ]
     },
     {
+      "name": "Chard",
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Broccoli and cauliflower",
+      "months": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
       "name": "Raspberries",
+      "months": [
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Marionberries and blackberries",
       "months": [
         7,
         8
@@ -512,7 +578,23 @@
       ]
     },
     {
-      "name": "Peaches",
+      "name": "Peaches and nectarines",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Zucchini and summer squash",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Cucumbers",
       "months": [
         7,
         8,
@@ -525,6 +607,27 @@
         7,
         8,
         9
+      ]
+    },
+    {
+      "name": "Carrots and beets",
+      "months": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Cabbage",
+      "months": [
+        7,
+        8,
+        9,
+        10,
+        11
       ]
     },
     {
@@ -544,6 +647,13 @@
       ]
     },
     {
+      "name": "Peppers and eggplant",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
       "name": "Sweet corn",
       "months": [
         8,
@@ -551,7 +661,21 @@
       ]
     },
     {
+      "name": "Melons",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
       "name": "Plums",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Figs",
       "months": [
         8,
         9
@@ -572,6 +696,13 @@
         9,
         10,
         11
+      ]
+    },
+    {
+      "name": "Grapes",
+      "months": [
+        9,
+        10
       ]
     },
     {
@@ -598,11 +729,48 @@
       ]
     },
     {
+      "name": "Brussels sprouts",
+      "months": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "Parsnips",
+      "months": [
+        10,
+        11,
+        12,
+        1,
+        2,
+        3
+      ]
+    },
+    {
       "name": "Kale and leeks",
       "months": [
         1,
         2,
         3,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "Cultivated mushrooms",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
         10,
         11,
         12
