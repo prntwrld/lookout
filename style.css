@@ -50,12 +50,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{display:flex;align-items:center;gap:28px;padding-top:18px;padding-bottom:18px}
 .mark{display:inline-flex;align-items:center;gap:9px;font:500 25px/1 var(--display);letter-spacing:-.01em;color:var(--ink);text-decoration:none;margin-right:auto}
 .mark svg{width:24px;height:24px;color:var(--accent)}
-/* once per visit the name runs through the flag: red, white, red, left to right, then settles back to ink */
-.mark.flag .word{background:linear-gradient(100deg,var(--ink) 0 34%,#d52b1e 37% 44%,#fff 44% 56%,#d52b1e 56% 63%,var(--ink) 66%) 100% 0/300% 100% no-repeat;
+/* once per visit the name runs through the Cascadia flag: blue, white, green, left to right, then settles back to ink */
+.mark.flag .word{background:linear-gradient(100deg,var(--ink) 0 34%,#0b5fa5 37% 44%,#fff 44% 56%,#2e7d3c 56% 63%,var(--ink) 66%) 100% 0/300% 100% no-repeat;
   -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 .6px rgba(0,0,0,.28));animation:flag 1.5s cubic-bezier(.45,0,.25,1) .3s both}
 .mark.flag svg{animation:flag-leaf 1.5s ease-in-out .3s both}
 @keyframes flag{to{background-position:0 0}}
-@keyframes flag-leaf{35%,60%{color:#d52b1e}}
+@keyframes flag-leaf{30%{color:#0b5fa5}65%{color:#2e7d3c}}
 :root[data-theme="dark"] .mark.flag .word{filter:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mark.flag .word{filter:none}}
 .top nav{display:flex;gap:24px;font-size:17px}
