@@ -38,12 +38,12 @@ python3 tools/build_birds.py     # about 10 minutes for 150 birds; COUNT=200 for
 A new trait pack (mushrooms, say) follows the birds: a build script that writes `data/<name>.json`, a hand-written `data/<name>-traits.json` whose `codes.slots` names its columns, and an entry in `KEYS` in `app/key.js` with its questions.
 
 - **`build_places.py`** writes `data/places-extra.json`. It finds the trailhead pin and named peaks, lookouts, hot springs, viewpoints, lakes and waterfalls nearby using OpenStreetMap (Overpass, or Nominatim when no Overpass server answers). It takes a photo and two sentences from Wikipedia (freely licensed photos only, with author and licence), and records what iNaturalist observers have seen within 3 km in each month.
-- **`build_flowers.py`** writes `data/flowers.json` and `data/thumbs/`. It picks the most-recorded native wildflowers across the Cascade regions (`tools/flora_rules.py` leaves out grasses, sedges, shrubs, trees and pond weeds) and fetches each one's names, family and the Wikipedia summary iNaturalist carries. Photos are **CC0 and CC BY only**, each credited to its photographer. Flowering months come from sightings annotated as flowering, regions from where it has been recorded, and elevation from the heights of its sightings (Open Topo Data, SRTM 30 m). It also saves a 200 px thumbnail of each species in the repository, so the key and the guide work offline.
+- **`build_flowers.py`** writes `data/flowers.json` and `data/thumbs/`. It picks the most-recorded native wildflowers across the Cascade regions (`tools/flora_rules.py` leaves out grasses, sedges, shrubs, trees and pond weeds) and fetches each one's names, family and the Wikipedia summary iNaturalist carries. Photos are Creative Commons only (CC0, CC BY, CC BY-SA, CC BY-NC, CC BY-NC-SA; never "no derivatives" or all rights reserved), each credited to its photographer. iNaturalist's own picks for the species come first, then Wikipedia's lead picture, then the region's sightings, with grey, dark or flat pictures moved back. Flowering months come from sightings annotated as flowering, regions from where it has been recorded, and elevation from the heights of its sightings (Open Topo Data, SRTM 30 m). It also saves a 200 px thumbnail of each species in the repository, so the key and the guide work offline.
 
 Every request is paced (about one a second for iNaturalist, Nominatim and Open Topo Data, as each asks) and cached in `tools/.cache/`, so a rerun only asks for what's new. Set `PAUSE_INATURALIST=2` (or `PAUSE_NOMINATIM`, `PAUSE_OPENTOPODATA`) to go slower.
 
 ## Live and saved
-Living things, species pages and "You might see here" ask iNaturalist as you browse (only CC0 and CC BY photos are shown; where iNaturalist's own pick isn't open-licensed, the page looks for an open-licensed sighting photo instead). The wildflower pack, the places and your log are files in the repository and on your device.
+Living things, species pages and "You might see here" ask iNaturalist as you browse (photos follow the same Creative Commons rule as the packs; non-commercial licences are used because Lookout is a non-commercial site, so revisit that if it ever becomes commercial). The wildflower pack, the places and your log are files in the repository and on your device.
 
 ## Offline
 `sw.js` is the service worker. On install it saves the app shell, the data packs and every wildflower thumbnail. Pages, scripts and data load fresh when there's a connection, so your edits show up, and come from the saved copy only when there's no connection. Photos and map tiles are saved as you view them, so a place or species you've opened before still has its pictures offline. When you change the list of shell files in `sw.js`, bump `VERSION` there.
@@ -61,7 +61,7 @@ node tools/check_site.mjs        # screenshots go to $SHOTS (default: /tmp/looko
 ```
 
 ## Credits
-- Photographs: [iNaturalist](https://www.inaturalist.org) observers (CC0 and CC BY, credited on every photo) and [Wikimedia Commons](https://commons.wikimedia.org) contributors (credited with their licences)
+- Photographs: [iNaturalist](https://www.inaturalist.org) observers (Creative Commons, credited on every photo) and [Wikimedia Commons](https://commons.wikimedia.org) contributors (credited with their licences)
 - Maps and places: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, ODbL
 - Text: [Wikipedia](https://en.wikipedia.org), CC BY-SA
 - Elevations: [Open Topo Data](https://www.opentopodata.org) (SRTM)

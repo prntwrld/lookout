@@ -43,14 +43,18 @@ async function loadSpecies(key, F){
     s.genusId = anc.find(a => a.rank === "genus")?.id;
     s.summary ||= shorten(plain(t.wikipedia_summary));
     s.wiki ||= wikiTitle(t.wikipedia_url);
-    if(!pack){
-      const seen = new Set(), add = p => { if(p && !seen.has(p.id) && s.photos.length < 5){ seen.add(p.id); s.photos.push(p); } };
-      (t.taxon_photos || []).forEach(x => add(L.openPhoto(x.photo)));
-      if(s.photos.length < 3){
-        try { const j = await L.nat("observations", {taxon_id: t.id, photo_license: "cc0,cc-by", quality_grade: "research", order_by: "votes", per_page: 12, place_id: L.PNW});
-          j.results.forEach(o => add(L.openPhoto(o.photos?.[0]))); } catch(e){}
-      }
+    /* photos: iNaturalist's own picks first (chosen to show the species), then Wikipedia's lead picture, then the region's
+       sightings; then the better-looking ones forward, so a night-camera frame or a far-off speck doesn't lead */
+    const cands = [], seen = new Set(), add = (p, keep) => { const k = p && (p.id || p.src); if(p && !seen.has(k)){ seen.add(k); cands.push(keep ? {...p, keep: true} : p); } };
+    (t.taxon_photos || []).forEach(x => add(L.openPhoto(x.photo), true));
+    if(cands.length < 2) add(await L.wikiLead(s.wiki), true);
+    if(pack) s.photos.forEach(p => add(p));
+    if(cands.length < 6){
+      try { const j = await L.nat("observations", {taxon_id: t.id, photo_license: L.LICENSES, quality_grade: "research", order_by: "votes", per_page: 20, place_id: L.PNW});
+        j.results.forEach(o => add(L.openPhoto(o.photos?.[0]))); } catch(e){}
     }
+    const ranked = await L.rankPhotos(cands);
+    if(ranked.length) s.photos = ranked.slice(0, 6);
   }
   if(pack) s.group ||= "Plantae";
   return s;
@@ -98,8 +102,8 @@ async function speciesPage(F, s){
     ["Pojar", s.pojar ? `p. ${esc(s.pojar)}` : ""]
   ].filter(x => x[1]);
   const kind = ONE[s.group] || "";
-  main.innerHTML = `<section class="hero">${ph.length ? `<div class="frame" data-hide-broken id="big"><img src="${L.inat(ph[0], "large")}"${s.pack ? ` data-fallback="${L.thumb(s)}"` : ""} alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.inatCredit(ph[0])}</div>
-      ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.inat(p, "small")}" alt="" loading="lazy" crossorigin="anonymous"></button>`).join("")}</div>` : ""}` : ""}
+  main.innerHTML = `<section class="hero">${ph.length ? `<div class="frame" data-hide-broken id="big"><img src="${L.photoSrc(ph[0], "large")}"${s.pack ? ` data-fallback="${L.thumb(s)}"` : ""} alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.photoCredit(ph[0])}</div>
+      ${ph.length > 1 ? `<div class="strip">${ph.map((p, i) => `<button type="button" data-i="${i}" aria-current="${!i}" aria-label="Photo ${i + 1}"><img src="${L.photoSrc(p, "small")}" alt="" loading="lazy" crossorigin="anonymous"></button>`).join("")}</div>` : ""}` : ""}
       <p class="eyebrow">${esc([kind, s.family].filter(Boolean).join(" · "))}${s.pack && L.blooming(s, m) ? " · In bloom now" : ""}</p><h1>${esc(s.common || s.sci)}</h1>
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i>${s.pojar ? ` · Pojar p. ${esc(s.pojar)}` : ""}</p></section>
     <div class="split"><div><dl class="facts">${facts.map(([k, v]) => `<dt${/id="/.test(v) ? " hidden" : ""}>${k}</dt><dd${/id="/.test(v) ? " hidden" : ""}>${v}</dd>`).join("")}</dl>
@@ -112,7 +116,7 @@ async function speciesPage(F, s){
   main.querySelector(".strip")?.addEventListener("click", e => {
     const b = e.target.closest("[data-i]"); if(!b) return;
     const p = ph[+b.dataset.i];
-    $("big").innerHTML = `<img src="${L.inat(p, "large")}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.inatCredit(p)}`;
+    $("big").innerHTML = `<img src="${L.photoSrc(p, "large")}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous">${L.photoCredit(p)}`;
     main.querySelectorAll(".strip button").forEach(x => x.setAttribute("aria-current", x === b));
   });
   const show = el => { el.hidden = false; el.previousElementSibling?.removeAttribute("hidden"); };
@@ -165,7 +169,7 @@ async function heroPick(F, r){
 async function guidePage(F){
   const r = L.rng("living " + L.today()), st = state();
   const pick = await heroPick(F, r);
-  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.inat(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.inatCredit(pick.photo)}</div>` : `<section class="hero">`)
+  main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.photoSrc(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.photoCredit(pick.photo)}</div>` : `<section class="hero">`)
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
     <div id="groups" style="margin:30px 0 18px">${L.groupChips(st.g)}</div>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}">

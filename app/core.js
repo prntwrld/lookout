@@ -107,14 +107,57 @@ const nat = (path, params = {}) => {
   if(!natCache.has(url)) natCache.set(url, fetchJSON(url).catch(e => { natCache.delete(url); throw e; }));
   return natCache.get(url);
 };
-/* only CC0 and CC BY photos are shown, each credited */
-const OPEN = {"cc0": "CC0", "cc-by": "CC BY"};
+/* Creative Commons photos, each credited; non-commercial licences are fine (Lookout is non-commercial),
+   "no derivatives" and all-rights-reserved photos are not used */
+const OPEN = {"cc0": "CC0", "cc-by": "CC BY", "cc-by-sa": "CC BY-SA", "cc-by-nc": "CC BY-NC", "cc-by-nc-sa": "CC BY-NC-SA"};
+const LICENSES = Object.keys(OPEN).join(",");
 const openPhoto = p => {
   const lic = OPEN[(p?.license_code || "").toLowerCase()], m = /photos\/(\d+)\/[a-z]+\.(\w+)/i.exec(p?.url || p?.medium_url || "");
   if(!lic || !m) return null;
   const by = String(p.attribution || "").replace(/^\(c\)\s*/, "").split(/, (some|no) rights/)[0].trim();
   return {id: +m[1], ext: m[2], by: /^no rights/i.test(by) || !by ? "an iNaturalist observer" : by, lic};
 };
+/* a photo is either iNaturalist's ({id, ext, by, lic}) or a Wikimedia one ({src, by, lic, page}) */
+const photoSrc = (p, size = "medium") => p.src ? (size === "small" || size === "square" ? sized(p.src, 330) : size === "medium" ? sized(p.src, 500) : p.src) : inat(p, size);
+const photoCredit = p => p.src ? credit(p.by, p.lic, p.page) : inatCredit(p);
+/* Wikipedia's lead picture for an article, if its licence is public domain, CC0, CC BY or CC BY-SA */
+async function wikiLead(title){
+  if(!title) return null;
+  try {
+    const api = "https://en.wikipedia.org/w/api.php?origin=*&format=json&action=query&redirects=1&";
+    const j = await fetchJSON(api + "prop=pageimages&piprop=name&titles=" + encodeURIComponent(title));
+    const name = Object.values(j.query?.pages || {})[0]?.pageimage;
+    if(!name || !/\.(jpe?g|png|webp)$/i.test(name)) return null;
+    const f = await fetchJSON(api + "prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=1280&titles=File:" + encodeURIComponent(name));
+    const ii = Object.values(f.query?.pages || {})[0]?.imageinfo?.[0], m = ii?.extmetadata || {};
+    const lic = String(m.LicenseShortName?.value || "").replace(/<[^>]+>/g, "").trim();
+    if(!ii || ii.width < 600 || !/^(public domain|pd|cc0|cc by(-sa)? \d|cc-by(-sa)?-\d)/i.test(lic)) return null;
+    const by = String(m.Artist?.value || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().slice(0, 80) || "Wikimedia Commons";
+    return {src: (ii.thumburl || ii.url).split("?")[0], by, lic, page: (ii.descriptionurl || "").split("?")[0]};
+  } catch(e){ return null; }
+}
+/* how good a photo looks as a portrait, judged from a small copy: grey (night cameras), dark or flat pictures score low.
+   It can't see whether the animal fills the frame; Wikipedia's lead picture and iNaturalist's own picks come first for that. */
+const looks = p => new Promise(ok => {
+  const img = new Image(); img.crossOrigin = "anonymous";
+  const t = setTimeout(() => ok(0.5), 2500);
+  img.onload = () => { clearTimeout(t);
+    try {
+      const c = document.createElement("canvas"); c.width = c.height = 48; const g = c.getContext("2d"); g.drawImage(img, 0, 0, 48, 48);
+      const d = g.getImageData(0, 0, 48, 48).data; let sat = 0, lum = 0, lum2 = 0; const n = d.length / 4;
+      for(let i = 0; i < d.length; i += 4){ const r = d[i] / 255, gr = d[i + 1] / 255, b = d[i + 2] / 255, mx = Math.max(r, gr, b), mn = Math.min(r, gr, b);
+        const l = .299 * r + .587 * gr + .114 * b; sat += mx ? (mx - mn) / mx : 0; lum += l; lum2 += l * l; }
+      sat /= n; lum /= n; const sd = Math.sqrt(Math.max(0, lum2 / n - lum * lum));
+      ok(Math.min(sat, .45) / .45 * .5 + Math.min(sd, .22) / .22 * .3 + (lum > .18 && lum < .85 ? .2 : 0) - (sat < .07 ? .6 : 0));
+    } catch(e){ ok(0.5); } };
+  img.onerror = () => { clearTimeout(t); ok(-1); };
+  img.src = photoSrc(p, "square");
+});
+/* put the better-looking photos first; a photo marked "keep" (Wikipedia's lead, iNaturalist's own pick) stays ahead */
+async function rankPhotos(list){
+  const scored = await Promise.all(list.map(async (p, i) => ({p, i, s: p.keep ? 2 : await looks(p)})));
+  return scored.filter(x => x.s >= 0).sort((a, b) => (b.s > .35) - (a.s > .35) || (b.s >= 2) - (a.s >= 2) || a.i - b.i).map(x => x.p);
+}
 /* a live taxon in the shape the pages use */
 const taxonCard = t => ({id: t.id, sci: t.name, common: cap(t.preferred_common_name || ""), rank: t.rank, group: t.iconic_taxon_name || "",
   photo: [t.default_photo, ...(t.taxon_photos || []).map(x => x.photo)].map(openPhoto).find(Boolean) || null});
@@ -134,7 +177,7 @@ const obsPhoto = id => photoQueue = photoQueue.then(async () => {
   if(photoMemo.get(id)) return photoMemo.get(id);
   await new Promise(ok => setTimeout(ok, 450));
   try {
-    const j = await nat("observations", {taxon_id: id, photo_license: "cc0,cc-by", quality_grade: "research", order_by: "votes", per_page: 3, place_id: PNW});
+    const j = await nat("observations", {taxon_id: id, photo_license: LICENSES, quality_grade: "research", order_by: "votes", per_page: 3, place_id: PNW});
     const p = j.results.flatMap(o => o.photos || []).map(openPhoto).find(Boolean) || null;
     photoMemo.set(id, p); return p;
   } catch(e){ return null; }
@@ -173,9 +216,21 @@ const group = k => { for(const g of GROUPS){ if(g.k === k) return {...g, top: g}
 /* two rows of chips: the main groups, then the chosen group's sub-groups (if it has any) */
 const groupChips = (sel, attr = "data-g") => {
   const g = group(sel), top = g.top;
-  return `<div class="chips groups">${GROUPS.map(x => `<button type="button" class="chip" ${attr}="${x.k}" aria-pressed="${x.k === top.k}">${esc(x.name)}</button>`).join("")}</div>
+  const rows = `<div class="chips groups">${GROUPS.map(x => `<button type="button" class="chip" ${attr}="${x.k}" aria-pressed="${x.k === top.k}">${esc(x.name)}</button>`).join("")}</div>
     ${top.sub ? `<div class="chips subgroups">${[{k: top.k, name: `All ${top.name.toLowerCase()}`}, ...top.sub].map(x => `<button type="button" class="chip" ${attr}="${x.k}" aria-pressed="${x.k === sel}">${esc(x.name)}</button>`).join("")}</div>` : ""}`;
+  /* on a phone, one button that says what's chosen and opens to every group (and the chosen one's sub-groups), wrapped */
+  const open = pickerOpen; pickerOpen = false;
+  return `<div class="gdesk">${rows}</div><details class="gphone"${open ? " open" : ""}><summary>${esc(top.name)}${g.k !== top.k ? ` · ${esc(g.name)}` : ""}</summary>${rows}</details>`;
 };
+/* the phone picker closes once something is picked, except a group with sub-groups, which stays open to offer them
+   (listening in the capture phase, so this runs before the page redraws the picker) */
+let pickerOpen = false;
+document.addEventListener("click", e => {
+  const d = e.target.closest("details.gphone"), c = e.target.closest(".chip"); if(!d || !c) return;
+  const v = [...c.attributes].find(a => /^data-.*g$/.test(a.name))?.value, g = group(v);
+  pickerOpen = !!g.sub && g.k === g.top.k;
+  d.open = pickerOpen;
+}, true);
 
 /* ---------- links ---------- */
 const placeHref = id => `${ROOT}places/?id=${encodeURIComponent(id)}`;
@@ -316,7 +371,7 @@ async function fillPhotos(root){
 const section = (title, body, {id = "", aside = "", n = ""} = {}) => body ? `<section class="section"${id ? ` id="${id}"` : ""}>
   <h2>${title}${n !== "" ? ` <span class="n">${n}</span>` : ""}${aside ? `<span class="aside">${aside}</span>` : ""}</h2>${body}</section>` : "";
 const toast = msg => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2600); };
-const footer = () => `<footer class="wrap"><span>Photos: <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers (CC0, CC BY) and <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a></span>
+const footer = () => `<footer class="wrap"><span>Photos: <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers (Creative Commons, credited on each) and <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a></span>
   <span>Maps: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
   <span>Text from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</span><span id="offline-state"></span></footer>`;
 const FAMILY = {Asteraceae:"aster family",Liliaceae:"lily family",Fabaceae:"pea family",Rosaceae:"rose family",Ranunculaceae:"buttercup family",Ericaceae:"heath family",
@@ -343,5 +398,5 @@ document.addEventListener("DOMContentLoaded", () => { const n = store.get("looko
 window.Lookout = {ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
   month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, today, hash, rng, shuffle, photos, shrink, log, theme,
   sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw,
-  NAT, PNW, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap, GROUPS, group, groupChips};
+  NAT, PNW, LICENSES, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap, GROUPS, group, groupChips, photoSrc, photoCredit, wikiLead, rankPhotos};
 }

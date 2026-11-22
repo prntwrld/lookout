@@ -7,7 +7,7 @@
 From iNaturalist (research-grade, Washington, Oregon and British Columbia):
   - which species: the most-recorded birds in the region
   - names, family and a short Wikipedia summary
-  - photos: CC0 and CC BY only, each with its photographer (the same rules as the wildflowers)
+  - photos: Creative Commons, credited, iNaturalist's own picks first (the same rules as the wildflowers)
   - months: when it's seen in the region
   - regions: which of data/regions.json's regions it has been recorded in
 The key's traits are hand-written in data/bird-traits.json; the page joins them to this file.
@@ -51,11 +51,11 @@ def main():
     for n, t in enumerate(chosen, 1):
         d = detail.get(t["id"], t)
         print(f"[{n}/{len(chosen)}] {t['name']}")
-        photos = B.photos_for(t["id"], d)
-        if photos:
-            B.thumb(t["id"], photos[0])
-        fam = next((anc[a]["name"] for a in d.get("ancestor_ids") or [] if a in anc and anc[a]["rank"] == "family"), "")
         wiki = (d.get("wikipedia_url") or "").rsplit("/wiki/", 1)[-1].replace("_", " ") if d.get("wikipedia_url") else ""
+        photos = B.best_photos(B.photos_for(t["id"], d), wiki)
+        if photos:
+            B.thumb_from(t["id"], photos)
+        fam = next((anc[a]["name"] for a in d.get("ancestor_ids") or [] if a in anc and anc[a]["rank"] == "family"), "")
         out.append({"id": t["id"], "slug": B.slug(t["name"]), "sci": t["name"], "common": (d.get("preferred_common_name") or "").strip(),
                     "family": fam, "obs": counts.get(t["id"], 0), "regions": [r["id"] for r in B.REGIONS if r["id"] in seen_in.get(t["id"], [])],
                     "months": months_for(t["id"]), "photos": photos, "wiki": wiki, "summary": B.summary(d.get("wikipedia_summary"))})

@@ -13,7 +13,7 @@ function hero(P, F, r){
   const useFlower = flowers.length && (!hikes.length || r() < .5);
   if(useFlower){
     const s = flowers[Math.floor(r() * Math.min(flowers.length, 40))], ph = s.photos[0];
-    return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(s)}"><img src="${L.inat(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.inatCredit(ph)}</div>
+    return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(s)}"><img src="${L.photoSrc(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.photoCredit(ph)}</div>
       <p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
       <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></section>`;
   }
@@ -32,7 +32,7 @@ function wall(P, F, r){
   const places = L.shuffle(P.list.filter(p => p.photo), r).map(p => ({href: L.placeHref(p.id), src: L.sized(p.photo.src, 960), name: p.name}));
   const fl = F?.list.filter(s => s.photos?.length) || [];
   const now = L.shuffle(fl.filter(s => L.blooming(s, m)), r), rest = L.shuffle(fl.filter(s => !L.blooming(s, m)), r);
-  const flowers = [...now, ...rest].slice(0, 22).map(s => ({href: L.speciesHref(s), src: L.inat(s.photos[0], "medium"), fb: L.thumb(s), name: s.common || s.sci}));
+  const flowers = [...now, ...rest].slice(0, 22).map(s => ({href: L.speciesHref(s), src: L.photoSrc(s.photos[0], "medium"), fb: L.thumb(s), name: s.common || s.sci}));
   const tiles = [];
   while(places.length || flowers.length){
     if(places.length) tiles.push(places.shift());

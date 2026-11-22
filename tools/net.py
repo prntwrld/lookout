@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = pathlib.Path(os.environ.get("LOOKOUT_CACHE", ROOT / "tools" / ".cache"))
 UA = "LookoutFieldGuide/1.0 (static PNW field guide; https://github.com/prntwrld/lookout)"
 PAUSE = {"api.inaturalist.org": 1.1, "en.wikipedia.org": 0.3, "overpass-api.de": 2.0,
-         "api.open-meteo.com": 0.5, "api.opentopodata.org": 1.1, "nominatim.openstreetmap.org": 1.1}
+         "api.open-meteo.com": 0.5, "api.opentopodata.org": 1.1, "nominatim.openstreetmap.org": 1.1, "upload.wikimedia.org": 1.5}
 for _h in list(PAUSE):
     _env = os.environ.get("PAUSE_" + _h.split(".")[-2].upper().replace("-", "_"))
     if _env:
@@ -115,8 +115,10 @@ def save(name, obj):
     print(f"wrote data/{name} ({path.stat().st_size // 1024} KB)")
 
 
-# iNaturalist photo licences we may show (the user's rule: CC0 and CC BY only)
-OPEN = {"cc0": "CC0", "cc-by": "CC BY"}
+# iNaturalist photo licences we may show: Creative Commons with credit, non-commercial allowed (Lookout is non-commercial);
+# not 'no derivatives', not all rights reserved
+OPEN = {"cc0": "CC0", "cc-by": "CC BY", "cc-by-sa": "CC BY-SA", "cc-by-nc": "CC BY-NC", "cc-by-nc-sa": "CC BY-NC-SA"}
+LICENSES = ",".join(OPEN)
 
 
 def inat_photo(p):

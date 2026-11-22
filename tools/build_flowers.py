@@ -7,7 +7,7 @@
 From iNaturalist (research-grade, native, flowering plants, in the regions of data/regions.json):
   - which species: the most-recorded wildflowers across the Cascade regions (tools/flora_rules.py says what counts)
   - names, family, a short Wikipedia summary (iNaturalist carries it; CC BY-SA, credited on the page)
-  - photos: CC0 and CC BY only, from the region's best-voted observations, each with its photographer
+  - photos: Creative Commons (non-commercial allowed, never "no derivatives"), iNaturalist's own picks first, each credited
   - bloom months: when sightings are annotated "flowering" (or, when few are, when it's seen at all)
   - regions: which regions it has been recorded in
   - elevation: the middle 80% of its sightings' heights, from Open Topo Data (SRTM 30 m)
@@ -70,28 +70,27 @@ def names_of(ids):
 
 
 def photos_for(tid, detail):
-    """Up to 5 open-licensed photos: the region's best-voted observations first, then iNaturalist's own picks."""
-    seen, out = set(), []
+    """Open-licensed photos: iNaturalist's own picks for the species first (chosen to show it well), then the region's
+    best-voted sightings. Returns (curated, others)."""
+    seen, curated, others = set(), [], []
 
-    def add(p):
+    def add(p, to):
         rec = net.inat_photo(p)
         if rec and rec["id"] not in seen:
-            seen.add(rec["id"]); out.append(rec)
+            seen.add(rec["id"]); to.append(rec)
 
-    for where in (BOX, {}):
-        j = net.get_json(f"{INAT}/observations", {
-            "taxon_id": tid, "photo_license": "cc0,cc-by", "quality_grade": "research", **where,
-            "order_by": "votes", "per_page": 30})
-        for o in j["results"]:
-            for p in (o.get("photos") or [])[:1]:
-                add(p)
-            if len(out) >= 5:
-                return out
-        if len(out) >= 3:
-            break
     for tp in detail.get("taxon_photos") or []:
-        add(tp["photo"])
-    return out[:5]
+        add(tp["photo"], curated)
+    if len(curated) < 4:
+        for where in (BOX, {}):
+            j = net.get_json(f"{INAT}/observations", {
+                "taxon_id": tid, "photo_license": net.LICENSES, "quality_grade": "research", **where, "order_by": "votes", "per_page": 30})
+            for o in j["results"]:
+                for p in (o.get("photos") or [])[:1]:
+                    add(p, others)
+            if len(curated) + len(others) >= 6:
+                break
+    return curated[:5], others
 
 
 def bloom_for(tid):
@@ -149,22 +148,85 @@ def summary(text):
     return (cut[:end + 1] if end > 120 else cut.rsplit(" ", 1)[0] + "…").strip()
 
 
-def thumb(tid, photo):
+def photo_url(photo, size="small"):
+    """iNaturalist photos are {id, ext}; Wikimedia ones carry their own src (a 1280px thumbnail, renamed for other widths)."""
+    if photo.get("src"):
+        return re.sub(r"/1280px-", "/330px-", photo["src"]) if size == "small" else photo["src"]
+    return f"https://inaturalist-open-data.s3.amazonaws.com/photos/{photo['id']}/{size}.{photo['ext']}"
+
+
+def wiki_lead(title):
+    """Wikipedia's lead picture for the article, if it's public domain, CC0 or CC BY (the rule for species photos)."""
+    if not title:
+        return None
+    W = "https://en.wikipedia.org/w/api.php"
+    try:
+        j = net.get_json(W, {"action": "query", "titles": title, "prop": "pageimages", "piprop": "name", "redirects": 1, "format": "json"})
+        name = next(iter(j.get("query", {}).get("pages", {}).values()), {}).get("pageimage")
+        if not name or not re.search(r"\.(jpe?g|png|webp)$", name, re.I):
+            return None
+        f = net.get_json(W, {"action": "query", "titles": "File:" + name, "prop": "imageinfo", "iiprop": "url|extmetadata|size", "format": "json"})
+        ii = next(iter(f["query"]["pages"].values())).get("imageinfo", [{}])[0]
+    except Exception as e:
+        print(f"  ! wikipedia {title}: {e}")
+        return None
+    m = ii.get("extmetadata", {})
+    lic = re.sub(r"<[^>]+>", "", m.get("LicenseShortName", {}).get("value", "")).strip()
+    if ii.get("width", 0) < 600 or not re.match(r"^(public domain|pd|cc0|cc by(-sa)? \d|cc-by(-sa)?-\d)", lic, re.I):
+        return None
+    by = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.get("Artist", {}).get("value", ""))).strip()[:80] or "Wikimedia Commons"
+    url = ii["url"].split("?")[0]
+    mm = re.match(r"(https://upload\.wikimedia\.org/wikipedia/commons)/(\w/\w\w)/(.+)$", url)
+    src = f"{mm.group(1)}/thumb/{mm.group(2)}/{mm.group(3)}/1280px-{mm.group(3)}" if mm and ii["width"] > 1280 else url
+    return {"src": src, "by": by, "lic": lic, "page": ii.get("descriptionurl", "").split("?")[0]}
+
+
+def looks(photo):
+    """How good a photo looks as a portrait, from a small copy: grey (night cameras), dark or flat pictures score low."""
+    from PIL import Image, ImageStat
+    try:
+        im = Image.open(io.BytesIO(net.get_bytes(photo_url(photo)))).convert("RGB").resize((48, 48))
+    except Exception:
+        return -1
+    hsv = im.convert("HSV"); sat = ImageStat.Stat(hsv).mean[1] / 255
+    g = ImageStat.Stat(im.convert("L")); lum, sd = g.mean[0] / 255, g.stddev[0] / 255
+    return min(sat, .45) / .45 * .5 + min(sd, .22) / .22 * .3 + (.2 if .18 < lum < .85 else 0) - (.6 if sat < .07 else 0)
+
+
+def best_photos(found, wiki_title):
+    """iNaturalist's own picks first (unless grey or dark), then Wikipedia's lead picture if its licence allows,
+    then the sightings, better-looking ones forward."""
+    curated, others = found
+    keep = [p for p in curated if looks(p) > .1]
+    scored = sorted(((looks(p), i, p) for i, p in enumerate(others)), key=lambda x: (-(x[0] > .35), x[1]))
+    rest = [p for s, i, p in scored if s >= 0]
+    lead = wiki_lead(wiki_title) if len(keep) < 2 else None
+    return (keep + ([lead] if lead else []) + rest)[:6]
+
+
+def thumb(tid, photo, force=False):
     """A small square picture for the key and the walls, kept in the repository so it works offline."""
     from PIL import Image
     path = THUMBS / f"{tid}.jpg"
-    if path.exists():
-        return
-    url = f"https://inaturalist-open-data.s3.amazonaws.com/photos/{photo['id']}/small.{photo['ext']}"
+    if path.exists() and not force:
+        return True
     try:
-        im = Image.open(io.BytesIO(net.get_bytes(url))).convert("RGB")
+        im = Image.open(io.BytesIO(net.get_bytes(photo_url(photo)))).convert("RGB")
     except Exception as e:  # a missing photo shouldn't stop the build
         print(f"  ! thumb {tid}: {e}")
-        return
+        return False
     w, h = im.size; s = min(w, h)
     im = im.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s)).resize((200, 200), Image.LANCZOS)
     THUMBS.mkdir(parents=True, exist_ok=True)
     im.save(path, "JPEG", quality=74, optimize=True, progressive=True)
+    return True
+
+
+def thumb_from(tid, photos):
+    """The first photo that downloads becomes the thumbnail."""
+    for p in photos:
+        if thumb(tid, p, force=True):
+            return
 
 
 def slug(s):
@@ -183,15 +245,15 @@ def main():
     for n, tid in enumerate(chosen, 1):
         t, d = taxa[tid], detail.get(tid, taxa[tid])
         print(f"[{n}/{len(chosen)}] {t['name']}")
-        photos = photos_for(tid, d)
+        wiki = (d.get("wikipedia_url") or "").rsplit("/wiki/", 1)[-1].replace("_", " ") if d.get("wikipedia_url") else ""
+        photos = best_photos(photos_for(tid, d), wiki)
         months, _ = bloom_for(tid)
         try:
             elev = elevation_for(tid)
         except Exception as e:
             print(f"  ! elevation: {e}"); elev = None
         if photos:
-            thumb(tid, photos[0])
-        wiki = (d.get("wikipedia_url") or "").rsplit("/wiki/", 1)[-1].replace("_", " ") if d.get("wikipedia_url") else ""
+            thumb_from(tid, photos)
         out.append({
             "id": tid, "slug": slug(t["name"]), "sci": t["name"],
             "common": (d.get("preferred_common_name") or t.get("preferred_common_name") or "").strip(),
