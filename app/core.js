@@ -356,7 +356,7 @@ const initials = s => esc(String(s || "?").split(/\s+/).map(w => w[0]).slice(0, 
 const placeCard = (p, region) => {
   const done = log.get(p.id);
   return `<a class="card" href="${placeHref(p.id)}" data-place="${esc(p.id)}"><div class="pic">${p.photo
-    ? `<img src="${esc(sized(p.photo.src, 500))}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${initials(p.name)}</span>`}
+    ? `<img src="${esc(sized(p.photo.src, 500))}" alt="" loading="lazy">` : `<span class="ph">${initials(p.name)}</span>`}
     ${done ? `<span class="tick" title="Done ${esc(done.date)}" aria-label="Done">✓</span>` : ""}<span class="badge">${esc(KIND[p.kind] || p.kind)}</span></div>
     <h3>${esc(p.name)}</h3><p>${[region?.name, p.distance_mi != null && miles(p.distance_mi), p.gain_ft != null && `${num(p.gain_ft)}\u00a0ft\u00a0gain`].filter(Boolean).map(esc).join(" · ")}</p></a>`;
 };
@@ -374,13 +374,13 @@ const speciesTile = (s, extra = "") => `<a class="sp" href="${speciesHref(s)}"><
   <b>${esc(s.common || s.sci)}</b><i>${esc(s.sci)}</i>${extra}</a>`;
 /* a live species (any taxon from iNaturalist) as a square tile; its photo may arrive later (fillPhotos) */
 const liveTile = (t, extra = "") => `<a class="sp" href="${speciesHref(t)}" data-tid="${t.id}"><div class="pic">${t.photo
-  ? `<img src="${inat(t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="ph">${initials(t.common || t.sci)}</span>`}</div>
+  ? `<img src="${inat(t.photo, "small")}" alt="" loading="lazy">` : `<span class="ph">${initials(t.common || t.sci)}</span>`}</div>
   <b>${esc(t.common || t.sci)}</b><i>${esc(t.sci)}</i>${extra}</a>`;
 /* give every live tile under root an open-licensed photo where one exists; tiles left without one keep their initials */
 async function fillPhotos(root){
   const tiles = [...root.querySelectorAll("[data-tid]")].filter(a => !a.querySelector("img"));
   if(!tiles.length) return;
-  const put = (a, p) => { if(!p || a.querySelector("img")) return; a.querySelector(".pic").innerHTML = `<img src="${inat(p, "small")}" alt="" loading="lazy" crossorigin="anonymous">`; };
+  const put = (a, p) => { if(!p || a.querySelector("img")) return; a.querySelector(".pic").innerHTML = `<img src="${inat(p, "small")}" alt="" loading="lazy">`; };
   const got = await openPhotos(tiles.map(a => +a.dataset.tid));
   const left = [];
   for(const a of tiles){ const p = got[+a.dataset.tid]; p ? put(a, p) : left.push(a); }
@@ -389,6 +389,25 @@ async function fillPhotos(root){
     obsPhoto(+e.target.dataset.tid).then(p => put(e.target, p)); }), {rootMargin: "200px"});
   left.forEach(a => io.observe(a));
 }
+/* rows that scroll sideways (.row, .strip) say so: the edge with more beyond it fades, and where there's a mouse,
+   a small arrow at that edge scrolls on. Each row is wrapped once, whenever one appears on the page. */
+const ARROW = d => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d < 0 ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5"}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const sideways = row => {
+  if(row.parentElement?.classList.contains("rowwrap")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "rowwrap" + (row.classList.contains("strip") ? " for-strip" : "");
+  row.replaceWith(wrap); wrap.append(row);
+  wrap.insertAdjacentHTML("beforeend", [-1, 1].map(d => `<button type="button" class="rownav ${d < 0 ? "back" : "on"}" data-d="${d}" aria-label="${d < 0 ? "Scroll back" : "Scroll on"}" tabindex="-1">${ARROW(d)}</button>`).join(""));
+  const mark = () => { const end = row.scrollWidth - row.clientWidth - 6;
+    wrap.classList.toggle("more-on", row.scrollLeft < end); wrap.classList.toggle("more-back", row.scrollLeft > 6); };
+  row.addEventListener("scroll", mark, {passive: true});
+  new ResizeObserver(mark).observe(row);
+  new MutationObserver(mark).observe(row, {childList: true});
+  wrap.addEventListener("click", e => { const b = e.target.closest(".rownav"); if(b) row.scrollBy({left: +b.dataset.d * row.clientWidth * .8, behavior: "smooth"}); });
+  mark();
+};
+new MutationObserver(() => document.querySelectorAll("main .row, main .strip").forEach(sideways)).observe(document.documentElement, {childList: true, subtree: true});
+
 /* a section that only appears if it has something in it */
 const section = (title, body, {id = "", aside = "", n = ""} = {}) => body ? `<section class="section"${id ? ` id="${id}"` : ""}>
   <h2>${title}${n !== "" ? ` <span class="n">${n}</span>` : ""}${aside ? `<span class="aside">${aside}</span>` : ""}</h2>${body}</section>` : "";

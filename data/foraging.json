@@ -1,0 +1,866 @@
+{
+  "note": "The Foraging page (living/?f=foraging), written for Lookout; edit freely. months are the usual harvest months west of the Cascades (later up high and east of the mountains). After editing a sci name, run python3 tools/resolve_names.py data/foraging.json to fill in the iNaturalist numbers. harvest lists the main crops of Washington, Oregon and British Columbia farms and markets, not every one; months are typical for the region's markets (east-side fruit comes early, west-side greens late).",
+  "hook": "Berries, greens and mushrooms by the month, the market's harvest, and the look-alikes that can kill",
+  "intro": [
+    "The Northwest feeds anyone who knows where to look. Salmonberries ripen in May as the first fruit of the year, huckleberries cover the mountain slopes in August, and the autumn rains bring chanterelles up through the moss. People here have harvested camas, berries, shellfish and salmon for thousands of years.",
+    "It's also home to some of the most poisonous plants and mushrooms in North America, several of them easy to mistake for something good. Start with the berries and greens that have no dangerous double, learn one new food at a time, and never eat anything on the say-so of a website, this one included."
+  ],
+  "rules": [
+    "Be completely sure. If you're not, leave it. A local mushroom club or a person who knows it in the field is worth more than any photo.",
+    "Take a little, from where there's a lot, and leave plenty for the birds, the bears and the next person.",
+    "Check the rules for the land: national forests usually allow picking for your own use within limits (some need a free permit); national and state parks often limit amounts or forbid it; tribal and private land needs permission.",
+    "Stay away from roadsides, sprayed fields and polluted water.",
+    "Shellfish need a licence in Washington and Oregon, and seaweed does in Washington. Shellfish beaches close for toxins: check the closures the same day you go."
+  ],
+  "groups": {
+    "berries": "Berries and fruit",
+    "greens": "Greens and shoots",
+    "mushrooms": "Mushrooms",
+    "nuts": "Nuts, roots and tips",
+    "shore": "From the shore"
+  },
+  "wild": [
+    {
+      "sci": "Rubus spectabilis",
+      "kind": "berries",
+      "months": [
+        5,
+        6,
+        7
+      ],
+      "note": "The first berry of the year, gold to deep red, along streams and in clearings.",
+      "id": 47543
+    },
+    {
+      "sci": "Fragaria vesca",
+      "kind": "berries",
+      "months": [
+        6,
+        7
+      ],
+      "note": "Tiny and intense, on open slopes and trail edges.",
+      "id": 50298
+    },
+    {
+      "sci": "Vaccinium parvifolium",
+      "kind": "berries",
+      "months": [
+        6,
+        7,
+        8
+      ],
+      "note": "Bright red, tart, on bushes growing from old stumps in the lowland forest.",
+      "id": 48354
+    },
+    {
+      "sci": "Rubus parviflorus",
+      "kind": "berries",
+      "months": [
+        7,
+        8
+      ],
+      "note": "Soft, shallow red caps under big maple-like leaves.",
+      "id": 51646
+    },
+    {
+      "sci": "Amelanchier alnifolia",
+      "kind": "berries",
+      "months": [
+        7,
+        8
+      ],
+      "note": "Serviceberry: purple, sweet and seedy, on the drier east side and in the gorge.",
+      "id": 75415
+    },
+    {
+      "sci": "Rubus ursinus",
+      "kind": "berries",
+      "months": [
+        7,
+        8
+      ],
+      "note": "The native trailing blackberry: smaller and better than the invader.",
+      "id": 53445
+    },
+    {
+      "sci": "Vaccinium membranaceum",
+      "kind": "berries",
+      "months": [
+        8,
+        9
+      ],
+      "note": "The mountain huckleberry, the great berry of the Cascades, on old burns and subalpine slopes.",
+      "id": 48347
+    },
+    {
+      "sci": "Rubus armeniacus",
+      "kind": "berries",
+      "months": [
+        8,
+        9
+      ],
+      "note": "Himalayan blackberry is invasive: pick all you like.",
+      "id": 61317
+    },
+    {
+      "sci": "Gaultheria shallon",
+      "kind": "berries",
+      "months": [
+        8,
+        9
+      ],
+      "note": "Salal: dark, mealy and sweet, good in jam.",
+      "id": 48441
+    },
+    {
+      "sci": "Sambucus cerulea",
+      "kind": "berries",
+      "months": [
+        8,
+        9
+      ],
+      "note": "Blue elderberry, cooked only. Its red cousin is the one to avoid.",
+      "danger": "Sambucus racemosa",
+      "dangerNote": "Red elderberry's raw berries, seeds, stems and leaves are toxic.",
+      "id": 143799,
+      "dangerId": 57824
+    },
+    {
+      "sci": "Vaccinium ovatum",
+      "kind": "berries",
+      "months": [
+        9,
+        10,
+        11
+      ],
+      "note": "Evergreen huckleberry: small, shiny and black, on the coast into November.",
+      "id": 48349
+    },
+    {
+      "sci": "Berberis aquifolium",
+      "kind": "berries",
+      "months": [
+        8,
+        9
+      ],
+      "note": "Oregon grape: very sour; best in jelly or with sweeter fruit.",
+      "id": 126887
+    },
+    {
+      "sci": "Urtica dioica",
+      "kind": "greens",
+      "months": [
+        3,
+        4,
+        5
+      ],
+      "note": "Young tops, picked with gloves and cooked or dried; cooking takes away the sting.",
+      "id": 1631210
+    },
+    {
+      "sci": "Claytonia perfoliata",
+      "kind": "greens",
+      "months": [
+        3,
+        4,
+        5
+      ],
+      "note": "Miner's lettuce: mild and juicy, in damp shade in spring.",
+      "id": 52994
+    },
+    {
+      "sci": "Oxalis oregana",
+      "kind": "greens",
+      "months": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "note": "Redwood sorrel: lemony leaves, a few at a time (they hold oxalic acid).",
+      "id": 47757
+    },
+    {
+      "sci": "Athyrium filix-femina",
+      "kind": "greens",
+      "months": [
+        4,
+        5
+      ],
+      "note": "Lady fern fiddleheads, cooked. Not bracken, whose shoots are carcinogenic.",
+      "id": 52669
+    },
+    {
+      "sci": "Allium cernuum",
+      "kind": "greens",
+      "months": [
+        4,
+        5,
+        6
+      ],
+      "note": "Nodding onion: it smells of onion. Anything onion-like that doesn't is not.",
+      "danger": "Toxicoscordion venenosum",
+      "dangerNote": "Death camas grows in the same meadows, has no onion smell, and kills.",
+      "id": 116364,
+      "dangerId": 59087
+    },
+    {
+      "sci": "Camassia quamash",
+      "kind": "nuts",
+      "months": [
+        5,
+        6
+      ],
+      "note": "Common camas was a staple food here for thousands of years; leave the digging to those whose tradition it is, and enjoy the blue meadows.",
+      "danger": "Toxicoscordion venenosum",
+      "dangerNote": "Death camas has creamy white flowers but identical bulbs, and grows among the camas.",
+      "id": 62220,
+      "dangerId": 59087
+    },
+    {
+      "sci": "Corylus cornuta",
+      "kind": "nuts",
+      "months": [
+        8,
+        9
+      ],
+      "note": "Beaked hazelnut: pick before the squirrels, as the husks turn brown.",
+      "id": 53374
+    },
+    {
+      "sci": "Picea sitchensis",
+      "kind": "nuts",
+      "months": [
+        4,
+        5
+      ],
+      "note": "Spruce tips in spring, bright and citrusy, for tea or syrup.",
+      "id": 68131
+    },
+    {
+      "sci": "Morchella",
+      "kind": "mushrooms",
+      "months": [
+        4,
+        5,
+        6
+      ],
+      "note": "Morels come up in spring, often the year after a forest fire. Always cooked.",
+      "danger": "Gyromitra",
+      "dangerNote": "False morels have lobed, brain-like caps and are stuffed with cottony tissue, not hollow.",
+      "id": 56830,
+      "dangerId": 85118
+    },
+    {
+      "sci": "Hypomyces lactifluorum",
+      "kind": "mushrooms",
+      "months": [
+        8,
+        9,
+        10
+      ],
+      "note": "Lobster mushroom: a mould that turns another mushroom bright orange and firm.",
+      "id": 48215
+    },
+    {
+      "sci": "Cantharellus formosus",
+      "kind": "mushrooms",
+      "months": [
+        9,
+        10,
+        11
+      ],
+      "note": "The Pacific golden chanterelle, Oregon's state mushroom: false gills like ridges, apricot smell.",
+      "danger": "Hygrophoropsis aurantiaca",
+      "dangerNote": "The false chanterelle has true, thin, forked gills and grows on wood; not deadly, but not good.",
+      "id": 120443,
+      "dangerId": 63538
+    },
+    {
+      "sci": "Boletus edulis",
+      "kind": "mushrooms",
+      "months": [
+        9,
+        10
+      ],
+      "note": "King bolete: a sponge under the cap, not gills, and a fat, netted stem.",
+      "id": 48701
+    },
+    {
+      "sci": "Tricholoma murrillianum",
+      "kind": "mushrooms",
+      "months": [
+        9,
+        10
+      ],
+      "note": "Matsutake: spicy cinnamon smell, under pine and hemlock.",
+      "danger": "Amanita smithiana",
+      "dangerNote": "Smith's amanita looks much like matsutake, lacks the smell, and destroys the kidneys.",
+      "id": 521711,
+      "dangerId": 62485
+    },
+    {
+      "sci": "Hericium abietis",
+      "kind": "mushrooms",
+      "months": [
+        9,
+        10,
+        11
+      ],
+      "note": "Conifer coral hedgehog: white cascades of spines on old logs.",
+      "id": 55187
+    },
+    {
+      "sci": "Craterellus tubaeformis",
+      "kind": "mushrooms",
+      "months": [
+        10,
+        11,
+        12
+      ],
+      "note": "Yellowfoot: small, hollow, in mossy wet forest into winter.",
+      "id": 350511
+    },
+    {
+      "sci": "Coprinus comatus",
+      "kind": "mushrooms",
+      "months": [
+        9,
+        10,
+        11
+      ],
+      "note": "Shaggy mane: cook within hours, before it melts into ink.",
+      "id": 47392
+    },
+    {
+      "sci": "Nereocystis luetkeana",
+      "kind": "shore",
+      "months": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "note": "Bull kelp: young fronds and stipes; cut, don't pull the holdfast. A licence is needed in Washington.",
+      "id": 120499
+    },
+    {
+      "sci": "Siliqua patula",
+      "kind": "shore",
+      "months": [
+        10,
+        11,
+        12,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "note": "Razor clams, on the surf beaches when the season opens; dates are set by the state each year.",
+      "id": 117615
+    },
+    {
+      "sci": "Metacarcinus magister",
+      "kind": "shore",
+      "months": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "note": "Dungeness crab: seasons and size limits differ by area.",
+      "id": 63697
+    }
+  ],
+  "deadly": [
+    {
+      "sci": "Cicuta douglasii",
+      "note": "Western water hemlock, in wet ground, is the most poisonous plant in North America; a bite of root can kill. Leave every wild member of the carrot family alone.",
+      "id": 76338
+    },
+    {
+      "sci": "Conium maculatum",
+      "note": "Poison hemlock: tall, purple-blotched hollow stems, along roads and fields. Deadly.",
+      "id": 52998
+    },
+    {
+      "sci": "Amanita phalloides",
+      "note": "The death cap, spreading in the Northwest under planted trees. Most mushroom deaths are from it.",
+      "id": 52135
+    },
+    {
+      "sci": "Galerina marginata",
+      "note": "Small and brown on rotting wood, with the same toxin as the death cap.",
+      "id": 1672638
+    },
+    {
+      "sci": "Actaea rubra",
+      "note": "Baneberry: shiny red or white berries on a forest herb. Poisonous.",
+      "id": 49870
+    },
+    {
+      "sci": "Veratrum viride",
+      "note": "Green false hellebore, or corn lily, in wet mountain meadows. Highly toxic.",
+      "id": 79484
+    }
+  ],
+  "shellfish": [
+    {
+      "name": "Washington: shellfish safety map",
+      "href": "https://fortress.wa.gov/doh/biotoxin/biotoxin.html"
+    },
+    {
+      "name": "Oregon: shellfish closures",
+      "href": "https://www.oregon.gov/oda/programs/foodsafety/shellfish/pages/shellfishclosures.aspx"
+    },
+    {
+      "name": "British Columbia: shellfish closures",
+      "href": "https://www.pac.dfo-mpo.gc.ca/fm-gp/contamination/biotox/index-eng.html"
+    }
+  ],
+  "harvest": [
+    {
+      "name": "Rhubarb",
+      "months": [
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Asparagus",
+      "months": [
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Spinach",
+      "months": [
+        4,
+        5,
+        6,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Salad greens",
+      "months": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Radishes and turnips",
+      "months": [
+        4,
+        5,
+        6,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Fava beans",
+      "months": [
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Peas",
+      "months": [
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Strawberries",
+      "months": [
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Cherries",
+      "months": [
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Gooseberries and currants",
+      "months": [
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Sweet onions",
+      "months": [
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Chard",
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Broccoli and cauliflower",
+      "months": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Raspberries",
+      "months": [
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Marionberries and blackberries",
+      "months": [
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Garlic",
+      "months": [
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Blueberries",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Apricots",
+      "months": [
+        7
+      ]
+    },
+    {
+      "name": "Peaches and nectarines",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Zucchini and summer squash",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Cucumbers",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Beans",
+      "months": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Carrots and beets",
+      "months": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Cabbage",
+      "months": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Potatoes",
+      "months": [
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Tomatoes",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Peppers and eggplant",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Sweet corn",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Melons",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Plums",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Figs",
+      "months": [
+        8,
+        9
+      ]
+    },
+    {
+      "name": "Pears",
+      "months": [
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Apples",
+      "months": [
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Grapes",
+      "months": [
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Hazelnuts",
+      "months": [
+        9,
+        10
+      ]
+    },
+    {
+      "name": "Winter squash and pumpkins",
+      "months": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Cranberries",
+      "months": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Brussels sprouts",
+      "months": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "Parsnips",
+      "months": [
+        10,
+        11,
+        12,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Kale and leeks",
+      "months": [
+        1,
+        2,
+        3,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "Cultivated mushrooms",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  ],
+  "sow": [
+    {
+      "name": "Peas",
+      "months": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "name": "Fava beans",
+      "months": [
+        2,
+        3,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "Lettuce and salad greens",
+      "months": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "name": "Kale",
+      "months": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Carrots and beets",
+      "months": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "Potatoes",
+      "months": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "name": "Tomatoes (plant out)",
+      "months": [
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Beans",
+      "months": [
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Squash and pumpkins",
+      "months": [
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Garlic",
+      "months": [
+        10,
+        11
+      ]
+    }
+  ]
+}

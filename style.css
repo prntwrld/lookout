@@ -70,9 +70,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hero{margin:0 0 30px}
 .hero .frame{position:relative;border-radius:var(--r);overflow:hidden;background:var(--soft)}
 .hero img{width:100%;aspect-ratio:21/9;max-height:74vh;object-fit:cover}
-.hero .credit{position:absolute;right:10px;bottom:8px;font-size:12px;color:#fff;background:rgba(10,14,12,.48);padding:2px 8px;border-radius:3px;
+.hero .credit,.plate .credit{position:absolute;right:10px;bottom:8px;font-size:12px;color:#fff;background:rgba(10,14,12,.48);padding:2px 8px;border-radius:3px;
   max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hero .credit a{color:#fff;text-decoration:none}
+.hero .credit a,.plate .credit a{color:#fff;text-decoration:none}
 .hero .eyebrow{margin:20px 0 4px}
 .hero .frame + h1,.hero .strip + h1{margin-top:22px}
 .hero.short img{aspect-ratio:3/1;max-height:42vh}
@@ -127,6 +127,18 @@ h1 i,.sci{font-style:italic}
 .sp b{display:block;font:400 16px/1.25 var(--display);margin-top:7px}
 .sp i{display:block;font-size:13px;color:var(--muted);line-height:1.3}
 
+/* a sideways row hints that there's more: the far edge fades, and (with a mouse) a small arrow scrolls on */
+.rowwrap{position:relative}
+.rowwrap.more-on > :first-child{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 64px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 64px),transparent)}
+.rowwrap.more-back > :first-child{-webkit-mask-image:linear-gradient(to right,transparent,#000 64px);mask-image:linear-gradient(to right,transparent,#000 64px)}
+.rowwrap.more-on.more-back > :first-child{-webkit-mask-image:linear-gradient(to right,transparent,#000 64px,#000 calc(100% - 64px),transparent);mask-image:linear-gradient(to right,transparent,#000 64px,#000 calc(100% - 64px),transparent)}
+.rownav{display:none;position:absolute;top:75px;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink);
+  place-items:center;cursor:pointer;box-shadow:0 1px 6px var(--shade);padding:0;z-index:2}
+.rownav svg{width:15px;height:15px}
+.rownav.back{left:-6px}.rownav.on{right:-6px}
+.for-strip .rownav{top:calc(50% - 1px)}
+@media (hover:hover){ .more-on > .rownav.on,.more-back > .rownav.back{display:grid} }
+
 /* ---------- the wall: a mosaic of photos ---------- */
 .wall{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:150px;grid-auto-flow:dense;gap:8px}
 .wall a{position:relative;display:block;border-radius:4px;overflow:hidden;background:var(--soft)}
@@ -160,6 +172,84 @@ h1 i,.sci{font-style:italic}
 .atlas .progress{grid-template-columns:1fr;gap:26px}
 .atlas-h{font:400 22px/1.2 var(--display);margin:0 0 14px}
 .mapbox.tall{height:auto;aspect-ratio:5/6;max-height:86vh}
+
+/* ---------- Living things: the season ---------- */
+.sec-sub{margin:-10px 0 16px}
+/* tabs: words on a rule, the chosen one underlined in the accent */
+.tabs{display:flex;flex-wrap:wrap;gap:0 24px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.tabs button{flex:none;background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;color:var(--muted);font-size:17px;cursor:pointer;white-space:nowrap}
+.tabs button span{font-size:14px;margin-left:3px;font-variant-numeric:tabular-nums}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab-note{margin:0 0 14px}
+/* recordings: a play button, the species, who recorded it, a thin line of progress */
+.song-ctl{margin:0 0 14px}
+.tracks{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);columns:2 420px;column-gap:36px}
+.track{display:grid;grid-template-columns:40px 52px minmax(0,1fr) auto;column-gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.play{width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--paper);color:var(--accent);border:1px solid var(--accent);cursor:pointer}
+.play:hover,.track.on .play{background:var(--accent);color:var(--accent-ink)}
+.play svg{width:14px;height:14px;display:block}
+.tr-img{display:block;width:52px;height:52px;border-radius:4px;overflow:hidden;background:var(--soft)}
+.tr-img img{width:100%;height:100%;object-fit:cover}
+.tr-name{display:block;font:400 18px/1.25 var(--display)}
+.tr-name a{color:var(--ink);text-decoration:none}
+.tr-name a:hover,.track.on .tr-name a{color:var(--accent)}
+.tr-meta{display:block;color:var(--muted);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.tr-bar{display:block;height:2px;background:var(--line);margin-top:6px;overflow:hidden}
+.tr-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s linear}
+.tr-time{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* songs beside Seen this week; either one alone takes the whole width */
+.pair{margin:56px 0}
+.pair > .section{margin:0}
+/* Seen this week keeps the right-hand column while the songs are still on their way; only when there are no songs
+   (or no photos) does the other take the whole width, at the usual size */
+.pair > #week{grid-column:2}
+.pair.solo{grid-template-columns:minmax(0,1fr)}
+.pair.solo > #week{grid-column:auto}
+.pair.solo .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+.pair .tracks{columns:auto}
+.track-box{max-height:700px;overflow-y:auto;scrollbar-width:thin;position:relative}
+.track-box.more-down,.spots-box.more-down{-webkit-mask-image:linear-gradient(#000 calc(100% - 56px),transparent);mask-image:linear-gradient(#000 calc(100% - 56px),transparent)}
+.week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+.week-grid .sp b{font-size:15px}
+.week-more{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:20px 0 0}
+
+/* ---------- a species or a taxon: the name and facts on the left, the photograph and maps on the right ---------- */
+.sp-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:start;margin:12px 0 0}
+.sp-main h1{margin-top:2px}
+.plate{margin:0}
+.plate .frame{position:relative;border-radius:var(--r);overflow:hidden;background:var(--soft)}
+.plate .frame img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.plate .strip{grid-auto-columns:76px;gap:6px}
+.where-box{margin-top:36px}
+/* a list of facts with nothing in it yet (or offline) shows nothing, not an empty rule */
+.facts:not(:has(dd:not([hidden]))){display:none}
+
+/* ---------- a group's page ---------- */
+.crumb{color:inherit;text-decoration:none}
+.crumb:hover{text-decoration:underline}
+#spot-map{height:640px}
+.spots-box{max-height:640px;overflow-y:auto;scrollbar-width:thin;padding-right:6px}
+.spots{columns:1;margin:0}
+.spots li{padding:12px 0}
+.spots li b{font:400 18px/1.25 var(--display)}
+.tides{columns:1}
+.tides li{display:flex;gap:10px;align-items:baseline}
+.tides li .ft{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink);font-size:16px}
+
+/* ---------- foraging ---------- */
+.rules{columns:1}
+.bullets{margin:0 0 8px;padding-left:1.15em;columns:2 150px;column-gap:24px}
+.bullets li{margin:0 0 4px;break-inside:avoid}
+.bullets li::marker{color:var(--moss)}
+.kind-h{font:400 21px/1.2 var(--display);margin:22px 0 12px}
+.kind-h:first-child{margin-top:0}
+.doubles{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:28px 32px}
+.double{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px 14px}
+.double h3{font:400 20px/1.2 var(--display);margin:0 0 12px}
+.double .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.double p{margin:10px 0 0;color:var(--muted)}
+.sp .note.danger{color:var(--ink);font-weight:600}
 
 /* ---------- maps ---------- */
 .mapbox{height:440px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
@@ -229,7 +319,8 @@ input[type=search]{min-width:220px}
 .about p{margin:0 0 8px}
 
 /* ---------- a species ---------- */
-.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:110px;gap:8px;margin-top:8px;padding:3px 3px 8px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin}
+.strip button{scroll-snap-align:start}
 .strip button{padding:0;border:0;background:var(--soft);border-radius:4px;overflow:hidden;cursor:pointer;aspect-ratio:1}
 .strip button[aria-current="true"]{outline:2px solid var(--accent);outline-offset:2px}
 .strip img{width:100%;height:100%;object-fit:cover}
@@ -242,6 +333,20 @@ input[type=search]{min-width:220px}
 .facts dt{color:var(--muted);padding-right:22px;font-size:15px}
 .facts dd{margin:0}
 .sw{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-1px;margin-right:5px;border:1px solid var(--shade)}
+.side-h{font:400 26px/1.2 var(--display);margin:0 0 14px}
+/* the classification: family and genus, opening to every rank */
+.tree summary{cursor:pointer;list-style:none;display:block}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::after{content:"";display:inline-block;width:7px;height:7px;margin-left:10px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translateY(-3px)}
+.tree[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+.tree dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:10px 0 2px;font-size:16px}
+.tree dt{color:var(--muted);font-size:14px}
+.tree dd{margin:0}
+/* the range map's streets and fields recede, so the records stand out */
+.base-tiles{filter:saturate(.4) brightness(1.04) contrast(.92)}
+.gbif-tiles{filter:contrast(1.12)}
+#range .legend{flex-wrap:wrap;gap:4px 18px}
+#range .legend span{white-space:nowrap}
 .where{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .where a{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;text-decoration:none;color:var(--ink)}
 .where img,.where .ph{width:64px;height:64px;border-radius:4px;object-fit:cover;background:var(--soft)}
@@ -266,7 +371,7 @@ input[type=search]{min-width:220px}
 .left .answered .chip::after{content:"×";margin-left:2px;opacity:.7}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
 .grid .sp b{font-size:15px}
-.grid .miss{font-size:12px;color:var(--muted);display:block}
+.grid .miss,.sp .note{font-size:12px;color:var(--muted);display:block;line-height:1.3}
 .peek{display:none}
 .peek:empty{display:none !important}
 .kgroups{margin:6px 0 28px}
@@ -303,6 +408,12 @@ footer a{color:inherit}
   .sky dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
   .wall{grid-template-columns:repeat(4,1fr)}
   .split{grid-template-columns:minmax(0,1fr);gap:36px}
+  .pair > #week{grid-column:auto}
+  .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  .sp-layout{grid-template-columns:minmax(0,1fr);gap:28px}
+  .sp-side{display:contents}
+  .sp-side .plate{order:-1}
+  .sp-side #range,.where-box{margin-top:0 !important}
   .key{grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:28px}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
 }
@@ -331,6 +442,16 @@ footer a{color:inherit}
   .card h3{font-size:18px}
   .wall{grid-template-columns:repeat(2,1fr);grid-auto-rows:140px;gap:5px}
   .wall a:nth-child(n+16){display:none}
+  .pair{margin:42px 0}
+  #spot-map{height:340px}
+  .spots-box{max-height:480px}
+  .track-box{max-height:480px}
+  .week-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px}
+  .week-grid .sp b{font-size:14px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:0 18px}
+  .track{grid-template-columns:40px 44px minmax(0,1fr) auto;column-gap:10px}
+  .tr-img{width:44px;height:44px}
+  .tr-name{font-size:17px}
   .gdesk{display:none}
   .gphone{display:block}
   .wall a.w2{grid-column:span 2;grid-row:span 2}
@@ -339,6 +460,8 @@ footer a{color:inherit}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stats dd{font-size:20px}
   .row{grid-auto-columns:128px}
+  .rownav{top:64px}
+  .strip{grid-auto-columns:84px}
   .grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px}
   .kinds{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
   .kind b{font-size:17px}
