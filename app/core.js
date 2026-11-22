@@ -17,10 +17,21 @@ const MON = MONTHS.map(m => m.slice(0, 3));
 /* ---------- the header ---------- */
 const NAV = [["places", "Places"], ["living", "Living things"], ["key", "Key"]];
 document.currentScript.insertAdjacentHTML("afterend", `<header class="top wrap">
-  <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg>Lookout</a>
+  <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg><span class="word">Lookout</span></a>
   <nav aria-label="Sections">${NAV.map(([id, name]) => `<a href="${ROOT}${id}/"${id === here ? ` aria-current="page"` : ""}>${name}</a>`).join("")}</nav>
   <button class="theme" id="theme" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
 </header>`);
+
+/* ---------- the name runs red-white-red once per visit (not on every page; skipped for reduced motion) ---------- */
+(() => {
+  const mark = document.querySelector(".top .mark");
+  try {
+    if(sessionStorage.getItem("lookout-flag") || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    sessionStorage.setItem("lookout-flag", "1");
+  } catch(e){ return; }
+  mark.classList.add("flag");
+  mark.querySelector(".word").addEventListener("animationend", () => mark.classList.remove("flag"), {once: true});
+})();
 
 /* ---------- the theme: light or dark, remembered ---------- */
 const theme = () => document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
