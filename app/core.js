@@ -414,7 +414,8 @@ const section = (title, body, {id = "", aside = "", n = ""} = {}) => body ? `<se
 const toast = msg => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2600); };
 const footer = () => `<footer class="wrap"><span>Photos: <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers (Creative Commons, credited on each) and <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a></span>
   <span>Maps: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
-  <span>Text from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</span><span id="offline-state"></span></footer>`;
+  <span>Text from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</span>
+  <span>Lookout is a guide, not an authority: never eat anything wild on its word alone</span><span id="offline-state"></span></footer>`;
 const FAMILY = {Asteraceae:"aster family",Liliaceae:"lily family",Fabaceae:"pea family",Rosaceae:"rose family",Ranunculaceae:"buttercup family",Ericaceae:"heath family",
   Apiaceae:"carrot family",Saxifragaceae:"saxifrage family",Plantaginaceae:"plantain family",Brassicaceae:"mustard family",Orobanchaceae:"broomrape family",
   Polemoniaceae:"phlox family",Polygonaceae:"buckwheat family",Onagraceae:"evening primrose family",Orchidaceae:"orchid family",Caryophyllaceae:"pink family",

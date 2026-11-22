@@ -175,6 +175,7 @@ h1 i,.sci{font-style:italic}
 
 /* ---------- Living things: the season ---------- */
 .sec-sub{margin:-10px 0 16px}
+.scope{margin:16px 0 0}
 /* tabs: words on a rule, the chosen one underlined in the accent */
 .tabs{display:flex;flex-wrap:wrap;gap:0 24px;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .tabs button{flex:none;background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;color:var(--muted);font-size:17px;cursor:pointer;white-space:nowrap}
@@ -396,6 +397,8 @@ input[type=search]{min-width:220px}
 .kind b{display:block;font:400 19px/1.2 var(--display);margin-top:8px}
 .kind i{display:block;font-size:14px;color:var(--muted);font-style:normal}
 .near-head{font:400 22px var(--display);margin:30px 0 12px}
+#hits > .near-head:first-child{margin-top:0}
+.here-q .here-on b{font-weight:600}
 
 /* ---------- footer ---------- */
 footer{margin-top:80px;padding-top:22px;padding-bottom:40px;border-top:1px solid var(--line);font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 22px}
