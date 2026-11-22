@@ -111,7 +111,10 @@ def record(kind, osm, name, lat, lon, tags):
 
 def keep(kind, name, lat, lon):
     k = KINDS[kind]
-    return bool(name) and in_cascadia(lat, lon) and (not k.get("test") or k["test"](name))
+    # a name that's a street address ("4141 224th Street ...") is a mapper's placeholder, not a name
+    if not name or re.match(r"^\d{3,}\s", name):
+        return False
+    return in_cascadia(lat, lon) and (not k.get("test") or k["test"](name))
 
 
 # ---------- Overpass ----------
@@ -237,7 +240,7 @@ def main():
             print(f"  no Overpass server answered, and there are too many to search one by one: keeping the {len(have[kind])} already seeded")
             continue
         have[kind] = dedupe(rows)
-        print(f"  {len(have[kind])} {KINDS[kind]['name'].lower()}s")
+        print(f"  {len(have[kind])} × {KINDS[kind]['name'].lower()}")
     seeds = sorted((s for k in KINDS for s in have[k]), key=lambda s: (s["kind"], s["name"].lower()))
     net.save("seeds.json", {
         "_note": "Written by tools/seed_places.py; don't edit by hand. Places across Cascadia from OpenStreetMap, to save onto your list from the Places page's map.",
