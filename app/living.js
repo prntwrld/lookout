@@ -353,6 +353,14 @@ async function heroPick(F, r){
 const MONTH = L.MONTHS[L.month() - 1];
 const daysAgo = n => { const d = new Date(Date.now() - n * 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 /* the most-seen species for a query: [{t: taxon card, count}] (hybrids and higher ranks left out) */
+/* answers kept in this browser for a while (the same day, and at most so many hours), so a refresh asks nothing again */
+const kept = async (key, hours, make) => {
+  const k = "lookout-kept-" + key, c = L.store.get(k);
+  if(c && c.day === L.today() && Date.now() - c.at < hours * 36e5) return c.v;
+  const v = await make();
+  if(v && (!Array.isArray(v) || v.length)) L.store.set(k, {day: L.today(), at: Date.now(), v});
+  return v;
+};
 const counts = async params => (await L.nat("observations/species_counts", {place_id: L.PNW, quality_grade: "research", ...params})).results
   .filter(r => r.taxon && ["species", "subspecies", "variety"].includes(r.taxon.rank)).map(r => ({t: L.taxonCard(r.taxon), count: r.count}));
 const tileOf = (F, x, note) => F?.byId[x.t.id] ? L.speciesTile(F.byId[x.t.id], `<span class="note">${esc(note)}</span>`) : L.liveTile(x.t, `<span class="note">${esc(note)}</span>`);
@@ -360,13 +368,13 @@ const tileOf = (F, x, note) => F?.byId[x.t.id] ? L.speciesTile(F.byId[x.t.id], `
 /* Out in <Month>: mushrooms, blooming, migrating, and mammals, amphibians and reptiles */
 async function outNow(F){
   const at = {month: L.month()};
-  const [fungi, bloomNative, bloomAll, birdsNow, birdsYear, animals] = await Promise.all([
+  const [fungi, bloomNative, bloomAll, birdsNow, birdsYear, animals] = (await kept("out", 24, () => Promise.all([
     counts({...at, taxon_id: "50814", per_page: 40}),
     counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, native: "true", per_page: 40}),
     counts({...at, taxon_id: "47126", term_id: 12, term_value_id: 13, per_page: 40}),
     counts({...at, taxon_id: "3", per_page: 200}),
     counts({taxon_id: "3", per_page: 400}),
-    counts({...at, taxon_id: "40151,20978,26036", per_page: 40})].map(p => p.catch(() => [])));
+    counts({...at, taxon_id: "40151,20978,26036", per_page: 40})].map(p => p.catch(() => []))).then(l => l.some(x => x.length) ? l : null))) || [[], [], [], [], [], []];
   const bloom = bloomNative.length >= 8 ? bloomNative : bloomAll;
   /* migrating: birds whose share of this month's sightings is well above their share of the year's */
   const sum = l => l.reduce((a, x) => a + x.count, 0) || 1;
@@ -398,35 +406,38 @@ async function outNow(F){
 }
 
 /* Songs & calls of the season: birds singing this month, then mammals and frogs when there are recordings, one after another */
-async function songs(){
-  const S = L.sound; if(!S) return;
-  const at = {month: L.month(), sounds: "true"};
+/* the season's recordings, as plain data (kept for the day): mostly birds, with a mammal or frog after every third */
+async function buildSongs(){
+  const S = L.sound, at = {month: L.month(), sounds: "true"};
   const [birds, others] = await Promise.all([counts({...at, taxon_id: "3", per_page: 18}), counts({...at, taxon_id: "40151,20979", per_page: 8})].map(p => p.catch(() => [])));
-  if(!birds.length && !others.length) return;
-  const track = (x, rec) => ({...rec, name: x.t.common || x.t.sci, href: L.speciesHref(x.t), img: x.t.photo ? L.inat(x.t.photo, "small") : "", t: x.t});
-  /* birds: Xeno-canto's recordings on Commons, one per bird; any without one, an observer's recording from here this month */
-  const got = await S.commonsSounds(birds.map(x => x.t.sci)).catch(() => ({}));
+  if(!birds.length && !others.length) return [];
+  const track = (x, rec) => ({...rec, name: x.t.common || x.t.sci, href: L.speciesHref(x.t), img: x.t.photo ? L.inat(x.t.photo, "small") : "", id: x.t.id});
   /* where it was recorded, as a town and a state or province: no street numbers or postcodes */
   const town = w => String(w || "").split(",").map(x => x.trim().replace(/\s+[A-Z]\d[A-Z] ?\d[A-Z]\d$|\s+\d{5}(-\d{4})?$/, "")).filter(x => x && !/\d/.test(x) && !/^(USA?|United States|Canada|CA)$/.test(x)).slice(-2).join(", ").replace(/\bCA-BC\b/, "BC");
-  const near = x => S.natSounds({taxon_id: x.t.id, place_id: L.PNW, month: L.month(), per_page: 3}).then(l => l[0] ? track(x, {...l[0], note: town(l[0].where)}) : null).catch(() => null);
+  /* observers' recordings from here this month: one request for the birds, one for the mammals and frogs, the first for each species */
+  const local = async taxa => { const by = {};
+    for(const r of await S.natSounds({taxon_id: taxa, place_id: L.PNW, month: L.month(), per_page: 120}).catch(() => [])) if(r.taxon && !by[r.taxon.id]) by[r.taxon.id] = {...r, note: town(r.where), taxon: undefined};
+    return by; };
+  const [got, birdRec, otherRec] = await Promise.all([S.commonsSounds(birds.slice(0, 12).map(x => x.t.sci)).catch(() => ({})), local("3"), local("40151,20979")]);
+  /* birds: Xeno-canto's recording on Commons where there's one that plays, else an observer's from here */
   const commons = await S.verified(birds.map(x => got[x.t.sci]?.[0] ? track(x, got[x.t.sci][0]) : null).filter(Boolean), 10, 4);
-  /* any bird whose Commons recording didn't play (or has none), up to ten in all: an observer's recording from here this month */
-  let b = commons;
-  if(commons.length < 10){
-    const have = new Set(commons.map(t => t.t.id));
-    const more = (await Promise.all(birds.filter(x => !have.has(x.t.id)).slice(0, 12 - commons.length).map(near))).filter(Boolean);
-    const extra = await S.verified(more, 10 - commons.length, 4), ids = new Set([...commons, ...extra].map(t => t.t.id));
-    const all = [...commons, ...extra];
-    b = birds.filter(x => ids.has(x.t.id)).map(x => all.find(t => t.t.id === x.t.id));   /* in order of how often they're recorded */
-  }
-  /* mammals and frogs: observers' recordings from the Northwest this month */
-  const o = await S.verified((await Promise.all(others.slice(0, 6).map(near))).filter(Boolean), 3, 3);
-  /* mostly birds, with a mammal or frog after every third */
+  const have = new Set(commons.map(t => t.id));
+  const extra = await S.verified(birds.filter(x => !have.has(x.t.id) && birdRec[x.t.id]).map(x => track(x, birdRec[x.t.id])), 10 - commons.length, 4);
+  const ok = new Set([...commons, ...extra].map(t => t.id)), all = [...commons, ...extra];
+  const b = birds.filter(x => ok.has(x.t.id)).map(x => all.find(t => t.id === x.t.id));   /* in order of how often they're recorded */
+  const o = await S.verified(others.filter(x => otherRec[x.t.id]).map(x => track(x, otherRec[x.t.id])), 3, 3);
   const list = []; b.forEach((t, i) => { list.push(t); if(i % 3 === 2 && o.length) list.push(o.shift()); }); list.push(...o);
-  if(list.length < 3) return;
+  if(list.length < 3) return [];
   /* a picture for each, open-licensed, where the species' own default photo isn't */
-  const pics = await L.openPhotos(list.filter(t => !t.img).map(t => t.t.id)).catch(() => ({}));
-  list.forEach(t => { if(!t.img && pics[t.t.id]) t.img = L.inat(pics[t.t.id], "small"); });
+  const pics = await L.openPhotos(list.filter(t => !t.img).map(t => t.id)).catch(() => ({}));
+  list.forEach(t => { if(!t.img && pics[t.id]) t.img = L.inat(pics[t.id], "small"); });
+  return list;
+}
+
+async function songs(){
+  const S = L.sound; if(!S) return;
+  const list = await kept("songs", 24, buildSongs).catch(() => null);
+  if(!list || list.length < 3) return;
   const sec = $("songs");
   sec.querySelector(".body").innerHTML = `<p class="song-ctl"><button type="button" class="btn ghost" id="play-all">Play all ${list.length}</button></p><div class="track-box"><div id="tracks"></div></div>`;
   const player = S.trackList($("tracks"), list, {chain: true});
@@ -441,7 +452,7 @@ async function songs(){
 
 /* Seen this week: the most-sighted species over the last seven days, with their names */
 async function week(F){
-  const list = (await counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160}).catch(() => [])).filter(x => x.t.photo);
+  const list = (await kept("week", 3, () => counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160}).catch(() => []))).filter(x => x.t.photo);
   if(list.length < 8) return;
   const sec = $("week"), body = sec.querySelector(".body");
   const tile = x => { const name = x.t.common || x.t.sci;
