@@ -68,6 +68,9 @@ const bsw = c => `<i class="sw" style="background:${BIRD_COLOUR[c]?.[1] || "#999
 
 /* ---------- the keys: each a pack of species and the questions it can answer ---------- */
 let REG = [];
+/* the regions this key's species are tagged with (a pack built before the regions grew knows only the Cascade ones); never the waters */
+const regsWithData = () => { const have = new Set((F?.list || []).flatMap(s => s.regions || [])); return REG.filter(r => r.kind !== "water" && have.has(r.id)); };
+const regOpts = () => regsWithData().map(r => ({v: r.id, label: r.name}));
 const near = (list, m) => { const n = [m, m === 1 ? 12 : m - 1, m === 12 ? 1 : m + 1]; return n.some(x => list.includes(x)); };
 const KEYS = {
   flowers: {name: "Wildflowers", what: "Cascades wildflowers", load: () => L.data.flowers(), months: s => s.bloom, taxa: "47126",
@@ -79,7 +82,7 @@ const KEYS = {
       {k: "habitat", title: "Where it's growing", multi: true, opts: [["forest","Forest"],["meadow","Meadow"],["rocky","Rocks"],["wet","Wet ground"],["dry","Dry and open"],["alpine","Alpine"]].map(([v, label]) => ({v, label, icon: HAB_ICON[v]}))},
       {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
       {k: "elev", title: "Elevation", opts: BANDS.map((b, i) => ({v: String(i), label: b[2]}))},
-      {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]},
+      {k: "region", title: "Region", opts: regOpts()}]},
   birds: {name: "Birds", what: "Pacific Northwest birds", load: () => L.data.birds(), months: s => s.months, byId: true, taxa: "3",
     Q: () => [
       {k: "size", title: "Size", multi: true, opts: [["s","Sparrow or smaller"],["m","Robin to jay"],["l","Crow to duck"],["xl","Goose or bigger"]].map(([v, label]) => ({v, label, icon: SIZE_ICON[v]}))},
@@ -88,7 +91,7 @@ const KEYS = {
       {k: "habitat", title: "Where it is", multi: true, opts: [["forest","Forest"],["open","Fields, open country"],["water","Lake or river"],["coast","Coast, salt water"],["marsh","Marsh"],["town","Town, feeder"],["alpine","Mountains"]].map(([v, label]) => ({v, label, icon: BIRD_HAB_ICON[v]}))},
       {k: "behaviour", title: "What it's doing", multi: true, opts: [["ground","On the ground"],["trunk","Climbing a trunk"],["swims","Swimming"],["dives","Diving"],["wades","Wading"],["soars","Soaring"],["hovers","Hovering"],["aerial","Catching insects in the air"],["flocks","In a flock"],["night","At night"]].map(([v, label]) => ({v, label}))},
       {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
-      {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]}
+      {k: "region", title: "Region", opts: regOpts()}]}
 };
 let K = null, F = null, mode = "flowers";
 /* the other trait keys come from data/packs.json; their questions are in each pack's trait file */
@@ -98,7 +101,7 @@ const genericKey = p => ({name: p.name, what: p.what, load: () => L.data.trait(p
   Q(){ return [...this.qs.map(q => ({k: q.k, title: q.title, multi: q.multi !== false, opts: Object.entries(q.opts).map(([v, label]) => ({v, label,
       icon: q.swatch && HEXNAME[v] === label ? `<i class="sw" style="background:${HEX[v]}"></i>` : ""}))})),
     {k: "month", title: "Month", opts: L.MON.map((m, i) => ({v: String(i + 1), label: m}))},
-    {k: "region", title: "Region", opts: REG.map(r => ({v: r.id, label: r.name}))}]; }});
+    {k: "region", title: "Region", opts: regOpts()}]; }});
 
 /* does species s fit answer(s) vals for question k? An unknown never rules a species out. */
 function fits(s, k, vals){
@@ -245,7 +248,7 @@ async function drawHere(more = false){
 }
 
 function regionAt(lat, lon){
-  const inBox = REG.filter(r => { const [s, w, n, e] = r.bbox; return lat >= s && lat <= n && lon >= w && lon <= e; });
+  const inBox = regsWithData().filter(r => { const [s, w, n, e] = r.bbox; return lat >= s && lat <= n && lon >= w && lon <= e; });
   return inBox.sort((a, b) => (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]) - (b.bbox[2] - b.bbox[0]) * (b.bbox[3] - b.bbox[1]))[0] || null;
 }
 const bandFor = ft => String(Math.max(0, BANDS.findIndex(([a, b]) => ft >= a && ft < b)));
@@ -257,7 +260,7 @@ function locate(){
     const {latitude: lat, longitude: lon, altitude} = pos.coords;
     if(mode === "here"){ A.at = [`${lat.toFixed(4)},${lon.toFixed(4)}`]; delete A.region; write(); return draw(); }
     const r = regionAt(lat, lon);
-    NEAR.msg = r ? "" : `You're outside the mountain regions this guide is built around, so region is left open. What's been seen near you comes first.`;
+    NEAR.msg = r ? "" : `This key's species haven't been sorted by region where you are yet, so region is left open. What's been seen near you comes first.`;
     if(r){ A.region = [r.id]; auto.region = "from your location"; }
     /* and what's been recorded around you, if there's signal: 10 km to start */
     NEAR.at = {lat: +lat.toFixed(3), lon: +lon.toFixed(3), t: Date.now()}; L.store.set("lookout-near", NEAR.at); NEAR.key = "";

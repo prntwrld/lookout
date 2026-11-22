@@ -1,6 +1,8 @@
 // Lookout's checks, with Playwright: every kind of page at three widths, then offline.
 //   node tools/check_site.mjs            (serves the repository itself on a free port)
 //   SHOTS=/some/dir node tools/check_site.mjs
+//   ONLY=seeds node tools/check_site.mjs  (just the Places map of seeds and the saved list)
+//   ONLY=trips node tools/check_site.mjs  (just Trips: a sample trip, the opening-hours reader, adding and placing a stop)
 // Prints each problem it finds and exits non-zero if there were any.
 import {createRequire} from "module";
 import {spawn} from "child_process";
@@ -23,14 +25,15 @@ const flag = (where, what) => { problems.push(`${where}: ${what}`); console.log(
 const WIDTHS = [1366, 880, 390];
 const flowers = JSON.parse(await (await fetch(BASE + "data/flowers.json")).text()).species;
 const someFlower = flowers[3].slug;
-const PAGES = [["home", ""], ["places", "places/"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
+const PAGES = [["home", ""], ["places", "places/"], ["trips", "trips/"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
   ["living", "living/"], ["living-insects", "living/?g=insects"], ["living-tidepools", "living/?g=tidepools"], ["living-flowers", "living/?g=flowers"], ["living-mammals", "living/?g=mammals"], ["foraging", "living/?f=foraging"], ["near", "living/?f=near"], ["salmon", "living/?f=salmon"], ["whales", "living/?f=whales"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["genus", "living/?id=144351"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"], ["key-birds", "key/#key=birds&size=m&colour=b"], ["key-insects", "key/#key=here&g=beetles&region=central-cascades&when=year"], ["key-mammals", "key/#key=mammals&tail=bushy"], ["key-here", "key/#key=here&region=olympics&g=tidepools&when=year"]];
 
 /* things that should never wrap onto a second line */
 const NOWRAP = [".top nav a", ".mark", ".stats dt", ".stats dd", ".chip", ".btn", ".legend span", ".eyebrow", ".left .count", ".regions li > span:first-child", ".section > h2"];
 
+const ONLY = process.env.ONLY || "";
 const browser = await chromium.launch();
-for(const w of WIDTHS){
+for(const w of ONLY ? [] : WIDTHS){
   const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
   for(const [name, url] of PAGES){
     const page = await ctx.newPage();
@@ -67,9 +70,86 @@ for(const w of WIDTHS){
   await ctx.close();
 }
 
+/* ---------- trips: a sample trip on the Olympic Peninsula ---------- */
+const TRIP = {t1: {name: "Olympic Peninsula loop", start: "2027-06-05", end: "2027-06-07", regions: ["olympics", "wa-coast", "puget-sound", "hood-canal"],
+  stops: [{ref: "place:hurricane-hill", day: 1}, {ref: "seed:osm-w54928227", day: 1}, {ref: "pool:rialto-beach", day: 2}], note: "", made: 1}};
+const HOURS = [   /* [hours, date, open?] — 2027-06-05 is a Saturday */
+  ["Sa 09:00-13:00", "2027-06-05", true], ["Sa 09:00-13:00", "2027-06-06", false], ["May-Oct Sa 10:00-14:00", "2027-06-05", true],
+  ["May-Oct Sa 10:00-14:00", "2027-11-06", false], ["Apr-Oct Sa 09:00-15:00, Su 10:00-15:00; Nov-Mar Sa 10:00-14:00", "2027-06-06", true],
+  ["Mo-Fr 10:00-18:00; Su off", "2027-06-06", false], ["Jun 06 - Aug 29 Fr 10:00-15:00", "2027-07-02", true], ["Nov-Mar Sa 10:00-14:00", "2027-01-02", true]];
+if(!ONLY || ONLY === "trips"){
+  console.log("trips");
+  for(const w of [1366, 390]){
+    const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
+    await ctx.addInitScript(t => { if(!localStorage.getItem("lookout-trips")) localStorage.setItem("lookout-trips", JSON.stringify(t)); }, TRIP);
+    const page = await ctx.newPage();
+    const errs = []; page.on("pageerror", e => errs.push(e.message));
+    await page.goto(BASE + "trips/", {waitUntil: "load"}); await page.waitForTimeout(800);
+    if(!(await page.$(".trip-card"))) flag(`trips@${w}`, "the sample trip isn't listed");
+    await page.screenshot({path: `${SHOTS}/trips-${w}.png`, fullPage: true});
+    await page.goto(BASE + "trips/?id=t1", {waitUntil: "load"}); await page.waitForSelector(".day", {timeout: 8000}).catch(() => flag(`trips@${w}`, "no days"));
+    if(w === 1366){
+      const bad = await page.evaluate(H => H.filter(([h, d, want]) => !!window.Lookout.openOn(h, d)?.open !== want).map(x => x.join(" @ ")), HOURS);
+      if(bad.length) flag("trips", `opening hours read wrong: ${bad.join(" | ")}`); else console.log(`  opening hours: ${HOURS.length} read right`);
+    }
+    const before = await page.$$eval(".stops li", l => l.length);
+    const ideas = await page.$$eval("#ideas [data-add]", b => b.length);
+    await page.click("#ideas [data-add]");
+    await page.waitForTimeout(300);
+    const after = await page.$$eval(".stops li", l => l.length);
+    if(after !== before + 1) flag(`trips@${w}`, `adding an idea: ${before} stops became ${after}`);
+    await page.selectOption(".stops.loose li select[data-day]", "3").catch(() => flag(`trips@${w}`, "no unplaced stop to place"));
+    await page.waitForTimeout(300);
+    const day3 = await page.$$eval(".day", d => d[2]?.querySelectorAll(".stops li").length || 0);
+    if(day3 !== 1) flag(`trips@${w}`, `placing on day 3 left it with ${day3}`);
+    else console.log(`  ${w}: ${before} stops, ${ideas} ideas; added one and put it on day 3`);
+    const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    if(ov > 1) flag(`trips@${w}`, `page scrolls sideways by ${ov}px`);
+    await page.waitForTimeout(2500);
+    await page.screenshot({path: `${SHOTS}/trip-${w}.png`, fullPage: true});
+    if(errs.length) flag(`trips@${w}`, "script errors: " + errs.join(" | "));
+    await ctx.close();
+  }
+}
+
+/* ---------- the seeds: pick a sea, save a place from the list, and it's in Saved after a reload ---------- */
+if(ONLY !== "trips") console.log("seeds");
+for(const w of ONLY === "trips" ? [] : [1366, 390]){
+  const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", e => errs.push(e.message));
+  await page.goto(BASE + "places/", {waitUntil: "load"});
+  const has = await page.waitForSelector("#seedmap", {timeout: 10000}).then(() => true).catch(() => false);
+  if(!has){ console.log("  (no data/seeds.json yet: run tools/seed_places.py)"); await ctx.close(); break; }
+  const water = await page.$eval('#s-where optgroup[label="Waters"] option', o => o.value).catch(() => null);
+  if(water) await page.selectOption("#s-where", water);
+  await page.waitForTimeout(600);
+  const rows = await page.$$eval("#s-list li", li => li.length);
+  const first = await page.$eval("#s-list [data-focus]", b => b.textContent).catch(() => null);
+  if(!rows || !first) flag(`seeds@${w}`, `nothing listed in ${water}`);
+  else {
+    await page.click("#s-list [data-save]");
+    await page.reload({waitUntil: "load"}); await page.waitForSelector("#saved", {timeout: 8000}).catch(() => {});
+    const kept = await page.$$eval("#saved [data-focus]", b => b.map(x => x.textContent)).catch(() => []);
+    if(!kept.includes(first)) flag(`seeds@${w}`, `saved "${first}" wasn't in Saved after a reload`);
+    else console.log(`  ${w}: ${rows} in ${water}; saved "${first}" and it stayed`);
+    const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    if(ov > 1) flag(`seeds@${w}`, `page scrolls sideways by ${ov}px`);
+    await page.$eval("#saved", el => el.scrollIntoView());
+    if(water) await page.selectOption("#s-where", water);
+    await page.waitForTimeout(1500);
+    await (await page.$("#saved")).screenshot({path: `${SHOTS}/seeds-saved-${w}.png`});
+    await (await page.$("#beyond")).screenshot({path: `${SHOTS}/seeds-${w}.png`});
+    await page.click("#saved [data-save]");
+    if(await page.$("#saved")) flag(`seeds@${w}`, "unsaving didn't empty Saved");
+  }
+  if(errs.length) flag(`seeds@${w}`, "script errors: " + errs.join(" | "));
+  await ctx.close();
+}
+
 /* ---------- offline: load the site, cut the network, check the key and the saved pages ---------- */
-console.log("offline");
-{
+if(!ONLY) console.log("offline");
+if(!ONLY){
   const ctx = await browser.newContext({viewport: {width: 390, height: 844}});
   const page = await ctx.newPage();
   const errs = []; page.on("pageerror", e => errs.push(e.message));

@@ -1,12 +1,49 @@
 {
-  "_note": "Regions shared by places, species and the key. bbox is [south, west, north, east] in degrees. The tools use the boxes to ask iNaturalist what grows where; the key uses them to turn your location into a region.",
+  "_note": "Regions across Cascadia (British Columbia, Washington, Oregon and Idaho), shared by places, species, the key and the seeds. bbox is [south, west, north, east] in degrees. Boxes may overlap: a place is in every region whose box holds it, and where one region is wanted the smallest land region wins. kind is mountains, lowlands, coast, dry (the east side's basins and high desert) or water (seas and lakes, which hold places but are never used to choose species). flora marks the Cascade regions the wildflower pack is chosen from. The tools ask iNaturalist what's been recorded in each land region's box; the key uses the boxes to turn your location into a region.",
   "regions": [
-    {"id": "north-cascades", "name": "North Cascades", "bbox": [47.9, -122.1, 49.0, -119.9]},
-    {"id": "central-cascades", "name": "Central Cascades", "bbox": [47.05, -121.95, 47.9, -120.3]},
-    {"id": "rainier", "name": "Mount Rainier", "bbox": [46.6, -122.05, 47.05, -121.3]},
-    {"id": "south-cascades", "name": "South Cascades", "bbox": [45.8, -122.5, 46.6, -121.1]},
-    {"id": "gorge", "name": "Columbia Gorge", "bbox": [45.5, -122.35, 45.8, -120.9]},
-    {"id": "olympics", "name": "Olympics", "bbox": [47.35, -124.5, 48.2, -122.9]},
-    {"id": "oregon-cascades", "name": "Oregon Cascades", "bbox": [43.0, -122.45, 45.5, -121.35]}
+    {"id": "north-cascades", "name": "North Cascades", "kind": "mountains", "flora": true, "bbox": [47.9, -122.1, 49.0, -119.9]},
+    {"id": "central-cascades", "name": "Central Cascades", "kind": "mountains", "flora": true, "bbox": [47.05, -121.95, 47.9, -120.3]},
+    {"id": "rainier", "name": "Mount Rainier", "kind": "mountains", "flora": true, "bbox": [46.6, -122.05, 47.05, -121.3]},
+    {"id": "south-cascades", "name": "South Cascades", "kind": "mountains", "flora": true, "bbox": [45.8, -122.5, 46.6, -121.1]},
+    {"id": "gorge", "name": "Columbia Gorge", "kind": "mountains", "flora": true, "bbox": [45.5, -122.35, 45.8, -120.9]},
+    {"id": "olympics", "name": "Olympics", "kind": "mountains", "flora": true, "bbox": [47.35, -124.5, 48.2, -122.9]},
+    {"id": "oregon-cascades", "name": "Oregon Cascades", "kind": "mountains", "flora": true, "bbox": [43.0, -122.45, 45.5, -121.35]},
+    {"id": "siskiyous", "name": "Klamath and Siskiyous", "kind": "mountains", "bbox": [41.95, -124.2, 43.3, -122.45]},
+    {"id": "blue-mountains", "name": "Blue Mountains and Wallowas", "kind": "mountains", "bbox": [44.5, -120.0, 46.3, -116.45]},
+    {"id": "central-idaho", "name": "Central Idaho", "kind": "mountains", "bbox": [43.6, -116.5, 46.4, -113.0]},
+    {"id": "coast-mountains", "name": "Sea to Sky and the Coast Mountains", "kind": "mountains", "bbox": [49.3, -124.6, 51.5, -121.5]},
+    {"id": "kootenays", "name": "Kootenays", "kind": "mountains", "bbox": [49.0, -118.5, 51.5, -114.5]},
+    {"id": "bc-rockies", "name": "Columbia Mountains and Rockies", "kind": "mountains", "bbox": [51.5, -119.0, 54.0, -114.5]},
+
+    {"id": "puget-lowlands", "name": "Puget Sound lowlands", "kind": "lowlands", "bbox": [46.9, -123.2, 48.95, -121.95]},
+    {"id": "willamette", "name": "Willamette Valley", "kind": "lowlands", "bbox": [43.9, -123.4, 45.75, -122.45]},
+    {"id": "lower-mainland", "name": "Lower Mainland and Fraser Valley", "kind": "lowlands", "bbox": [49.0, -123.3, 49.45, -121.4]},
+    {"id": "idaho-panhandle", "name": "Idaho Panhandle", "kind": "lowlands", "bbox": [46.4, -117.05, 49.0, -114.9]},
+
+    {"id": "wa-coast", "name": "Washington coast", "kind": "coast", "bbox": [46.25, -124.8, 48.4, -123.7]},
+    {"id": "oregon-coast", "name": "Oregon coast", "kind": "coast", "bbox": [41.95, -124.6, 46.25, -123.6]},
+    {"id": "san-juans", "name": "San Juan Islands", "kind": "coast", "bbox": [48.4, -123.25, 48.8, -122.75]},
+    {"id": "vancouver-island", "name": "Vancouver Island", "kind": "coast", "bbox": [48.3, -128.5, 50.9, -123.2]},
+    {"id": "bc-central-coast", "name": "Central Coast and Great Bear Rainforest", "kind": "coast", "bbox": [50.8, -129.0, 53.0, -125.5]},
+    {"id": "bc-north-coast", "name": "North Coast and Haida Gwaii", "kind": "coast", "bbox": [52.0, -133.2, 55.8, -127.0]},
+
+    {"id": "columbia-basin", "name": "Columbia Basin", "kind": "dry", "bbox": [45.6, -120.9, 48.0, -117.0]},
+    {"id": "okanogan", "name": "Okanogan Highlands", "kind": "dry", "bbox": [48.0, -119.9, 49.0, -117.0]},
+    {"id": "okanagan", "name": "Okanagan and Thompson", "kind": "dry", "bbox": [49.0, -121.5, 51.0, -118.5]},
+    {"id": "high-desert", "name": "Oregon high desert", "kind": "dry", "bbox": [41.95, -121.35, 44.5, -117.0]},
+    {"id": "snake-plain", "name": "Snake River Plain", "kind": "dry", "bbox": [41.95, -117.05, 43.6, -111.0]},
+    {"id": "eastern-idaho", "name": "Eastern Idaho", "kind": "mountains", "bbox": [43.6, -113.0, 45.6, -111.0]},
+    {"id": "cariboo", "name": "Cariboo and Chilcotin", "kind": "dry", "bbox": [51.0, -125.0, 53.5, -119.0]},
+    {"id": "northern-bc", "name": "Northern British Columbia", "kind": "mountains", "bbox": [53.5, -139.1, 60.0, -120.0]},
+
+    {"id": "salish-sea", "name": "Salish Sea", "kind": "water", "bbox": [47.0, -125.0, 50.5, -122.2]},
+    {"id": "puget-sound", "name": "Puget Sound", "kind": "water", "bbox": [47.05, -123.15, 48.2, -122.2]},
+    {"id": "hood-canal", "name": "Hood Canal", "kind": "water", "bbox": [47.35, -123.2, 47.95, -122.6]},
+    {"id": "lake-washington", "name": "Lake Washington", "kind": "water", "bbox": [47.48, -122.3, 47.78, -122.18]},
+    {"id": "lake-chelan", "name": "Lake Chelan", "kind": "water", "bbox": [47.83, -120.85, 48.4, -119.95]},
+    {"id": "crater-lake", "name": "Crater Lake", "kind": "water", "bbox": [42.88, -122.18, 42.98, -122.05]},
+    {"id": "coeur-d-alene", "name": "Lake Coeur d'Alene", "kind": "water", "bbox": [47.35, -116.95, 47.75, -116.7]},
+    {"id": "pend-oreille", "name": "Lake Pend Oreille", "kind": "water", "bbox": [47.95, -116.65, 48.35, -116.15]},
+    {"id": "okanagan-lake", "name": "Okanagan Lake", "kind": "water", "bbox": [49.3, -119.9, 50.35, -119.3]}
   ]
 }
