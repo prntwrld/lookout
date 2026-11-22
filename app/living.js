@@ -845,63 +845,130 @@ async function foragingPage(F){
   }
 }
 
-/* ---------- Near you (living/?f=near): what's been recorded around you, from iNaturalist's observers. Your location is
+/* ---------- Near you (living/?f=near): a map of what people have photographed around you lately, the latest
+   sightings, what's around you by kind (tiles that open), the best bets this month, and rare finds. Your location is
    kept on this device a few hours, shared with the key's "Use my location". ---------- */
-const NEAR_GROUPS = ["birds", "plants", "fungi", "mammals", "insects", "tidepools", "molluscs", "amphibians", "reptiles", "spiders", "seaweeds"];
+const HABITATS = [
+  ["water", "In the water", "47178,47273,47549,47534,85493,48824,47113,47429,47811,48220,57774,50863", "fish"],
+  ["birds", "Birds", "3", "birds"],
+  ["plants", "Trees and flowers", "47126", "plants"],
+  ["fungi", "Mushrooms and lichens", "47170", "fungi"],
+  ["bugs", "Bugs and spiders", "47158,47119", "insects"],
+  ["mammals", "Mammals", "40151", "mammals"],
+  ["herps", "Frogs, snakes and lizards", "20978,26036", "amphibians"],
+  ["snails", "Slugs and snails", "47114", "snails"]];
+const ago = d => { const n = Math.round((Date.now() - new Date(d)) / 864e5); return n <= 0 ? "today" : n === 1 ? "yesterday" : n < 14 ? `${n} days ago` : `${Math.round(n / 7)} weeks ago`; };
 async function nearPage(F){
   document.title = "Near you — Lookout";
-  const quiet = (id, title, sub) => `<section class="section" id="${id}" hidden><h2>${title}</h2>${sub ? `<p class="muted small sec-sub">${sub}</p>` : ""}<div class="body"></div></section>`;
-  let r = String(L.store.get("lookout-near-km", 10));
+  let r = String(L.store.get("lookout-near-km", 10)), map = null;
   main.innerHTML = `<section class="hero"><p class="eyebrow"><a href="./" class="crumb">Living things</a></p><h1>Near you</h1>
-      <p class="sub-line">What iNaturalist's observers have recorded around where you are</p>
+      <p class="sub-line" id="where-line">What people have found around where you're standing</p>
       <div class="filters" style="margin:16px 0 0"><div class="chips" id="radius" role="group" aria-label="How far">${[["2", "Within 2 km"], ["10", "10 km"], ["25", "25 km"]].map(([v, l]) => `<button type="button" class="chip" data-r="${v}" aria-pressed="${v === r}">${l}</button>`).join("")}</div>
       <button type="button" class="btn ghost" id="locate">Use my location</button><span class="muted small" id="where-note"></span></div></section>
     <div id="near-body" hidden>
-      ${quiet("out", `Out in ${MONTH}`, "")}
-      <div class="split pair solo">${quiet("week", "Seen this week", "Around you")}</div>
-      <section class="section" id="n-groups" hidden><h2>Recorded around you</h2><p class="muted small sec-sub">Any time of year, the most recorded first. Each opens in the key, to name what you've found.</p><div class="body"></div></section>
+      <section class="section" id="n-map-sec"><h2>Found lately <span class="n" id="n-map-n"></span></h2><p class="muted small sec-sub">Photographs people have shared from around here in the last month. Tap one.</p><div class="mapbox near-map" id="n-map"></div></section>
+      <section class="section" id="n-recent" hidden><h2>Just seen</h2><div class="row"></div></section>
+      <section class="section" id="n-hab" hidden><h2>Around you</h2><p class="muted small sec-sub">Everything ever recorded here, by kind. Open one.</p><div class="kinds" id="hab-tiles"></div><div id="hab-open"></div></section>
+      <section class="section" id="n-best" hidden><h2>Best bets this ${L.MONTHS[L.month() - 1]}</h2><p class="muted small sec-sub">Seen most around here this month in past years: your best chance of finding them.</p><div class="cards"></div></section>
+      <section class="section" id="n-rare" hidden><h2>Rare finds <span class="aside"><button type="button" class="linkish" id="reshuffle">Show me others</button></span></h2><p class="muted small sec-sub">Recorded here only once or twice.</p><div class="row"></div></section>
       <section class="section" id="n-places" hidden><h2>Your places nearby</h2><div class="cards"></div></section>
     </div>`;
   const here = () => { const h = L.store.get("lookout-near", null); return h && Date.now() - h.t < 6 * 36e5 ? h : null; };
+  const sightings = n => `${L.num(n)} ${n === 1 ? "sighting" : "sightings"}`;
+  let token = 0;
   const show = async () => {
     const h = here(); if(!h) return;
-    const where = {lat: h.lat, lng: h.lon, radius: r};
-    $("where-note").textContent = "";
-    /* the place's name: the smallest of iNaturalist's places around the point (a park, a beach), else the county */
+    const me = ++token, where = {lat: h.lat, lng: h.lon, radius: r};
+    $("locate").textContent = "Update my location"; $("where-note").textContent = ""; $("near-body").hidden = false;
+    /* the place's name */
     L.nat("places/nearby", {nelat: h.lat + .001, nelng: h.lon + .001, swlat: h.lat - .001, swlng: h.lon - .001, per_page: 20}).then(j => {
       const c = (j.results?.community || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0], st = (j.results?.standard || []).sort((a, b) => (a.bbox_area || 1) - (b.bbox_area || 1))[0];
       const name = c && c.bbox_area < .05 ? c.name.trim() : st ? `${st.name}${st.admin_level === 20 ? " County" : ""}` : "";
-      if(name) $("where-note").textContent = ` Around ${name}`;
+      if(name && me === token) $("where-line").textContent = `Around ${name}`;
     }).catch(() => {});
-    $("locate").textContent = "Update my location";
-    $("near-body").hidden = false;
-    outNow(F, where).catch(() => {}); week(F, where).catch(() => {});
-    /* group by group: what's been recorded here, any time */
-    const box = $("n-groups"), body = box.querySelector(".body"); body.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`; box.hidden = false;
-    const rows = await Promise.all(NEAR_GROUPS.map(k => { const g = L.group(k);
-      return L.nat("observations/species_counts", {...where, taxon_id: g.taxa, verifiable: "true", per_page: 20}).then(j => ({g, total: j.total_results,
-        l: j.results.filter(x => ["species", "subspecies", "variety"].includes(x.taxon.rank)).map(x => ({t: L.taxonCard(x.taxon), count: x.count}))})).catch(() => null); }));
-    const ok = rows.filter(x => x && x.l.length >= 3).sort((a, b) => b.total - a.total);
-    body.innerHTML = ok.length ? ok.map(({g, total, l}) => `<h3 class="kind-h">${esc(g.name)} <span class="muted small">${L.num(total)} species</span>
-        <a class="small" style="margin-left:10px" href="${L.ROOT}key/#key=here&g=${g.k}&at=${h.lat},${h.lon}&r=${r === "2" ? "1" : r === "25" ? "25" : "5"}&when=year">Name one in the key →</a></h3>
-        <div class="row">${l.map(x => tileOf(F, x, `${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"}`)).join("")}</div>`).join("")
-      : `<p class="muted">Little has been recorded within ${r} km of you yet. Try a wider circle.</p>`;
-    L.fillPhotos(body);
+
+    /* the map and the latest sightings: observations with photographs in the last month */
+    const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    L.nat("observations", {...where, d1: since, photos: "true", photo_license: L.LICENSES, order_by: "observed_on", per_page: 80, verifiable: "true"}).then(j => {
+      if(me !== token) return;
+      const obs = j.results.map(o => ({o, p: L.openPhoto(o.photos?.[0]), t: o.taxon && L.taxonCard(o.taxon)})).filter(x => x.p && x.t && x.o.geojson);
+      $("n-map-n").textContent = obs.length ? `${new Set(obs.map(x => x.t.id)).size} species in the last month` : "";
+      const Lf = window.L;
+      if(Lf){
+        if(map) map.remove();
+        map = Lf.map("n-map", {scrollWheelZoom: false}).setView([h.lat, h.lon], 12);
+        Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, className: "base-tiles", attribution: `© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · sightings © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers`}).addTo(map);
+        const ring = Lf.circle([h.lat, h.lon], {radius: +r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2d5c43", weight: 1.5, fill: false, dashArray: "4 6"}).addTo(map);
+        Lf.marker([h.lat, h.lon], {icon: Lf.divIcon({className: "", html: `<span class="you-dot"></span>`, iconSize: [16, 16]}), title: "You"}).addTo(map);
+        /* one pin per species, at most 40; one landing on another is nudged aside so both can be tapped */
+        const pinned = [], ids = new Set(), taken = new Map();
+        for(const x of obs){ if(ids.has(x.t.id) || pinned.length >= 40) continue; ids.add(x.t.id); pinned.push(x); }
+        for(const x of pinned){ let [lng, lat] = x.o.geojson.coordinates; const name = x.t.common || x.t.sci;
+          const cell = `${lat.toFixed(3)},${lng.toFixed(3)}`, n = taken.get(cell) || 0; taken.set(cell, n + 1);
+          if(n){ const a = n * 2.4; lat += Math.sin(a) * .0012 * Math.ceil(n / 6); lng += Math.cos(a) * .0018 * Math.ceil(n / 6); }
+          Lf.marker([lat, lng], {title: name, icon: Lf.divIcon({className: "", html: `<span class="photo-pin"><img src="${L.inat(x.p, "square")}" alt=""></span>`, iconSize: [36, 36]})}).addTo(map)
+            .bindPopup(`<a class="pop near-pop" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}"><img src="${L.inat(x.p, "small")}" alt=""><b>${esc(name)}</b><span>${esc(ago(x.o.observed_on))}${x.o.user?.login ? ` · ${esc(x.o.user.login)}` : ""}</span></a><span class="credit">© ${esc(x.p.by)} · ${esc(x.p.lic)}</span>`, {maxWidth: 220}); }
+        map.fitBounds(ring.getBounds(), {padding: [10, 10]});
+      }
+      /* the latest, one per species */
+      const seen = new Set(), latest = obs.filter(x => !seen.has(x.t.id) && seen.add(x.t.id)).slice(0, 24);
+      if(latest.length >= 3){ const sec = $("n-recent");
+        sec.querySelector(".row").innerHTML = latest.map(x => `<a class="sp" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="Photo © ${esc(x.p.by)} · ${esc(x.p.lic)}"><div class="pic"><img src="${L.inat(x.p, "small")}" alt="" loading="lazy"></div><b>${esc(x.t.common || x.t.sci)}</b><i>${esc(x.t.sci)}</i><span class="note">${esc(ago(x.o.observed_on))}${x.o.user?.login ? ` · ${esc(x.o.user.login)}` : ""}</span></a>`).join("");
+        sec.hidden = false; }
+    }).catch(() => { $("n-map-sec").hidden = true; });
+
+    /* around you, by kind: a mosaic tile each, which opens to its species */
+    const rows = await Promise.all(HABITATS.map(([k, name, taxa, g]) => L.nat("observations/species_counts", {...where, taxon_id: taxa, verifiable: "true", per_page: 24})
+      .then(j => ({k, name, g, taxa, total: j.total_results, l: j.results.filter(x => ["species", "subspecies", "variety"].includes(x.taxon.rank)).map(x => ({t: L.taxonCard(x.taxon), count: x.count}))})).catch(() => null)));
+    if(me !== token) return;
+    const habs = rows.filter(x => x && x.l.length >= 2);
+    if(habs.length){
+      const sec = $("n-hab"), open = $("hab-open");
+      $("hab-tiles").innerHTML = habs.map(x => `<button type="button" class="kind" data-hab="${x.k}"><div class="pics">${x.l.filter(y => y.t.photo).slice(0, 4).map(y => `<img src="${L.inat(y.t.photo, "small")}" alt="" loading="lazy">`).join("")}</div><b>${esc(x.name)}</b><i>${L.num(x.total)} species</i></button>`).join("");
+      $("hab-tiles").onclick = e => { const b = e.target.closest("[data-hab]"); if(!b) return;
+        const x = habs.find(y => y.k === b.dataset.hab), was = b.getAttribute("aria-expanded") === "true";
+        $("hab-tiles").querySelectorAll(".kind").forEach(k => k.setAttribute("aria-expanded", "false"));
+        if(was){ open.innerHTML = ""; return; }
+        b.setAttribute("aria-expanded", "true");
+        open.innerHTML = `<h3 class="kind-h" style="margin-top:28px">${esc(x.name)} <span class="muted small">${L.num(x.total)} species, the most recorded first</span>
+          <a class="small" style="margin-left:10px" href="${L.ROOT}key/#key=here&g=${x.g}&at=${h.lat},${h.lon}&r=${r === "2" ? "1" : r === "25" ? "25" : "5"}&when=year">Name one in the key →</a></h3>
+          <div class="row">${x.l.map(y => tileOf(F, y, sightings(y.count))).join("")}</div>`;
+        L.fillPhotos(open); open.scrollIntoView({behavior: "smooth", block: "nearest"}); };
+      sec.hidden = false;
+    }
+
+    /* best bets this month: the most seen around here in this month of the year */
+    counts({...where, month: L.month(), per_page: 12}).then(l => {
+      if(me !== token || l.length < 4) return;
+      const sec = $("n-best");
+      sec.querySelector(".cards").innerHTML = l.filter(x => x.t.photo).slice(0, 8).map(x => `<a class="card" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}"><div class="pic"><img src="${L.inat(x.t.photo, "medium")}" alt="" loading="lazy" title="Photo © ${esc(x.t.photo.by)} · ${esc(x.t.photo.lic)}"></div><h3>${esc(x.t.common || x.t.sci)}</h3><p>${sightings(x.count)} here in ${L.MONTHS[L.month() - 1]}s</p></a>`).join("");
+      sec.hidden = false;
+    }).catch(() => {});
+
+    /* rare finds: recorded here only once or twice */
+    counts({...where, per_page: 500, verifiable: "true", quality_grade: "research"}).then(l => {
+      if(me !== token) return;
+      const rare = l.filter(x => x.count <= 2 && x.t.photo); if(rare.length < 4) return;
+      const sec = $("n-rare"), draw = () => { sec.querySelector(".row").innerHTML = L.shuffle(rare, Math.random).slice(0, 12).map(x => tileOf(F, x, x.count === 1 ? "Recorded once here" : "Recorded twice here")).join(""); };
+      draw(); $("reshuffle").onclick = draw; sec.hidden = false;
+    }).catch(() => {});
+
     /* your places within 50 km, nearest first */
     const P = await L.data.places().catch(() => null);
-    const near = (P?.list || []).map(p => ({p, d: L.km({lat: h.lat, lon: h.lon}, {lat: p.pin.lat, lon: p.pin.lon})})).filter(x => x.d <= 50).sort((a, b) => a.d - b.d).slice(0, 6);
-    if(near.length){ const pl = $("n-places"); pl.querySelector(".cards").innerHTML = near.map(x => L.placeCard(x.p, P.region[x.p.region])).join(""); pl.hidden = false; L.ownPhotos(pl); }
+    const near = (P?.list || []).map(p => ({p, d: L.km({lat: h.lat, lon: h.lon}, {lat: p.pin.lat, lon: p.pin.lon})})).filter(x => x.d <= 50).sort((a, b) => a.d - b.d).slice(0, 4);
+    const pl = $("n-places"); pl.hidden = !near.length;
+    if(near.length){ pl.querySelector(".cards").innerHTML = near.map(x => L.placeCard(x.p, P.region[x.p.region])).join(""); L.ownPhotos(pl); }
   };
   const locate = () => {
     if(!navigator.geolocation){ $("where-note").textContent = " This browser can't share a location."; return; }
     $("where-note").textContent = " Finding you…";
     navigator.geolocation.getCurrentPosition(pos => {
       L.store.set("lookout-near", {lat: +pos.coords.latitude.toFixed(3), lon: +pos.coords.longitude.toFixed(3), t: Date.now()}); show();
-    }, () => { $("where-note").textContent = " No location: allow it in your browser, or use the key's regions instead."; }, {timeout: 15000, maximumAge: 600000});
+    }, () => { $("where-note").textContent = " Your browser didn't share a location. Allow it for this site to see what's around you."; }, {timeout: 15000, maximumAge: 600000});
   };
   $("locate").addEventListener("click", locate);
   $("radius").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if(!b) return; r = b.dataset.r; L.store.set("lookout-near-km", +r);
-    $("radius").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); show(); });
+    $("radius").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); $("hab-open").innerHTML = ""; show(); });
   if(navigator.onLine === false){ $("where-note").textContent = " Near you needs a connection to iNaturalist."; return; }
   if(here()) show(); else locate();
 }
