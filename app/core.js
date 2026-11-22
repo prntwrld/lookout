@@ -389,6 +389,25 @@ async function fillPhotos(root){
     obsPhoto(+e.target.dataset.tid).then(p => put(e.target, p)); }), {rootMargin: "200px"});
   left.forEach(a => io.observe(a));
 }
+/* rows that scroll sideways (.row, .strip) say so: the edge with more beyond it fades, and where there's a mouse,
+   a small arrow at that edge scrolls on. Each row is wrapped once, whenever one appears on the page. */
+const ARROW = d => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d < 0 ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5"}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const sideways = row => {
+  if(row.parentElement?.classList.contains("rowwrap")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "rowwrap" + (row.classList.contains("strip") ? " for-strip" : "");
+  row.replaceWith(wrap); wrap.append(row);
+  wrap.insertAdjacentHTML("beforeend", [-1, 1].map(d => `<button type="button" class="rownav ${d < 0 ? "back" : "on"}" data-d="${d}" aria-label="${d < 0 ? "Scroll back" : "Scroll on"}" tabindex="-1">${ARROW(d)}</button>`).join(""));
+  const mark = () => { const end = row.scrollWidth - row.clientWidth - 6;
+    wrap.classList.toggle("more-on", row.scrollLeft < end); wrap.classList.toggle("more-back", row.scrollLeft > 6); };
+  row.addEventListener("scroll", mark, {passive: true});
+  new ResizeObserver(mark).observe(row);
+  new MutationObserver(mark).observe(row, {childList: true});
+  wrap.addEventListener("click", e => { const b = e.target.closest(".rownav"); if(b) row.scrollBy({left: +b.dataset.d * row.clientWidth * .8, behavior: "smooth"}); });
+  mark();
+};
+new MutationObserver(() => document.querySelectorAll("main .row, main .strip").forEach(sideways)).observe(document.documentElement, {childList: true, subtree: true});
+
 /* a section that only appears if it has something in it */
 const section = (title, body, {id = "", aside = "", n = ""} = {}) => body ? `<section class="section"${id ? ` id="${id}"` : ""}>
   <h2>${title}${n !== "" ? ` <span class="n">${n}</span>` : ""}${aside ? `<span class="aside">${aside}</span>` : ""}</h2>${body}</section>` : "";

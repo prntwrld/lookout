@@ -128,10 +128,14 @@ function statusText(cs){
 
 /* ---------- where it lives: GBIF's records as hexagons over the map, fitted to the Pacific Northwest (as in Myriad) ---------- */
 const getJ = url => fetch(url, {signal: AbortSignal.timeout(15000)}).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); });
-async function lifeMap(box, sci, taxonId, places){
+const KINGDOM = {Plantae: "Plantae", Fungi: "Fungi", Chromista: "Chromista", Protozoa: "Protozoa"};
+async function lifeMap(box, sci, taxonId, places, iconic = ""){
   const Lf = window.L, el = box.querySelector(".mapbox"), legend = box.querySelector(".legend");
   if(!Lf || !el || navigator.onLine === false) return;
-  const key = await getJ("https://api.gbif.org/v1/species/match?name=" + encodeURIComponent(sci)).then(m => m.matchType !== "NONE" && m.usageKey).catch(() => null);
+  /* the same name in the same kingdom only, so a plant never borrows an animal's records */
+  const kingdom = KINGDOM[iconic] || (iconic ? "Animalia" : "");
+  const key = await getJ("https://api.gbif.org/v1/species/match?strict=true&name=" + encodeURIComponent(sci) + (kingdom ? "&kingdom=" + kingdom : ""))
+    .then(m => ["EXACT", "FUZZY"].includes(m.matchType) && (!kingdom || m.kingdom === kingdom) && m.usageKey).catch(() => null);
   const caps = key ? await getJ(`https://api.gbif.org/v2/map/occurrence/density/capabilities.json?taxonKey=${key}`).catch(() => null) : null;
   box.hidden = false;
   const mine = `<span><i></i>Your places</span>`;
@@ -150,13 +154,21 @@ async function lifeMap(box, sci, taxonId, places){
   const done = L.log.all();
   for(const p of places) Lf.marker([p.pin.lat, p.pin.lon], {title: p.name, icon: Lf.divIcon({className: "", html: `<span class="pin${done[p.id] ? " done" : ""}"></span>`, iconSize: [14, 14]})})
     .addTo(m).bindPopup(`<a class="pop" href="${L.placeHref(p.id)}"><b>${esc(p.name)}</b><span>${esc(L.KIND[p.kind] || "")}</span></a>`);
-  /* the Pacific Northwest, or less of it if that's all it lives in; somewhere else entirely, all of its range */
-  let b = [Math.max(caps.minLat, 41.6), Math.max(caps.minLng, -128.8), Math.min(caps.maxLat, 52.6), Math.min(caps.maxLng, -115.6)];
-  if(b[0] >= b[2] - .5 || b[1] >= b[3] - .5) b = [caps.minLat, caps.minLng, caps.maxLat, caps.maxLng];
+  /* the Pacific Northwest, or less of it if that's all it lives in; somewhere else entirely, all of its range.
+     (GBIF gives longitudes that can run past 180°, as -170 to 190 for a range across the Pacific, so the box is
+     tried a world to the east and west as well.) */
+  const PNW_BOX = [41.6, -128.8, 52.6, -115.6];
+  let b = null;
+  for(const k of [0, 360, -360]){
+    const w = Math.max(caps.minLng, PNW_BOX[1] + k), e = Math.min(caps.maxLng, PNW_BOX[3] + k), sth = Math.max(caps.minLat, PNW_BOX[0]), nth = Math.min(caps.maxLat, PNW_BOX[2]);
+    if(e - w > .5 && nth - sth > .5){ b = [sth, w - k, nth, e - k]; break; }
+  }
+  if(!b) b = caps.maxLng - caps.minLng > 300 ? [-50, -170, 72, 170] : [caps.minLat, caps.minLng, caps.maxLat, caps.maxLng];
+  /* refit whenever the box changes size (the words beside it arriving), until someone moves the map */
   let moved = false;
-  const fit = () => { if(moved) return; m.invalidateSize(); m.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: [8, 8], maxZoom: 9, animate: false}); };
-  fit(); m.once("movestart zoomstart", () => setTimeout(() => moved = true));
-  ["mousedown", "touchstart", "keydown"].forEach(k => el.addEventListener(k, () => moved = true, {passive: true}));
+  const fit = () => { if(moved || !el.clientHeight) return; m.invalidateSize(); m.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: [8, 8], maxZoom: 9, animate: false}); };
+  fit();
+  ["mousedown", "touchstart", "wheel", "keydown"].forEach(k => el.addEventListener(k, () => moved = true, {passive: true}));
   new ResizeObserver(fit).observe(el);
   legend.innerHTML = `<span><i class="grid-key"></i>${L.num(caps.total)} records on <a href="https://www.gbif.org/species/${key}" target="_blank" rel="noopener">GBIF</a>; the darker, the more</span>${mine}`;
 }
@@ -244,7 +256,7 @@ async function speciesPage(F, s){
   const show = el => { el.hidden = false; el.previousElementSibling?.removeAttribute("hidden"); };
 
   /* the live parts, each appearing only if it finds something */
-  lifeMap($("range"), s.sci, s.id, P?.list || []).catch(() => {});
+  lifeMap($("range"), s.sci, s.id, P?.list || [], s.group).catch(() => {});
   L.nat("observations/histogram", {taxon_id: s.id, place_id: L.PNW, interval: "month_of_year", verifiable: "true"}).then(j => {
     const h = Object.values(j.results?.month_of_year || {}), top = Math.max(...h);
     const el = $("seen-months"); if(!el || !top) return;
@@ -299,7 +311,7 @@ async function rankPage(F, t){
     el.innerHTML = `${L.num(j.total_results)} in the Pacific Northwest <a class="small" href="https://www.inaturalist.org/observations?taxon_id=${t.id}&place_id=${L.PNW}" target="_blank" rel="noopener">see them ↗</a>`;
     el.parentElement.hidden = false; el.parentElement.previousElementSibling.hidden = false;
   }).catch(() => {});
-  L.data.places().then(P => P.list).catch(() => []).then(pl => lifeMap($("range"), t.name, t.id, pl)).catch(() => {});
+  L.data.places().then(P => P.list).catch(() => []).then(pl => lifeMap($("range"), t.name, t.id, pl, t.iconic_taxon_name)).catch(() => {});
   let page = 1;
   const draw = async () => {
     const box = $("list");
@@ -429,11 +441,11 @@ async function week(F){
     return `<a href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${name}: ${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
       <img src="${L.inat(x.t.photo, "small")}" alt="${esc(name)}" loading="lazy" crossorigin="anonymous"><span>${esc(name)}</span></a>`; };
   sec.hidden = false;
-  /* about 40, rounded up to whole rows; the rest on request */
+  /* one row; the rest on request */
   let all = false;
   const draw = () => {
     const cols = getComputedStyle(body.querySelector(".wall") || body).gridTemplateColumns?.split(" ").length || 1;
-    const n = Math.min(list.length, Math.max(cols, cols * Math.ceil(40 / cols)));
+    const n = Math.min(list.length, cols);
     body.innerHTML = `<div class="wall dense">${(all ? list : list.slice(0, n)).map(tile).join("")}</div>`
       + (list.length > n ? `<p style="margin-top:14px"><button type="button" class="linkish" data-all>${all ? "Show fewer" : `Show all ${list.length}`}</button></p>` : "");
   };

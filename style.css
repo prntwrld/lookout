@@ -127,6 +127,18 @@ h1 i,.sci{font-style:italic}
 .sp b{display:block;font:400 16px/1.25 var(--display);margin-top:7px}
 .sp i{display:block;font-size:13px;color:var(--muted);line-height:1.3}
 
+/* a sideways row hints that there's more: the far edge fades, and (with a mouse) a small arrow scrolls on */
+.rowwrap{position:relative}
+.rowwrap.more-on > :first-child{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 64px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 64px),transparent)}
+.rowwrap.more-back > :first-child{-webkit-mask-image:linear-gradient(to right,transparent,#000 64px);mask-image:linear-gradient(to right,transparent,#000 64px)}
+.rowwrap.more-on.more-back > :first-child{-webkit-mask-image:linear-gradient(to right,transparent,#000 64px,#000 calc(100% - 64px),transparent);mask-image:linear-gradient(to right,transparent,#000 64px,#000 calc(100% - 64px),transparent)}
+.rownav{display:none;position:absolute;top:75px;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink);
+  place-items:center;cursor:pointer;box-shadow:0 1px 6px var(--shade);padding:0;z-index:2}
+.rownav svg{width:15px;height:15px}
+.rownav.back{left:-6px}.rownav.on{right:-6px}
+.for-strip .rownav{top:calc(50% - 1px)}
+@media (hover:hover){ .more-on > .rownav.on,.more-back > .rownav.back{display:grid} }
+
 /* ---------- the wall: a mosaic of photos ---------- */
 .wall{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:150px;grid-auto-flow:dense;gap:8px}
 .wall a{position:relative;display:block;border-radius:4px;overflow:hidden;background:var(--soft)}
@@ -259,7 +271,8 @@ input[type=search]{min-width:220px}
 .about p{margin:0 0 8px}
 
 /* ---------- a species ---------- */
-.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:110px;gap:8px;margin-top:8px;padding:3px 3px 8px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin}
+.strip button{scroll-snap-align:start}
 .strip button{padding:0;border:0;background:var(--soft);border-radius:4px;overflow:hidden;cursor:pointer;aspect-ratio:1}
 .strip button[aria-current="true"]{outline:2px solid var(--accent);outline-offset:2px}
 .strip img{width:100%;height:100%;object-fit:cover}
@@ -389,7 +402,8 @@ footer a{color:inherit}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stats dd{font-size:20px}
   .row{grid-auto-columns:128px}
-  .strip{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:84px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin}
+  .rownav{top:64px}
+  .strip{grid-auto-columns:84px}
   .grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px}
   .kinds{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
   .kind b{font-size:17px}
