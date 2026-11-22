@@ -28,6 +28,7 @@ function listPage(P){
       <h1>Places</h1><p class="sub-line">${n} of ${P.list.length} done · <a href="${L.placeHref(pick.id)}">${esc(pick.name)}</a> above</p></section>` : `<h1>Places</h1>`)
     + L.section(`In season in ${L.MONTHS[m - 1]}`, season.length ? `<div class="cards">${season.map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {n: season.length})
     + L.section("The map", `<div class="mapbox" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p>`)
+    + `<div id="saved-slot"></div><div id="beyond-slot"></div>`
     + L.section("By region", regionBars(P), {id: "by-region"})
     + L.section("Everything", `<div class="filters">
         <label>Region <select id="f-region"><option value="">All</option>${P.regions.filter(g => P.list.some(p => p.region === g.id)).map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></label>
@@ -38,6 +39,7 @@ function listPage(P){
     + L.section("Your log", `<div class="chips"><button class="btn ghost" id="export" type="button">Export</button>
         <label class="btn ghost" style="cursor:pointer">Import<input type="file" id="import" accept="application/json,.json" hidden></label></div>`);
   L.map($("map"), P.list);
+  beyond(P);
   const draw = () => {
     const reg = $("f-region").value, kind = $("f-kind").value, show = $("f-done").value, sort = $("f-sort").value, done = L.log.all();
     const by = {books: (a, b) => (b.books?.length || 0) - (a.books?.length || 0) || a.name.localeCompare(b.name), name: (a, b) => a.name.localeCompare(b.name),
@@ -55,6 +57,79 @@ function listPage(P){
     catch(err){ L.toast(err.message || "Couldn't read that file"); }
   });
   document.addEventListener("lookout-log", () => { const el = $("by-region"); if(el) el.querySelector(".regions").outerHTML = regionBars(P); });
+}
+
+/* ---------- beyond the trail: the seeds (data/seeds.json) on a map, and the ones you've saved ---------- */
+const GROUP_NAME = {water: "Waters", coast: "Coast and islands", lowlands: "Lowlands and valleys", mountains: "Mountains", dry: "The dry side"};
+const inBox = (r, s) => { const [a, w, n, e] = r.bbox; return s.lat >= a && s.lat <= n && s.lon >= w && s.lon <= e; };
+
+function savedList(P, names){
+  const all = Object.entries(L.saved.all()).map(([id, r]) => ({id, ...r}));
+  const slot = $("saved-slot"); if(!slot) return;
+  if(!all.length){ slot.innerHTML = ""; return; }
+  /* by region, the regions in the order they're listed */
+  const order = Object.fromEntries(P.regions.map((r, i) => [r.id, i]));
+  const by = {};
+  for(const s of all) (by[s.region || ""] ||= []).push(s);
+  const rows = Object.keys(by).sort((a, b) => (order[a] ?? 999) - (order[b] ?? 999)).map(rg => `<h3 class="seed-h">${esc(names[rg] || "Elsewhere")} <span class="muted">${by[rg].length}</span></h3>
+    <ul class="seed-list">${by[rg].sort((a, b) => a.name.localeCompare(b.name)).map(s => seedRow(s, names, true)).join("")}</ul>`).join("");
+  slot.innerHTML = L.section("Saved", `<p class="muted small lede">From the map below, kept on this device (and in your log's Export).</p>${rows}`, {n: all.length, id: "saved"});
+}
+const seedRow = (s, names, savedOnly) => {
+  const on = savedOnly || L.saved.has(s.id), where = (s.waters || []).map(w => names[w]).filter(Boolean);
+  return `<li><i class="dot" style="background:${L.SEED_COLOUR[s.kind] || "#777"}"></i><span class="what"><button type="button" class="linkish" data-focus="${esc(s.id)}">${esc(s.name)}</button>
+    <small>${esc(L.KIND[s.kind] || s.kind)}${where.length ? ` · ${esc(where.join(", "))}` : ""}${s.hours ? ` · ${esc(s.hours)}` : ""}</small></span>
+    <button type="button" class="chip${on ? " on" : ""}" data-save="${esc(s.id)}" aria-pressed="${on}">${on ? "Saved" : "Save"}</button></li>`;
+};
+let SEEDS = {};
+function wireRows(root, M){
+  root.addEventListener("click", e => {
+    const f = e.target.closest("[data-focus]");
+    if(f){ const s = SEEDS[f.dataset.focus] || {id: f.dataset.focus, ...L.saved.all()[f.dataset.focus]}; if(M && s.lat != null) M.focus(s); return; }
+    const b = e.target.closest("[data-save]"); if(!b) return;
+    const s = SEEDS[b.dataset.save] || {id: b.dataset.save, ...L.saved.all()[b.dataset.save]};
+    L.saved.toggle(s);
+  });
+}
+
+async function beyond(P){
+  const [S, outline] = await Promise.all([L.data.seeds(), L.data.json("cascadia.json").catch(() => null)]);
+  const names = Object.fromEntries(P.regions.map(r => [r.id, r.name]));
+  if(!S?.seeds?.length){ wireRows($("saved-slot"), null); savedList(P, names, null); document.addEventListener("lookout-saved", () => savedList(P, names, null)); return; }
+  SEEDS = Object.fromEntries(S.seeds.map(s => [s.id, s]));
+  const kinds = Object.keys(S.kinds).filter(k => S.kinds[k].n);
+  let on = new Set(L.store.get("lookout-seed-kinds", null) || kinds.filter(k => k !== "campground"));
+  const groups = Object.keys(GROUP_NAME).map(g => [g, P.regions.filter(r => r.kind === g && S.seeds.some(s => inBox(r, s)))]).filter(([, rs]) => rs.length);
+  $("beyond-slot").innerHTML = L.section("Beyond the trail", `<p class="muted small lede">Lighthouses, farmers markets, farm stands, ferries and more, across British Columbia, Washington, Oregon and Idaho. Tap a dot to save it; what you save is listed above.</p>
+    <div class="filters"><label>Where <select id="s-where"><option value="">All of Cascadia</option>${groups.map(([g, rs]) => `<optgroup label="${GROUP_NAME[g]}">${rs.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join("")}</optgroup>`).join("")}</select></label></div>
+    <div class="chips seed-kinds" id="s-kinds"></div>
+    <div class="mapbox seeds-map" id="seedmap"></div>
+    <div id="s-list"></div>
+    <p class="credit">Places © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, seeded ${esc(S.built || "")}. Something missing? Add it to OpenStreetMap and it comes in with the next seeding.</p>`, {n: S.seeds.length, id: "beyond"});
+  const M = L.seedMap($("seedmap"), outline, names);
+  const draw = (refit) => {
+    const where = P.region[$("s-where").value];
+    const here = S.seeds.filter(s => !where || inBox(where, s));
+    const count = k => here.filter(s => s.kind === k).length;
+    $("s-kinds").innerHTML = kinds.map(k => `<button type="button" class="chip${on.has(k) ? " on" : ""}" data-kind="${k}" aria-pressed="${on.has(k)}"${count(k) ? "" : " disabled"}><i class="dot" style="background:${L.SEED_COLOUR[k] || "#777"}"></i>${esc(S.kinds[k].name)}<span class="c">${L.num(count(k))}</span></button>`).join("");
+    const shown = here.filter(s => on.has(s.kind));
+    M?.show(shown);
+    if(refit && M){ where ? M.fit(where.bbox) : outline && M.fit([outline.bounds[1], outline.bounds[0], outline.bounds[3], outline.bounds[2]]); }
+    const list = where ? [...shown].sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)) : [];
+    $("s-list").innerHTML = !where ? `<p class="muted small">Pick a region, a sea or a lake under Where to list what's in it.</p>`
+      : list.length ? `<ul class="seed-list">${list.slice(0, 120).map(s => seedRow(s, names)).join("")}</ul>${list.length > 120 ? `<p class="muted small">And ${list.length - 120} more on the map.</p>` : ""}`
+      : `<p class="muted small">Nothing of those kinds here.</p>`;
+  };
+  $("s-where").addEventListener("change", () => draw(true));
+  $("s-kinds").addEventListener("click", e => {
+    const b = e.target.closest("[data-kind]"); if(!b) return;
+    on.has(b.dataset.kind) ? on.delete(b.dataset.kind) : on.add(b.dataset.kind);
+    L.store.set("lookout-seed-kinds", [...on]); draw(false);
+  });
+  wireRows($("s-list"), M); wireRows($("saved-slot"), M);
+  draw(false);
+  savedList(P, names, M);
+  document.addEventListener("lookout-saved", () => { savedList(P, names, M); if($("s-where").value) draw(false); });
 }
 
 /* ---------- one place ---------- */

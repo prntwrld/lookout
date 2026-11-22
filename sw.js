@@ -6,7 +6,7 @@
    - Photos from iNaturalist and Wikimedia, and map tiles, are kept as you see them (up to a limit), so a page
      you've opened before still has its pictures and map offline.
    Bump VERSION when the list of shell files changes. */
-const VERSION = "lookout-v13";
+const VERSION = "lookout-v14";
 const SHELL = VERSION + "-shell", PACK = VERSION + "-pack", IMG = "lookout-img", TILES = "lookout-tiles";
 const BASE = new URL("./", self.location).href;
 const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.webmanifest",
@@ -17,7 +17,7 @@ const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.we
   "fonts/source-serif-4-latin-400-normal.woff2", "fonts/source-serif-4-latin-400-italic.woff2",
   "fonts/source-serif-4-latin-600-normal.woff2", "fonts/source-serif-4-latin-600-italic.woff2",
   "data/places.json", "data/places-extra.json", "data/books.json", "data/regions.json",
-  "data/flowers.json", "data/flower-traits.json", "data/pojar.json", "data/birds.json", "data/bird-traits.json", "data/packs.json", "data/cascadia.json", "data/groups.json", "data/tidepools.json", "data/foraging.json", "data/salmon.json", "data/whales.json"];
+  "data/flowers.json", "data/flower-traits.json", "data/pojar.json", "data/birds.json", "data/bird-traits.json", "data/packs.json", "data/cascadia.json", "data/groups.json", "data/tidepools.json", "data/foraging.json", "data/salmon.json", "data/whales.json", "data/seeds.json"];
 const REMOTE_IMG = /(^|\.)(inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org|upload\.wikimedia\.org|thumb\.wikimedia\.org)$/;
 const LIMIT = {[IMG]: 500, [TILES]: 1500};
 

@@ -1,6 +1,7 @@
 // Lookout's checks, with Playwright: every kind of page at three widths, then offline.
 //   node tools/check_site.mjs            (serves the repository itself on a free port)
 //   SHOTS=/some/dir node tools/check_site.mjs
+//   ONLY=seeds node tools/check_site.mjs  (just the Places map of seeds and the saved list)
 // Prints each problem it finds and exits non-zero if there were any.
 import {createRequire} from "module";
 import {spawn} from "child_process";
@@ -29,8 +30,9 @@ const PAGES = [["home", ""], ["places", "places/"], ["place", "places/?id=maple-
 /* things that should never wrap onto a second line */
 const NOWRAP = [".top nav a", ".mark", ".stats dt", ".stats dd", ".chip", ".btn", ".legend span", ".eyebrow", ".left .count", ".regions li > span:first-child", ".section > h2"];
 
+const ONLY = process.env.ONLY || "";
 const browser = await chromium.launch();
-for(const w of WIDTHS){
+for(const w of ONLY ? [] : WIDTHS){
   const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
   for(const [name, url] of PAGES){
     const page = await ctx.newPage();
@@ -67,9 +69,44 @@ for(const w of WIDTHS){
   await ctx.close();
 }
 
+/* ---------- the seeds: pick a sea, save a place from the list, and it's in Saved after a reload ---------- */
+console.log("seeds");
+for(const w of [1366, 390]){
+  const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", e => errs.push(e.message));
+  await page.goto(BASE + "places/", {waitUntil: "load"});
+  const has = await page.waitForSelector("#seedmap", {timeout: 10000}).then(() => true).catch(() => false);
+  if(!has){ console.log("  (no data/seeds.json yet: run tools/seed_places.py)"); await ctx.close(); break; }
+  const water = await page.$eval('#s-where optgroup[label="Waters"] option', o => o.value).catch(() => null);
+  if(water) await page.selectOption("#s-where", water);
+  await page.waitForTimeout(600);
+  const rows = await page.$$eval("#s-list li", li => li.length);
+  const first = await page.$eval("#s-list [data-focus]", b => b.textContent).catch(() => null);
+  if(!rows || !first) flag(`seeds@${w}`, `nothing listed in ${water}`);
+  else {
+    await page.click("#s-list [data-save]");
+    await page.reload({waitUntil: "load"}); await page.waitForSelector("#saved", {timeout: 8000}).catch(() => {});
+    const kept = await page.$$eval("#saved [data-focus]", b => b.map(x => x.textContent)).catch(() => []);
+    if(!kept.includes(first)) flag(`seeds@${w}`, `saved "${first}" wasn't in Saved after a reload`);
+    else console.log(`  ${w}: ${rows} in ${water}; saved "${first}" and it stayed`);
+    const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    if(ov > 1) flag(`seeds@${w}`, `page scrolls sideways by ${ov}px`);
+    await page.$eval("#saved", el => el.scrollIntoView());
+    if(water) await page.selectOption("#s-where", water);
+    await page.waitForTimeout(1500);
+    await (await page.$("#saved")).screenshot({path: `${SHOTS}/seeds-saved-${w}.png`});
+    await (await page.$("#beyond")).screenshot({path: `${SHOTS}/seeds-${w}.png`});
+    await page.click("#saved [data-save]");
+    if(await page.$("#saved")) flag(`seeds@${w}`, "unsaving didn't empty Saved");
+  }
+  if(errs.length) flag(`seeds@${w}`, "script errors: " + errs.join(" | "));
+  await ctx.close();
+}
+
 /* ---------- offline: load the site, cut the network, check the key and the saved pages ---------- */
-console.log("offline");
-{
+if(!ONLY) console.log("offline");
+if(!ONLY){
   const ctx = await browser.newContext({viewport: {width: 390, height: 844}});
   const page = await ctx.newPage();
   const errs = []; page.on("pageerror", e => errs.push(e.message));

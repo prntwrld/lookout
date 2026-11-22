@@ -28,11 +28,13 @@ import flora_rules  # noqa: E402
 INAT = "https://api.inaturalist.org/v1"
 COUNT = int(os.environ.get("COUNT", 300))
 ANGIOSPERMS = 47125
-REGIONS = net.load("regions.json")["regions"]
-CASCADES = [r for r in REGIONS if r["id"] != "olympics"]
-# one box around everything, for photos and seasons
-S = min(r["bbox"][0] for r in REGIONS); W = min(r["bbox"][1] for r in REGIONS)
-N = max(r["bbox"][2] for r in REGIONS); E = max(r["bbox"][3] for r in REGIONS)
+# every land region gets its own tag; the pack's 300 are chosen from the Cascade regions ("flora": true in regions.json)
+REGIONS = [r for r in net.load("regions.json")["regions"] if r.get("kind") != "water"]
+FLORA = [r for r in REGIONS if r.get("flora")]
+CASCADES = [r["id"] for r in FLORA if r["id"] != "olympics"]
+# one box around the Cascade regions, for photos and seasons
+S = min(r["bbox"][0] for r in FLORA); W = min(r["bbox"][1] for r in FLORA)
+N = max(r["bbox"][2] for r in FLORA); E = max(r["bbox"][3] for r in FLORA)
 BOX = {"swlat": S, "swlng": W, "nelat": N, "nelng": E}
 THUMBS = net.ROOT / "data" / "thumbs"
 
@@ -237,7 +239,7 @@ def main():
     counts, taxa = region_counts()
     anc = names_of(a for t in taxa.values() for a in (t.get("ancestor_ids") or [])[:-1])
     family = lambda t: next((anc[a]["name"] for a in t.get("ancestor_ids") or [] if a in anc and anc[a]["rank"] == "family"), "")
-    ranked = sorted(taxa, key=lambda i: -sum(c for r, c in counts[i].items() if r != "olympics"))
+    ranked = sorted(taxa, key=lambda i: -sum(c for r, c in counts[i].items() if r in CASCADES))
     chosen = [i for i in ranked if taxa[i]["rank"] == "species" and flora_rules.is_wildflower(taxa[i]["name"], family(taxa[i]))][:COUNT]
     detail = names_of(chosen)
     traits = net.load("flower-traits.json")["traits"]
@@ -257,7 +259,7 @@ def main():
         out.append({
             "id": tid, "slug": slug(t["name"]), "sci": t["name"],
             "common": (d.get("preferred_common_name") or t.get("preferred_common_name") or "").strip(),
-            "family": family(t), "obs": sum(counts[tid].values()),
+            "family": family(t), "obs": sum(c for r, c in counts[tid].items() if r in CASCADES or r == "olympics"),
             "regions": [r["id"] for r in REGIONS if counts[tid].get(r["id"], 0) >= 2],
             "bloom": months, "elev": elev, "photos": photos,
             "wiki": wiki, "summary": summary(d.get("wikipedia_summary")),

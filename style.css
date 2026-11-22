@@ -486,3 +486,22 @@ footer a{color:inherit}
   .big-n{font-size:64px}
   input[type=search]{min-width:0;width:100%}
 }
+
+/* ---------- beyond the trail: the seeds map and the saved list ---------- */
+.seeds-map{height:min(70vh,560px);margin-top:14px}
+.seed-kinds .chip .dot,.seed-list .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;border:1px solid var(--paper)}
+.seed-kinds .chip.on .dot{border-color:var(--accent-ink)}
+.lede{margin:-4px 0 14px;max-width:46em}
+.seed-h{font:400 19px var(--display);margin:18px 0 4px}
+.seed-h .muted{font:400 15px var(--book)}
+.seed-list{list-style:none;margin:14px 0 0;padding:0;columns:2 340px;column-gap:28px}
+.seed-list li{break-inside:avoid;display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.seed-list .what{flex:1;min-width:0}
+.seed-list .what .linkish{text-decoration:none;color:var(--ink);text-align:left;font-size:16px;line-height:1.3}
+.seed-list .what .linkish:hover{text-decoration:underline}
+.seed-list small{display:block;color:var(--muted);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.seed-list .chip{font-size:13px;padding:3px 11px;flex:none}
+.seed-pop .hours{display:block;margin-top:4px}
+.seed-pop .links{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 8px}
+.seed-pop .links a{font-size:13px}
+.seed-pop .btn{padding:5px 14px;font-size:14px}
