@@ -152,14 +152,12 @@ function draw(){
 }
 
 /* ---------- Here & now: everything recorded near you (or in a region), by group, live from iNaturalist ---------- */
-const GROUPS = [["", "Everything"], ["Plantae", "Plants"], ["Fungi", "Fungi"], ["Aves", "Birds"], ["Mammalia", "Mammals"], ["Insecta", "Insects"],
-  ["Arachnida", "Spiders"], ["Amphibia", "Amphibians"], ["Reptilia", "Reptiles"], ["Actinopterygii", "Fish"], ["Mollusca", "Molluscs"]];
 let packs = {}, page = 1, token = 0;
 async function drawHere(more = false){
-  const g = A.g?.[0] || "", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
+  const g = A.g?.[0] || "all", r = A.r?.[0] || "5", when = A.when?.[0] || "month", at = A.at?.[0], reg = REG.find(x => x.id === A.region?.[0]);
   const q = (k, title, opts, sel, extra = "") => `<div class="q"><h3><span>${title}${auto[k] ? ` <small class="muted" style="text-transform:none;letter-spacing:0">· ${esc(auto[k])}</small>` : ""}</span></h3>
     <div class="chips">${opts.map(([v, label]) => `<button type="button" class="chip" data-h="${k}" data-v="${v}" aria-pressed="${v === sel}">${esc(label)}</button>`).join("")}</div>${extra}</div>`;
-  if(!more) $("qs").innerHTML = q("g", "What is it?", GROUPS, g)
+  if(!more) $("qs").innerHTML = `<div class="q"><h3><span>What is it?</span></h3>${L.groupChips(g, "data-hg")}</div>`
     + q("region", "Where", REG.map(x => [x.id, x.name]), at ? "" : A.region?.[0] || "", `<button type="button" class="linkish here-btn" id="here">${at ? "Near you ✓ · update" : "Use my location"}</button>`)
     + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
     + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
@@ -172,7 +170,7 @@ async function drawHere(more = false){
   const [lat, lng] = at ? at.split(",").map(Number) : [];
   const where = at ? {lat, lng, radius: r} : {swlat: reg.bbox[0], swlng: reg.bbox[1], nelat: reg.bbox[2], nelng: reg.bbox[3]};
   try {
-    const j = await L.nat("observations/species_counts", {...where, verifiable: "true", per_page: 60, page, ...(g ? {iconic_taxa: g} : {}), ...(when === "month" ? {month: L.month()} : {})});
+    const j = await L.nat("observations/species_counts", {...where, verifiable: "true", per_page: 60, page, ...(L.group(g).taxa ? {taxon_id: L.group(g).taxa} : {}), ...(when === "month" ? {month: L.month()} : {})});
     if(me !== token) return;
     const pick = t => packs.flowers?.byId[t.id] ? L.speciesTile(packs.flowers.byId[t.id]) : packs.birds?.byId[t.id] ? L.speciesTile({...packs.birds.byId[t.id], slug: String(t.id)}) : L.liveTile(L.taxonCard(t));
     const tiles = j.results.filter(x => ["species", "subspecies", "variety", "form"].includes(x.taxon.rank)).map(x => pick(x.taxon)).join("");
@@ -245,6 +243,10 @@ async function start(){
   $("modes").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if(b && b.dataset.mode !== mode) setMode(b.dataset.mode); });
   $("qs").addEventListener("click", e => {
     if(e.target.closest("#here")) return locate();
+    const hg = e.target.closest("[data-hg]");
+    if(hg){ const v = hg.dataset.hg;
+      if(L.group(v).pack) return setMode("flowers");   /* the saved wildflowers have a key of their own */
+      if(v === "all") delete A.g; else A.g = [v]; write(); return draw(); }
     const h = e.target.closest("[data-h]");
     if(h){ const {h: k, v} = h.dataset; A[k] = A[k]?.[0] === v && k === "region" ? [] : [v]; if(k === "region") delete A.at; if(!A[k].length) delete A[k]; delete auto[k]; write(); return draw(); }
     const c = e.target.closest("[data-clear]"); if(c){ delete A[c.dataset.clear]; delete auto[c.dataset.clear]; write(); return draw(); }

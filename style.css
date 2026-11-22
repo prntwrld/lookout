@@ -238,6 +238,8 @@ input[type=search]{min-width:220px}
 .grid .miss{font-size:12px;color:var(--muted);display:block}
 .peek{display:none}
 .modes{margin:6px 0 28px}
+.subgroups{margin-top:10px;padding-left:14px;border-left:2px solid var(--accent)}
+.subgroups .chip{font-size:14px;padding:4px 11px}
 .modes .chip{font-size:16px;padding:7px 18px}
 .near-head{font:400 22px var(--display);margin:30px 0 12px}
 
@@ -273,6 +275,9 @@ footer a{color:inherit}
   .card h3{font-size:18px}
   .wall{grid-template-columns:repeat(2,1fr);grid-auto-rows:140px;gap:5px}
   .wall a:nth-child(n+16){display:none}
+  .groups,.subgroups{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:16px;padding-bottom:2px}
+  .groups::-webkit-scrollbar,.subgroups::-webkit-scrollbar{display:none}
+  .groups .chip,.subgroups .chip{flex:none;white-space:nowrap}
   .wall a.w2{grid-column:span 2;grid-row:span 2}
   .mapbox{height:340px}
   .regions li{grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 3.6em;gap:10px;font-size:15px}

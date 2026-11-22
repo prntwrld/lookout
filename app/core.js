@@ -140,6 +140,43 @@ const obsPhoto = id => photoQueue = photoQueue.then(async () => {
   } catch(e){ return null; }
 });
 
+/* ---------- groups of living things ----------
+   Each is one or more iNaturalist taxa (their numbers, checked against iNaturalist). A group may have sub-groups;
+   Wildflowers is the saved pack rather than a taxon. Living things and the key's Here & now share these. */
+const GROUPS = [
+  {k: "all", name: "Everything"},
+  {k: "birds", name: "Birds", taxa: "3"},
+  {k: "mammals", name: "Mammals", taxa: "40151"},
+  {k: "plants", name: "Plants", taxa: "47126", sub: [
+    {k: "flowers", name: "Wildflowers", pack: true}, {k: "conifers", name: "Conifers", taxa: "136329"}, {k: "ferns", name: "Ferns", taxa: "121943"},
+    {k: "mosses", name: "Mosses and liverworts", taxa: "311249,64615"}, {k: "grasses", name: "Grasses and sedges", taxa: "47434,47161"}]},
+  {k: "fungi", name: "Fungi", taxa: "47170", sub: [{k: "mushrooms", name: "Mushrooms and brackets", taxa: "50814"}, {k: "lichens", name: "Lichens", taxa: "54743"}]},
+  {k: "insects", name: "Insects", taxa: "47158", sub: [
+    {k: "butterflies", name: "Butterflies and moths", taxa: "47157"}, {k: "bees", name: "Bees, wasps and ants", taxa: "47201"}, {k: "beetles", name: "Beetles", taxa: "47208"},
+    {k: "dragonflies", name: "Dragonflies", taxa: "47792"}, {k: "flies", name: "Flies", taxa: "47822"}, {k: "bugs", name: "True bugs", taxa: "47744"},
+    {k: "grasshoppers", name: "Grasshoppers and crickets", taxa: "47651"}]},
+  {k: "spiders", name: "Spiders and kin", taxa: "47119"},
+  {k: "amphibians", name: "Amphibians", taxa: "20978"},
+  {k: "reptiles", name: "Reptiles", taxa: "26036"},
+  {k: "fish", name: "Fish", taxa: "47178,47273"},
+  {k: "molluscs", name: "Molluscs", taxa: "47115", sub: [
+    {k: "snails", name: "Slugs and snails", taxa: "47114"}, {k: "clams", name: "Clams and mussels", taxa: "47584"}, {k: "octopus", name: "Octopus and squid", taxa: "47459"}]},
+  {k: "tidepools", name: "Tide pools", taxa: "47549,47534,85493,48824,47113,47429,47811", sub: [
+    {k: "stars", name: "Sea stars and urchins", taxa: "47549"}, {k: "anemones", name: "Anemones and jellies", taxa: "47534"}, {k: "crabs", name: "Crabs and barnacles", taxa: "85493"},
+    {k: "nudibranchs", name: "Nudibranchs", taxa: "47113"}, {k: "chitons", name: "Chitons", taxa: "47429"}, {k: "sponges", name: "Sponges and sea squirts", taxa: "48824,47811"}]},
+  {k: "seaweeds", name: "Seaweeds and kelp", taxa: "48220,57774,50863"},
+  {k: "worms", name: "Worms, centipedes and millipedes", taxa: "47491,144128"},
+  {k: "slime", name: "Slime moulds", taxa: "47685"}
+];
+/* a group or sub-group by its key, with its parent */
+const group = k => { for(const g of GROUPS){ if(g.k === k) return {...g, top: g}; for(const s of g.sub || []) if(s.k === k) return {...s, top: g}; } return {...GROUPS[0], top: GROUPS[0]}; };
+/* two rows of chips: the main groups, then the chosen group's sub-groups (if it has any) */
+const groupChips = (sel, attr = "data-g") => {
+  const g = group(sel), top = g.top;
+  return `<div class="chips groups">${GROUPS.map(x => `<button type="button" class="chip" ${attr}="${x.k}" aria-pressed="${x.k === top.k}">${esc(x.name)}</button>`).join("")}</div>
+    ${top.sub ? `<div class="chips subgroups">${[{k: top.k, name: `All ${top.name.toLowerCase()}`}, ...top.sub].map(x => `<button type="button" class="chip" ${attr}="${x.k}" aria-pressed="${x.k === sel}">${esc(x.name)}</button>`).join("")}</div>` : ""}`;
+};
+
 /* ---------- links ---------- */
 const placeHref = id => `${ROOT}places/?id=${encodeURIComponent(id)}`;
 /* a species in the wildflower pack goes by its name; any other species by its iNaturalist number */
@@ -306,5 +343,5 @@ document.addEventListener("DOMContentLoaded", () => { const n = store.get("looko
 window.Lookout = {ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
   month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, today, hash, rng, shuffle, photos, shrink, log, theme,
   sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw,
-  NAT, PNW, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap};
+  NAT, PNW, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap, GROUPS, group, groupChips};
 }

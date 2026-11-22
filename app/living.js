@@ -8,8 +8,6 @@ const main = $("main");
 const id = new URLSearchParams(location.search).get("id");
 document.body.insertAdjacentHTML("beforeend", L.footer());
 
-const GROUPS = [["all", "Everything"], ["Aves", "Birds"], ["Mammalia", "Mammals"], ["Plantae", "Plants"], ["flowers", "Wildflowers"], ["Fungi", "Fungi"],
-  ["Insecta", "Insects"], ["Amphibia", "Amphibians"], ["Reptilia", "Reptiles"], ["Actinopterygii", "Fish"], ["Mollusca", "Molluscs"], ["Arachnida", "Spiders"]];
 const ONE = {Aves: "Bird", Mammalia: "Mammal", Plantae: "Plant", Fungi: "Fungus", Insecta: "Insect", Amphibia: "Amphibian", Reptilia: "Reptile",
   Actinopterygii: "Fish", Mollusca: "Mollusc", Arachnida: "Arachnid", Animalia: "Animal", Chromista: "Seaweed or kelp", Protozoa: "Slime mould"};
 const PETALS = {"3": "three", "4": "four", "5": "five", "6": "six", many: "many", daisy: "a daisy-like head", irregular: "irregular (pea, orchid or lipped)", tiny: "tiny, in clusters"};
@@ -169,7 +167,7 @@ async function guidePage(F){
   const pick = await heroPick(F, r);
   main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.inat(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.inatCredit(pick.photo)}</div>` : `<section class="hero">`)
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
-    <div class="filters" style="margin-top:30px"><div class="chips" id="groups">${GROUPS.map(([k, n]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${k === st.g}">${n}</button>`).join("")}</div></div>
+    <div id="groups" style="margin:30px 0 18px">${L.groupChips(st.g)}</div>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}">
       <div class="chips" id="when">${[["month", `Seen in ${L.MONTHS[L.month() - 1]}`], ["year", "All year"]].map(([k, n]) => `<button type="button" class="chip" data-w="${k}" aria-pressed="${k === st.when}">${n}</button>`).join("")}</div></div>
     <section class="section" style="margin-top:20px"><h2 id="list-h"></h2><div id="list"></div></section>`;
@@ -177,7 +175,7 @@ async function guidePage(F){
   const draw = async (more = false) => {
     const s = state(), me = ++token, box = $("list"), head = $("list-h");
     $("when").hidden = s.g === "flowers" || !!s.q;
-    main.querySelectorAll("#groups .chip").forEach(b => b.setAttribute("aria-pressed", b.dataset.g === s.g && !s.q));
+    $("groups").innerHTML = L.groupChips(s.q ? "" : s.g);
     if(s.g === "flowers" && !s.q) return flowerGrid(F, box, head);
     if(!more){ page = 1; box.innerHTML = `<p class="status muted">Asking iNaturalist…</p>`; }
     try {
@@ -189,13 +187,12 @@ async function guidePage(F){
         if(me !== token) return;
         head.innerHTML = `Matching “${esc(s.q)}” <span class="n">${total}</span>`;
       } else {
-        const params = {place_id: L.PNW, quality_grade: "research", per_page: 48, page, ...(s.g !== "all" ? {iconic_taxa: s.g} : {}), ...(s.when === "month" ? {month: L.month()} : {})};
+        const params = {place_id: L.PNW, quality_grade: "research", per_page: 48, page, ...(L.group(s.g).taxa ? {taxon_id: L.group(s.g).taxa} : {}), ...(s.when === "month" ? {month: L.month()} : {})};
         const j = await L.nat("observations/species_counts", params);
         if(me !== token) return;
         total = j.total_results;
         tiles = j.results.map(x => F?.byId[x.taxon.id] ? L.speciesTile(F.byId[x.taxon.id]) : L.liveTile(L.taxonCard(x.taxon)));
-        const g = GROUPS.find(x => x[0] === s.g)[1];
-        head.innerHTML = `${s.g === "all" ? "Everything" : g}${s.when === "month" ? ` seen in ${L.MONTHS[L.month() - 1]}` : ""} <span class="n">${L.num(total)} species</span>`;
+        head.innerHTML = `${esc(L.group(s.g).name)}${s.when === "month" ? ` seen in ${L.MONTHS[L.month() - 1]}` : ""} <span class="n">${L.num(total)} species</span>`;
       }
       if(!more) box.innerHTML = `<div class="grid" id="grid"></div><p id="more-p" style="margin-top:22px" hidden><button type="button" class="btn ghost" id="more">More</button></p>`;
       $("grid").insertAdjacentHTML("beforeend", tiles.join("") || "");
