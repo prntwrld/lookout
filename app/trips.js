@@ -214,7 +214,7 @@ function tripPage(tid){
     return `<li data-ref="${esc(s.ref)}">${d ? `<span class="n" style="background:${DAY_COLOUR[(s.day - 1) % DAY_COLOUR.length]}">${i + 1}</span>` : `<i class="dot" style="background:${x.colour}"></i>`}
       <span class="what">${x.href ? `<a href="${esc(x.href)}">${esc(x.name)}</a>` : `<button type="button" class="linkish" data-show="${esc(s.ref)}">${esc(x.name)}</button>`}
       <small>${[esc(x.kind), hop && `${hop} from ${esc(prev.name)}`, d && dayNote(x, d)].filter(Boolean).join(" · ")}</small></span>
-      <span class="ctl"><select data-day aria-label="Day for ${esc(x.name)}"><option value="0"${!s.day ? " selected" : ""}>Not placed</option>${days.map((dd, k) => `<option value="${k + 1}"${s.day === k + 1 ? " selected" : ""}>Day ${k + 1}, ${esc(short(dd))}</option>`).join("")}</select>
+      <span class="ctl"><select data-day aria-label="Day for ${esc(x.name)}"><option value="0"${!s.day ? " selected" : ""}>Not placed</option>${days.map((dd, k) => `<option value="${k + 1}"${s.day === k + 1 ? " selected" : ""}>Day ${k + 1} · ${esc(at(dd).toLocaleDateString("en-US", {weekday: "short"}))}</option>`).join("")}</select>
       ${d ? `<button type="button" class="ic" data-move="-1" aria-label="Earlier"${i ? "" : " disabled"}>↑</button><button type="button" class="ic" data-move="1" aria-label="Later"${i < list.length - 1 ? "" : " disabled"}>↓</button>` : ""}
       <button type="button" class="ic" data-remove aria-label="Take ${esc(x.name)} off the trip">×</button></span></li>`;
   };
