@@ -15,20 +15,20 @@ function hero(P, F, r){
   if(useFlower){
     const s = flowers[Math.floor(r() * Math.min(flowers.length, 40))], ph = s.photos[0];
     return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(s)}"><img src="${L.photoSrc(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.photoCredit(ph)}</div>
-      <p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
-      <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></section>`;
+      <div class="hero-row"><div><p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
+      <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></div>${almanac()}</div></section>`;
   }
   const pool = hikes.length ? hikes : P.list.filter(p => p.photo);
   if(!pool.length) return "";
   const p = pool[Math.floor(r() * pool.length)], reg = P.region[p.region];
   heroId = p.id;
   return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(p.id)}"><img src="${esc(p.photo.src)}" alt="${esc(p.name)}" crossorigin="anonymous"></a>${L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>
-    <p class="eyebrow">${L.inSeason(p) ? "In season now" : esc(L.KIND[p.kind])} · ${esc(reg?.name || "")}</p>
+    <div class="hero-row"><div><p class="eyebrow">${L.inSeason(p) ? "In season now" : esc(L.KIND[p.kind])} · ${esc(reg?.name || "")}</p>
     <h1><a href="${L.placeHref(p.id)}" style="color:inherit;text-decoration:none">${esc(p.name)}</a></h1>
-    <p class="sub-line">${[p.area, p.distance_mi != null && L.miles(p.distance_mi), p.gain_ft != null && `${L.num(p.gain_ft)} ft gain`, L.seasonText(p.season)].filter(Boolean).map(esc).join(" · ")}</p></section>`;
+    <p class="sub-line">${[p.area, p.distance_mi != null && L.miles(p.distance_mi), p.gain_ft != null && `${L.num(p.gain_ft)} ft gain`, L.seasonText(p.season)].filter(Boolean).map(esc).join(" · ")}</p></div>${almanac()}</div></section>`;
 }
 
-/* ---------- the sky and the season: a line above everything, worked out for Seattle (app/sky.js) ---------- */
+/* ---------- the sky and the season: a small panel beside the big picture's title, worked out for Seattle (app/sky.js) ---------- */
 const HERE = {lat: 47.61, lng: -122.33, name: "Seattle", tz: "America/Los_Angeles"};
 const SHOWERS = [["Quadrantids", 1, 3], ["Lyrids", 4, 22], ["Eta Aquariids", 5, 5], ["Perseids", 8, 12], ["Orionids", 10, 21],
   ["Leonids", 11, 17], ["Geminids", 12, 13], ["Ursids", 12, 22]];
@@ -68,15 +68,18 @@ function almanac(){
     .map(x => ({...x, in: Math.round((x.t - now) / day)})).filter(x => x.in >= -2 && x.in <= 30).sort((a, b) => a.t - b.t)[0];
   const dur = today.rise && today.set ? today.set - today.rise : 0, was = yday.rise && yday.set ? yday.set - yday.rise : 0;
   const mins = Math.round((dur - was) / 60e3);
-  const bits = [
-    today.rise && today.set && `Sunrise ${hm(today.rise)}, sunset ${hm(today.set)} in ${HERE.name}`,
-    dur && `${Math.floor(dur / 36e5)} h ${Math.round(dur % 36e5 / 60e3)} min of daylight${was ? mins ? `, ${Math.abs(mins)} min ${mins < 0 ? "less" : "more"} than yesterday` : ", the same as yesterday" : ""}`,
-    `${S.phaseName(m.phase).replace(/ moon$/i, "")} moon`.replace(/^(New|Full) moon moon$/, "$1 moon"),
-    up.length && `${up.length > 1 ? up.slice(0, -1).join(", ") + " and " + up.at(-1) : up[0]} up tonight`,
-    shower && (shower.in < 0 ? `the ${shower.n} just peaked` : shower.in <= 1 ? `the ${shower.n} peak tonight` : `the ${shower.n} peak ${fmt(shower.t, {month: "short", day: "numeric"})}`)
-  ].filter(Boolean);
-  return `<div class="almanac"><p class="eyebrow">${esc(fmt(now, {weekday: "long", month: "long", day: "numeric"}))} · ${esc(season)}, ${days <= 0 ? `the ${next[1]} today` : `${days} ${days === 1 ? "day" : "days"} to the ${next[1]}`}</p>
-    <p class="muted small">${esc(bits.join(" · ").replace(/· the /g, "· The "))}</p></div>`;
+  const row = (k, v) => v ? `<div><dt>${k}</dt><dd>${v}</dd></div>` : "";
+  const list = names => names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names.at(-1) : names[0];
+  const change = was ? mins ? ` <small>${mins < 0 ? "−" : "+"}${Math.abs(mins)} min</small>` : ` <small>same as yesterday</small>` : "";
+  return `<aside class="sky" aria-label="The sky and the season">
+    <p class="eyebrow">${esc(fmt(now, {weekday: "long", month: "long", day: "numeric"}))}</p>
+    <p class="sky-season">${esc(season)} <small>${days <= 0 ? `the ${next[1]} today` : `${days} ${days === 1 ? "day" : "days"} to the ${next[1]}`}</small></p>
+    <dl>${row("Sunrise", today.rise && esc(hm(today.rise)))}${row("Sunset", today.set && esc(hm(today.set)))}
+      ${row("Daylight", dur && `${Math.floor(dur / 36e5)} h ${Math.round(dur % 36e5 / 60e3)} min${change}`)}
+      ${row("Moon", esc(S.phaseName(m.phase).replace(/ moon$/i, "")))}
+      ${row("Tonight", up.length && esc(list(up)))}
+      ${row("Meteors", shower && esc(`${shower.n}, ${shower.in < 0 ? "just peaked" : shower.in <= 1 ? "peak tonight" : "peak " + fmt(shower.t, {month: "short", day: "numeric"})}`))}</dl>
+    <p class="sky-where">In ${esc(HERE.name)}</p></aside>`;
 }
 
 /* ---------- where to go this month: the places in season, as a mosaic; the ones opening next, in a line ---------- */
@@ -122,7 +125,7 @@ async function render(){
   const [P, F] = await Promise.all([L.data.places(), L.data.flowers().catch(() => null)]);
   const r = L.rng("home " + L.today());
   const outline = await L.data.json("cascadia.json").catch(() => null);
-  main.innerHTML = almanac() + hero(P, F, r)
+  main.innerHTML = hero(P, F, r)
     + L.section(`Where to go in ${L.MONTHS[L.month() - 1]}`, goNow(P, r))
     + L.section("Cascadia", `<div class="atlas"><div><div class="mapbox tall" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p></div>
       <div id="progress"><h3 class="atlas-h">Your progress</h3>${progress(P)}</div></div>`, {aside: `<span class="muted">British Columbia, Washington and Oregon</span>`})

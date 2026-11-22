@@ -139,9 +139,19 @@ h1 i,.sci{font-style:italic}
 .wall a:hover span,.wall a:focus span{opacity:1}
 
 /* ---------- the front page ---------- */
-.almanac{margin:4px 0 22px}
-.almanac .eyebrow{margin:0 0 4px}
-.almanac p.muted{margin:0;max-width:62em}
+/* the big picture's title, with the sky and the season beside it */
+.hero-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:36px;align-items:start}
+.hero-row .eyebrow{margin:20px 0 4px}
+.sky{margin-top:20px;width:300px;padding:16px 18px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
+.sky .eyebrow{margin:0 0 2px}
+.sky-season{font:400 22px/1.2 var(--display);margin:0 0 10px}
+.sky-season small,.sky dd small{font:400 14px var(--book);color:var(--muted)}
+.sky-season small{display:block;margin-top:2px}
+.sky dl{margin:0;display:grid;gap:0}
+.sky dl div{display:grid;grid-template-columns:5.6em minmax(0,1fr);gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.sky dt{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.sky dd{margin:0;font-size:16px;line-height:1.35}
+.sky-where{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .wall.go{grid-auto-rows:170px}
 .go-next{margin:16px 0 0}
 /* Cascadia: the tall map beside your progress */
@@ -294,6 +304,8 @@ footer a{color:inherit}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
 }
 @media (max-width: 760px){
+  .hero-row{grid-template-columns:minmax(0,1fr);gap:0}
+  .sky{width:auto}
   .atlas{grid-template-columns:1fr;gap:30px}
   .mapbox.tall{aspect-ratio:4/5}
   .wall.go{grid-auto-rows:120px}
