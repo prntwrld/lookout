@@ -15,20 +15,20 @@ function hero(P, F, r){
   if(useFlower){
     const s = flowers[Math.floor(r() * Math.min(flowers.length, 40))], ph = s.photos[0];
     return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.speciesHref(s)}"><img src="${L.photoSrc(ph, "large")}" data-fallback="${L.thumb(s)}" alt="${esc(s.common || s.sci)}" crossorigin="anonymous"></a>${L.photoCredit(ph)}</div>
-      <div class="hero-row"><div><p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
-      <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></div>${almanac()}</div></section>`;
+      <p class="eyebrow">In bloom now</p><h1><a href="${L.speciesHref(s)}" style="color:inherit;text-decoration:none">${esc(s.common || s.sci)}</a></h1>
+      <p class="sub-line"><i class="sci">${esc(s.sci)}</i> · ${esc(L.bloomText(s.bloom))}${s.elev ? ` · ${L.num(s.elev[0])}–${L.feet(s.elev[1])}` : ""}</p></section>`;
   }
   const pool = hikes.length ? hikes : P.list.filter(p => p.photo);
   if(!pool.length) return "";
   const p = pool[Math.floor(r() * pool.length)], reg = P.region[p.region];
   heroId = p.id;
   return `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(p.id)}"><img src="${esc(p.photo.src)}" alt="${esc(p.name)}" crossorigin="anonymous"></a>${L.credit(p.photo.by, p.photo.lic, p.photo.page)}</div>
-    <div class="hero-row"><div><p class="eyebrow">${L.inSeason(p) ? "In season now" : esc(L.KIND[p.kind])} · ${esc(reg?.name || "")}</p>
+    <p class="eyebrow">${L.inSeason(p) ? "In season now" : esc(L.KIND[p.kind])} · ${esc(reg?.name || "")}</p>
     <h1><a href="${L.placeHref(p.id)}" style="color:inherit;text-decoration:none">${esc(p.name)}</a></h1>
-    <p class="sub-line">${[p.area, p.distance_mi != null && L.miles(p.distance_mi), p.gain_ft != null && `${L.num(p.gain_ft)} ft gain`, L.seasonText(p.season)].filter(Boolean).map(esc).join(" · ")}</p></div>${almanac()}</div></section>`;
+    <p class="sub-line">${[p.area, p.distance_mi != null && L.miles(p.distance_mi), p.gain_ft != null && `${L.num(p.gain_ft)} ft gain`, L.seasonText(p.season)].filter(Boolean).map(esc).join(" · ")}</p></section>`;
 }
 
-/* ---------- the sky and the season: a small panel beside the big picture's title, worked out for Seattle (app/sky.js) ---------- */
+/* ---------- the sky and the season: a small panel beside Where to go, worked out for Seattle (app/sky.js) ---------- */
 const HERE = {lat: 47.61, lng: -122.33, name: "Seattle", tz: "America/Los_Angeles"};
 const SHOWERS = [["Quadrantids", 1, 3], ["Lyrids", 4, 22], ["Eta Aquariids", 5, 5], ["Perseids", 8, 12], ["Orionids", 10, 21],
   ["Leonids", 11, 17], ["Geminids", 12, 13], ["Ursids", 12, 22]];
@@ -82,25 +82,28 @@ function almanac(){
     <p class="sky-where">In ${esc(HERE.name)}</p></aside>`;
 }
 
-/* ---------- where to go this month: the places in season, as a mosaic; the ones opening next, in a line ---------- */
+/* ---------- where to go this month: the places in season, then the ones opening next; the sky panel beside ---------- */
 function goNow(P, r){
   const m = L.month(), done = L.log.all();
   const now = L.shuffle(P.list.filter(p => L.inSeason(p, m) && p.photo && p.id !== heroId), r).sort((a, b) => !!done[a.id] - !!done[b.id]);
   /* how many months until a place's season opens */
   const wait = p => Array.isArray(p.season) ? (p.season[0] - m + 12) % 12 : 99;
-  const soon = P.list.filter(p => !L.inSeason(p, m) && wait(p) < 99).sort((a, b) => wait(a) - wait(b) || a.name.localeCompare(b.name)).slice(0, 4);
+  const soon = P.list.filter(p => !L.inSeason(p, m) && wait(p) < 99).sort((a, b) => wait(a) - wait(b) || a.name.localeCompare(b.name));
   const tile = (p, cls) => `<a href="${L.placeHref(p.id)}" class="${cls}" data-place="${esc(p.id)}"><img src="${esc(L.sized(p.photo.src, cls ? 960 : 500))}" alt="" loading="lazy" crossorigin="anonymous"><span>${esc(p.name)}</span></a>`;
-  let body = "";
+  /* a card; for one opening later, when it opens comes first under its name */
+  const card = (p, opens) => L.placeCard(p, P.region[p.region]).replace("</h3><p>", opens ? `</h3><p>Opens in ${esc(L.MONTHS[p.season[0] - 1])} · ` : "</h3><p>");
+  const cards = (list, opens) => `<div class="cards">${list.map(p => card(p, opens)).join("")}</div>`;
+  let body;
   if(now.length >= 9){
-    /* two rows of six: one big tile (four cells) and eight small */
+    /* plenty in season: two rows of six, one big tile (four cells) and eight small */
     body = `<div class="wall go">${now.slice(0, 9).map((p, i) => tile(p, i ? "" : "w2")).join("")}</div>`;
-  } else if(now.length){
-    /* too few for a mosaic: the places as cards */
-    body = `<div class="cards">${now.map(p => L.placeCard(p, P.region[p.region])).join("")}</div>`;
+  } else {
+    /* fewer: the ones in season, then enough of those opening next to make two rows of three */
+    const next = soon.slice(0, Math.max(3, 6 - now.length));
+    body = (now.length ? `<p class="eyebrow go-h">In season now</p>${cards(now)}` : "")
+      + (next.length ? `<p class="eyebrow go-h">Opening next</p>${cards(next, true)}` : "");
   }
-  const next = soon.length ? `<p class="muted small go-next">${now.length ? "Opening next" : "Nothing's in season this month. Opening next"}: ${soon.map(p =>
-    `<a href="${L.placeHref(p.id)}">${esc(p.name)}</a> (${esc(L.MONTHS[p.season[0] - 1])})`).join(", ")}</p>` : "";
-  return body + next;
+  return `<div class="go-row"><div>${body}</div>${almanac()}</div>`;
 }
 
 function progress(P){
