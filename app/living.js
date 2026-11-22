@@ -406,7 +406,9 @@ async function songs(){
   const track = (x, rec) => ({...rec, name: x.t.common || x.t.sci, href: L.speciesHref(x.t), img: x.t.photo ? L.inat(x.t.photo, "small") : "", t: x.t});
   /* birds: Xeno-canto's recordings on Commons, one per bird; any without one, an observer's recording from here this month */
   const got = await S.commonsSounds(birds.map(x => x.t.sci)).catch(() => ({}));
-  const near = x => S.natSounds({taxon_id: x.t.id, place_id: L.PNW, month: L.month(), per_page: 3}).then(l => l[0] ? track(x, {...l[0], note: l[0].where}) : null).catch(() => null);
+  /* where it was recorded, as a town and a state or province: no street numbers or postcodes */
+  const town = w => String(w || "").split(",").map(x => x.trim().replace(/\s+[A-Z]\d[A-Z] ?\d[A-Z]\d$|\s+\d{5}(-\d{4})?$/, "")).filter(x => x && !/\d/.test(x) && !/^(USA?|United States|Canada|CA)$/.test(x)).slice(-2).join(", ").replace(/\bCA-BC\b/, "BC");
+  const near = x => S.natSounds({taxon_id: x.t.id, place_id: L.PNW, month: L.month(), per_page: 3}).then(l => l[0] ? track(x, {...l[0], note: town(l[0].where)}) : null).catch(() => null);
   const commons = await S.verified(birds.map(x => got[x.t.sci]?.[0] ? track(x, got[x.t.sci][0]) : null).filter(Boolean), 10, 4);
   /* any bird whose Commons recording didn't play (or has none), up to ten in all: an observer's recording from here this month */
   let b = commons;
@@ -426,30 +428,33 @@ async function songs(){
   const pics = await L.openPhotos(list.filter(t => !t.img).map(t => t.t.id)).catch(() => ({}));
   list.forEach(t => { if(!t.img && pics[t.t.id]) t.img = L.inat(pics[t.t.id], "small"); });
   const sec = $("songs");
-  sec.querySelector(".body").innerHTML = `<p class="song-ctl"><button type="button" class="btn ghost" id="play-all">Play all ${list.length}</button></p><div id="tracks"></div>`;
+  sec.querySelector(".body").innerHTML = `<p class="song-ctl"><button type="button" class="btn ghost" id="play-all">Play all ${list.length}</button></p><div class="track-box"><div id="tracks"></div></div>`;
   const player = S.trackList($("tracks"), list, {chain: true});
+  /* the list scrolls inside its box; the bottom edge fades while there's more below */
+  const tb = sec.querySelector(".track-box"), mark = () => tb.classList.toggle("more-down", tb.scrollTop < tb.scrollHeight - tb.clientHeight - 4);
+  tb.addEventListener("scroll", mark, {passive: true}); new ResizeObserver(mark).observe(tb); mark();
+  /* the playing track stays in view as the list plays through */
+  S.audio.addEventListener("play", () => { const on = tb.querySelector(".track.on"); if(on && (on.offsetTop < tb.scrollTop || on.offsetTop + on.offsetHeight > tb.scrollTop + tb.clientHeight)) tb.scrollTo({top: on.offsetTop - 8, behavior: "smooth"}); });
   $("play-all").addEventListener("click", player.playAll);
   sec.hidden = false;
 }
 
-/* Seen this week: a dense wall of the most-sighted species over the last seven days */
+/* Seen this week: the most-sighted species over the last seven days, with their names */
 async function week(F){
   const list = (await counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160}).catch(() => [])).filter(x => x.t.photo);
   if(list.length < 8) return;
   const sec = $("week"), body = sec.querySelector(".body");
   const tile = x => { const name = x.t.common || x.t.sci;
-    return `<a href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${name}: ${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
-      <img src="${L.inat(x.t.photo, "small")}" alt="${esc(name)}" loading="lazy" crossorigin="anonymous"><span>${esc(name)}</span></a>`; };
+    return `<a class="sp" href="${L.speciesHref(F?.byId[x.t.id] || x.t)}" title="${esc(`${L.num(x.count)} ${x.count === 1 ? "sighting" : "sightings"} this week. Photo © ${x.t.photo.by} · ${x.t.photo.lic}`)}">
+      <div class="pic"><img src="${L.inat(x.t.photo, "small")}" alt="" loading="lazy" crossorigin="anonymous"></div><b>${esc(name)}</b></a>`; };
   sec.hidden = false;
-  /* one row; the rest on request */
+  /* twelve, with their names; the rest on request */
   let all = false;
   const draw = () => {
-    const cols = getComputedStyle(body.querySelector(".wall") || body).gridTemplateColumns?.split(" ").length || 1;
-    const n = Math.min(list.length, cols);
-    body.innerHTML = `<div class="wall dense">${(all ? list : list.slice(0, n)).map(tile).join("")}</div>`
-      + (list.length > n ? `<p style="margin-top:14px"><button type="button" class="linkish" data-all>${all ? "Show fewer" : `Show all ${list.length}`}</button></p>` : "");
+    body.innerHTML = `<div class="week-grid">${(all ? list : list.slice(0, 12)).map(tile).join("")}</div>`
+      + `<p style="margin-top:20px"><button type="button" class="btn ghost" data-all>${all ? "Show fewer" : `Show all ${list.length}`}</button></p>`;
   };
-  body.innerHTML = `<div class="wall dense"></div>`; draw();
+  draw();
   body.addEventListener("click", e => { if(e.target.closest("[data-all]")){ all = !all; draw(); if(!all) sec.scrollIntoView({block: "nearest"}); } });
 }
 
@@ -460,8 +465,8 @@ async function guidePage(F){
   main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${pick.href}"><img src="${L.photoSrc(pick.photo, "large")}"${pick.fb ? ` data-fallback="${pick.fb}"` : ""} alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.photoCredit(pick.photo)}</div>` : `<section class="hero">`)
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
     ${quiet("out", `Out in ${MONTH}`, "")}
-    ${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
-    ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}
+    <div class="split pair">${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
+    ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}</div>
     <section class="section" id="browse"><h2 id="list-h">Every species</h2>
     <div id="groups" style="margin:0 0 18px">${L.groupChips(st.g)}</div>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>

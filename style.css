@@ -198,10 +198,15 @@ h1 i,.sci{font-style:italic}
 .tr-bar{display:block;height:2px;background:var(--line);margin-top:6px;overflow:hidden}
 .tr-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s linear}
 .tr-time{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-/* Seen this week: the wall, smaller and square */
-.wall.dense{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));grid-auto-rows:auto;gap:6px}
-.wall.dense a{aspect-ratio:1}
-.wall.dense span{font-size:13px;padding:18px 7px 6px}
+/* songs beside Seen this week; either one alone takes the whole width */
+.pair{margin:56px 0}
+.pair > .section{margin:0}
+.pair:has(> [hidden]){grid-template-columns:minmax(0,1fr)}
+.pair .tracks{columns:auto}
+.track-box{max-height:700px;overflow-y:auto;scrollbar-width:thin;position:relative}
+.track-box.more-down{-webkit-mask-image:linear-gradient(#000 calc(100% - 56px),transparent);mask-image:linear-gradient(#000 calc(100% - 56px),transparent)}
+.week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+.week-grid .sp b{font-size:15px}
 
 /* ---------- maps ---------- */
 .mapbox{height:440px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
@@ -360,6 +365,7 @@ footer a{color:inherit}
   .sky dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
   .wall{grid-template-columns:repeat(4,1fr)}
   .split{grid-template-columns:minmax(0,1fr);gap:36px}
+  .week-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
   .key{grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:28px}
   .progress{grid-template-columns:minmax(0,1fr);gap:22px}
 }
@@ -388,8 +394,10 @@ footer a{color:inherit}
   .card h3{font-size:18px}
   .wall{grid-template-columns:repeat(2,1fr);grid-auto-rows:140px;gap:5px}
   .wall a:nth-child(n+16){display:none}
-  .wall.dense{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:auto;gap:4px}
-  .wall.dense a:nth-child(n+16){display:block}
+  .pair{margin:42px 0}
+  .track-box{max-height:480px}
+  .week-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px}
+  .week-grid .sp b{font-size:14px}
   .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:0 18px}
   .track{grid-template-columns:40px 44px minmax(0,1fr) auto;column-gap:10px}
   .tr-img{width:44px;height:44px}
