@@ -267,7 +267,7 @@ async function start(){
   read();
   const keep = {...A};
   await setMode(mode);
-  if(hadHash){ A = keep; write(); draw(); }
+  if(hadHash){ A = keep; auto = {}; write(); draw(); }
   drawGroups();
   /* a group with a trait key opens on its questions; a link there switches to "recorded near you", and back */
   main.addEventListener("click", e => { const b = e.target.closest("[data-kg]"); if(b) pickGroup(b.dataset.kg, !!KEYS[b.dataset.kg] && b.dataset.kg !== "flowers" && (b.hasAttribute("data-ask") || !b.closest("#qs"))); });

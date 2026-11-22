@@ -6,7 +6,7 @@
    - Photos from iNaturalist and Wikimedia, and map tiles, are kept as you see them (up to a limit), so a page
      you've opened before still has its pictures and map offline.
    Bump VERSION when the list of shell files changes. */
-const VERSION = "lookout-v4";
+const VERSION = "lookout-v5";
 const SHELL = VERSION + "-shell", PACK = VERSION + "-pack", IMG = "lookout-img", TILES = "lookout-tiles";
 const BASE = new URL("./", self.location).href;
 const SHELL_FILES = ["", "places/", "living/", "key/", "style.css", "manifest.webmanifest",
@@ -39,7 +39,8 @@ const savePack = async () => {
   let more = [];
   try { more = (await (await fetch(new URL("data/packs.json", BASE), {cache: "no-cache"})).json()).packs.flatMap(p => [`data/packs/${p.id}.json`, `data/traits/${p.id}.json`]); } catch(e){}
   await addAll(SHELL, more);
-  for(const f of ["data/flowers.json", "data/birds.json", ...more.filter(x => x.startsWith("data/packs/"))]){
+  /* thumbnails up front for the wildflowers and birds only; the other keys' pictures are kept as you open them */
+  for(const f of ["data/flowers.json", "data/birds.json"]){
     try { const r = await fetch(new URL(f, BASE), {cache: "no-cache"}); ids = ids.concat((await r.json()).species.map(s => s.id)); } catch(e){}
   }
   return ids.length ? addAll(PACK, ids.map(id => `data/thumbs/${id}.jpg`)) : 0;
