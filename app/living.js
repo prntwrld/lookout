@@ -647,6 +647,7 @@ async function groupPage(F, key){
     const fl = main.querySelector('#kinds [data-k="flowers"] .pic'), s0 = F?.list?.[0];
     if(fl && s0) fl.innerHTML = `<img src="${L.thumb(s0)}" alt="" loading="lazy">`;
   }
+  if(g.pack && F) packSeason(F);
   if(top.k === "tidepools" && !sub) tidePools().catch(() => {});
   if(taxa) showKinds($("kinds-sec"), taxa, "family");
 
@@ -683,6 +684,22 @@ async function groupPage(F, key){
   $("most").addEventListener("click", e => { if(e.target.id === "more"){ page++; draw(true); } if(e.target.id === "retry") draw(); });
   let t; $("gq")?.addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { const v = e.target.value.trim(); q = v.length > 1 ? v : ""; draw(); }, 350); });
   draw();
+}
+
+/* the wildflowers page, from the saved pack (so it works with no signal): how many bloom in each month, and what's in
+   bloom now, or (in the off season) what comes up first */
+function packSeason(F){
+  const m = L.month(), per = L.MON.map((_, i) => F.list.filter(s => s.bloom?.includes(i + 1)).length), most = Math.max(...per);
+  const fact = (id, html) => { const el = $(id); if(!el) return; el.innerHTML = html; el.hidden = false; el.previousElementSibling.hidden = false; el.previousElementSibling.textContent = id === "g-species" ? "In the key" : el.previousElementSibling.textContent; };
+  fact("g-species", `${F.list.length} species`);
+  fact("g-months", monthBar([], m, per.map(n => n / most)) + esc(L.bloomText(per.map((n, i) => n > most * .6 ? i + 1 : 0).filter(Boolean))));
+  let mm = m, title = `In bloom in ${MONTH}`;
+  if(per[m - 1] < 4){ for(let k = 1; k < 12; k++){ const x = (m - 1 + k) % 12 + 1; if(per[x - 1] >= 4){ mm = x; title = `Coming up in ${L.MONTHS[x - 1]}`; break; } } }
+  const l = F.list.filter(s => s.bloom?.includes(mm)).sort((a, b) => b.obs - a.obs).slice(0, 30);
+  const sec = $("g-now"); if(!sec || l.length < 4) return;
+  sec.querySelector("h2").textContent = title;
+  sec.querySelector(".row").innerHTML = l.map(s => L.speciesTile(s, `<span class="note">${esc(L.bloomText(s.bloom))}</span>`)).join("");
+  sec.hidden = false;
 }
 
 /* ---------- tide pools: the month's low tides at a NOAA station, the spots on a map, and how to look without harm ---------- */

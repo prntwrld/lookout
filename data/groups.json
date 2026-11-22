@@ -352,7 +352,12 @@
       ]
     },
     "flowers": {
-      "hook": "The 300 Cascades wildflowers in the key, by colour and family"
+      "hook": "The 300 Cascades wildflowers in the key, by colour, family and month",
+      "intro": [
+        "These are the 300 most-recorded native wildflowers of the Cascades, from the lowland forest to the alpine. Each has its flowering months, its range of elevation, its colours and the shape of its petals and leaves: everything the key uses to name a flower from what you see.",
+        "They're saved on your device, so this page and the key work on the trail with no signal."
+      ],
+      "look": "Wildflowers follow the melting snow uphill: the Columbia Gorge from March, the lowland forest in April and May, middle-elevation meadows in June, and the subalpine meadows from mid-July into August."
     },
     "conifers": {
       "hook": "Firs, cedars, hemlocks and spruce: the trees that make the forest"
