@@ -15,10 +15,11 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const MON = MONTHS.map(m => m.slice(0, 3));
 
 /* ---------- the header ---------- */
-const NAV = [["places", "Places"], ["trips", "Trips"], ["atlas", "Atlas"], ["living", "Living things"], ["key", "Key"]];
+const NAV = [["places", "Places"], ["atlas", "Atlas"], ["living", "Living things"], ["key", "Key"]];
 document.currentScript.insertAdjacentHTML("afterend", `<header class="top wrap">
   <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg><span class="word">Lookout</span></a>
   <nav aria-label="Sections">${NAV.map(([id, name]) => `<a href="${ROOT}${id}/"${id === here ? ` aria-current="page"` : ""}>${name}</a>`).join("")}</nav>
+  <a class="theme me-link" href="${ROOT}me/" aria-label="Me: your progress, log, saved places and trips"${here === "me" || here === "trips" ? ` aria-current="page"` : ""}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.6" r="2.7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.8 14c.6-2.9 2.7-4.4 5.2-4.4s4.6 1.5 5.2 4.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
   <button class="theme" id="theme" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
 </header>`);
 
