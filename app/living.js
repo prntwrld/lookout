@@ -845,7 +845,7 @@ async function foragingPage(F){
   }
 }
 
-/* ---------- Near you (living/?f=near): a map of what people have photographed around you lately, the latest
+/* ---------- Near you (me/?f=near: it lives on the Me page, which loads this file for it; living/?f=near goes there): a map of what people have photographed around you lately, the latest
    sightings, what's around you by kind (tiles that open), the best bets this month, and rare finds. Your location is
    kept on this device a few hours, shared with the key's "Use my location". ---------- */
 const HABITATS = [
@@ -878,7 +878,7 @@ const recentObs = j => j.results.map(o => ({o, p: L.openPhoto(o.photos?.[0]), t:
 async function nearPage(F){
   document.title = "Near you — Lookout";
   let r = String(L.store.get("lookout-near-km", 10)), map = null;
-  main.innerHTML = `<section class="hero"><p class="eyebrow"><a href="./" class="crumb">Living things</a></p><h1>Near you</h1>
+  main.innerHTML = `<section class="hero"><p class="eyebrow"><a href="${L.ROOT}me/" class="crumb">Me</a></p><h1>Near you</h1>
       <p class="sub-line" id="where-line">What people have found around where you're standing</p>
       <div class="filters" style="margin:16px 0 0"><div class="chips" id="radius" role="group" aria-label="How far">${[["2", "Within 2 km"], ["10", "10 km"], ["25", "25 km"]].map(([v, l]) => `<button type="button" class="chip" data-r="${v}" aria-pressed="${v === r}">${l}</button>`).join("")}</div>
       <button type="button" class="btn ghost" id="locate">Use my location</button><span class="muted small" id="where-note"></span></div></section>
@@ -1086,7 +1086,7 @@ async function explore(F){
   const D = (await L.data.json("groups.json").catch(() => null))?.groups || {};
   /* four features in a row, then twelve groups, four by four; worms and slime moulds in a line below */
   const LINE = ["worms", "slime"], groups = L.GROUPS.filter(g => g.k !== "all" && !LINE.includes(g.k));
-  $("explore-cards").innerHTML = `<a class="card" href="?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a><a class="card" href="?f=salmon" data-k="salmon"><div class="pic"><span class="ph">Sa</span><span class="badge">Running now</span></div><h3>Salmon runs</h3><p>When the five salmon come home, and where to watch them</p></a><a class="card" href="?f=whales" data-k="whales"><div class="pic"><span class="ph">Wh</span></div><h3>Whales</h3><p>Orcas, humpbacks and gray whales, and where to watch from shore</p></a>`;
+  $("explore-cards").innerHTML = `<a class="card" href="${L.ROOT}me/?f=near" data-k="near"><div class="pic"><span class="ph">Ne</span><span class="badge">Near you</span></div><h3>Near you</h3><p>What's been recorded around where you're standing, this week, this month and ever</p></a><a class="card" href="?f=foraging" data-k="foraging"><div class="pic"><span class="ph">Fo</span><span class="badge">In season</span></div><h3>Foraging and the harvest</h3><p>Berries, greens and mushrooms by the month, and the look-alikes that can kill</p></a><a class="card" href="?f=salmon" data-k="salmon"><div class="pic"><span class="ph">Sa</span><span class="badge">Running now</span></div><h3>Salmon runs</h3><p>When the five salmon come home, and where to watch them</p></a><a class="card" href="?f=whales" data-k="whales"><div class="pic"><span class="ph">Wh</span></div><h3>Whales</h3><p>Orcas, humpbacks and gray whales, and where to watch from shore</p></a>`;
   $("group-cards").innerHTML = groups.map(g => `<a class="card" href="?g=${g.k}" data-k="${g.k}"><div class="pic"><span class="ph">${L.initials(g.name)}</span>${g.k === "tidepools" ? `<span class="badge">Low tides</span>` : ""}</div>
     <h3>${esc(g.name)}</h3>${D[g.k]?.hook ? `<p>${esc(D[g.k].hook)}</p>` : ""}</a>`).join("");
   $("group-line").innerHTML = "Also: " + LINE.map(k => `<a href="?g=${k}">${esc(L.group(k).name)}</a>`).join(" · ");
@@ -1140,7 +1140,8 @@ L.data.flowers().catch(() => null).then(async F => {
     return groupPage(F, gk);
   }
   if(new URLSearchParams(location.search).get("f") === "foraging") return foragingPage(F);
-  if(new URLSearchParams(location.search).get("f") === "near") return nearPage(F);
+  if(new URLSearchParams(location.search).get("f") === "near")
+    return document.body.dataset.page === "me" ? nearPage(F) : location.replace(L.ROOT + "me/?f=near");
   if(new URLSearchParams(location.search).get("f") === "salmon") return salmonPage(F);
   if(new URLSearchParams(location.search).get("f") === "whales") return whalesPage(F);
   if(!id) return guidePage(F);

@@ -54,7 +54,7 @@ async function render(){
       + L.section("Your progress", progress(P), {id: "progress"})
       + L.section(`Next up in ${L.MONTHS[L.month() - 1]}`, nextUp(P).length ? `<div class="cards">${nextUp(P).map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {aside: `<span class="muted">In season, not done yet</span>`})
       + L.section("Near you", `<p class="lede">What's been seen around where you're standing: a map of the last month's photographs, the latest sightings, the best bets this month, and your places nearby.</p>
-          <p><a class="btn" href="${L.ROOT}living/?f=near">See what's near you</a></p>`, {id: "near"})
+          <p><a class="btn" href="?f=near">See what's near you</a></p>`, {id: "near"})
       + `<div id="trips-slot"></div>`
       + L.section("Saved", n ? `<p class="muted small lede">From <a href="${L.ROOT}places/#beyond">Beyond the trail</a> on Places.</p>${saved(P)}` : "", {n, id: "saved"})
       + L.section("Your log", `${logList(P)}<div class="chips log-io"><button class="btn ghost" id="export" type="button">Export</button>
