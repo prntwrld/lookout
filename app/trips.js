@@ -1,14 +1,17 @@
-/* Lookout — Trips: your trips (trips/) and one trip (trips/?id=…).
+/* Lookout — Trips: one trip (trips/?id=…), and your trips' list and the form to plan one, which live on the Me page
+   (me/, which loads this file and calls Lookout.tripsInto(slot)); trips/ on its own goes there.
    A trip is a name, its dates and its regions (any of data/regions.json's, seas and lakes too). Its page has the
    days, each with its stops in order and the miles between them; one map of the stops and of what's left to add;
    and the ideas: your places in season, what you've saved, salmon, whale and tide-pool spots in season, farmers
    markets open on your days (from OpenStreetMap's opening hours), lighthouses, farm stands and ferries, and what's
-   out that month. Trips are kept on this device (Lookout.trips) and go out with Places → Your log → Export. */
+   out that month. Trips are kept on this device (Lookout.trips) and go out with Me → Your log → Export. */
 {
 const L = window.Lookout, {esc, $} = L;
 const main = $("main");
 const id = new URLSearchParams(location.search).get("id");
-document.body.insertAdjacentHTML("beforeend", L.footer());
+const embedded = document.body.dataset.page === "me";
+if(!embedded) document.body.insertAdjacentHTML("beforeend", L.footer());
+const ME = L.ROOT + "me/#trips", TRIP = tid => `${L.ROOT}trips/?id=${encodeURIComponent(tid)}`;
 
 const GROUP_NAME = {water: "Waters", coast: "Coast and islands", lowlands: "Lowlands and valleys", mountains: "Mountains", dry: "The dry side"};
 const DAY_COLOUR = ["#2d5c43", "#c8402f", "#2f6db0", "#d98a1c", "#7b52ab", "#23948f", "#8a5f3c", "#cf5d86"];
@@ -154,21 +157,20 @@ function wireForm(t, done){
   });
 }
 
-function listPage(){
-  document.title = "Trips — Lookout";
+function listPage(slot){
   const all = Object.entries(L.trips.all()).map(([id, t]) => ({id, ...t})).sort((a, b) => a.start.localeCompare(b.start));
   const now = L.today(), coming = all.filter(t => t.end >= now), past = all.filter(t => t.end < now).reverse();
-  const card = t => `<a class="trip-card" href="?id=${encodeURIComponent(t.id)}"><b>${esc(t.name)}</b><span>${esc(range(t))} · ${daysOf(t).length} ${daysOf(t).length === 1 ? "day" : "days"}</span>
+  const card = t => `<a class="trip-card" href="${TRIP(t.id)}"><b>${esc(t.name)}</b><span>${esc(range(t))} · ${daysOf(t).length} ${daysOf(t).length === 1 ? "day" : "days"}</span>
     <span>${esc(t.regions.map(r => D.names[r] || r).join(", "))}</span><span>${t.stops.length} ${t.stops.length === 1 ? "stop" : "stops"}${t.stops.some(s => !s.day) ? `, ${t.stops.filter(s => !s.day).length} not placed yet` : ""}</span></a>`;
   const start = addDays(now, ((6 - at(now).getDay()) + 7) % 7 || 7);   /* next Saturday */
-  main.innerHTML = `<section class="hero"><h1>Trips</h1><p class="sub-line">Pick the dates and where, and the trip gathers what's in season there: your places, the markets open on your days, the low tides, the salmon and whales, and the lighthouses.</p></section>`
-    + L.section("Coming up", coming.length ? `<div class="trip-cards">${coming.map(card).join("")}</div>` : "", {n: coming.length})
-    + L.section("Plan a trip", tripForm({name: "", start, end: addDays(start, 2), regions: []}, false), {id: "new"})
-    + L.section("Been", past.length ? `<div class="trip-cards">${past.map(card).join("")}</div>` : "", {n: past.length});
+  slot.innerHTML = L.section("Trips", `<p class="muted small lede">Pick the dates and where, and the trip gathers what's in season there: your places, the markets open on your days, the low tides, the salmon and whales, and the lighthouses.</p>
+    ${coming.length ? `<h3 class="atlas-h">Coming up</h3><div class="trip-cards">${coming.map(card).join("")}</div>` : ""}
+    <h3 class="atlas-h" id="new">Plan a trip</h3>${tripForm({name: "", start, end: addDays(start, 2), regions: []}, false)}
+    ${past.length ? `<h3 class="atlas-h">Been</h3><div class="trip-cards">${past.map(card).join("")}</div>` : ""}`, {id: "trips", n: all.length || ""});
   wireForm({stops: [], note: ""}, t => {
     const id = "t" + Date.now().toString(36);
     L.trips.set(id, {...t, made: Date.now()});
-    location.href = "?id=" + id;
+    location.href = TRIP(id);
   });
 }
 
@@ -176,7 +178,7 @@ function listPage(){
 let MAP = null, LAYER = null, LIVE = {};
 function tripPage(tid){
   const t = L.trips.get(tid);
-  if(!t){ main.innerHTML = `<h1>No such trip</h1><p><a href="./">Your trips</a></p>`; return; }
+  if(!t){ main.innerHTML = `<h1>No such trip</h1><p><a href="${ME}">Your trips</a></p>`; return; }
   document.title = `${t.name} — Lookout`;
   const days = daysOf(t), months = monthsOf(t);
   const stops = t.stops.map(s => ({...s, it: item(s.ref)})).filter(s => s.it);
@@ -234,7 +236,7 @@ function tripPage(tid){
   const CAP = 40;
   main.innerHTML = `<section class="hero"><p class="eyebrow">Trip · ${days.length} ${days.length === 1 ? "day" : "days"}</p><h1>${esc(t.name)}</h1>
       <p class="sub-line">${esc(range(t))} · ${esc(t.regions.map(r => D.names[r] || r).join(", "))}</p>
-      <p class="trip-acts"><button type="button" class="linkish" id="t-edit">Change the dates or where</button> · <a href="./">All trips</a></p><div id="t-editbox"></div></section>`
+      <p class="trip-acts"><button type="button" class="linkish" id="t-edit">Change the dates or where</button> · <a href="${ME}">All trips</a></p><div id="t-editbox"></div></section>`
     + `<div class="trip-grid"><div>`
     + L.section("The days", days.map(dayBlock).join("")
         + (unplaced.length ? `<div class="day"><h3>Not placed yet <span class="muted">${unplaced.length}</span></h3><ol class="stops loose">${unplaced.map((s, i) => stopRow(s, i, unplaced, null)).join("")}</ol></div>` : ""), {id: "days"})
@@ -325,12 +327,16 @@ function tripPage(tid){
     box2.innerHTML = tripForm(L.trips.get(tid), true);
     wireForm(L.trips.get(tid), next => { LIVE = {}; const n = daysOf(next).length; next.stops = next.stops.map(s => s.day > n ? {...s, day: 0} : s); L.trips.set(tid, next); tripPage(tid); });
     $("t-cancel").addEventListener("click", () => box2.innerHTML = "");
-    $("t-delete").addEventListener("click", () => { if(confirm(`Delete ${t.name}?`)){ L.trips.remove(tid); location.href = "./"; } });
+    $("t-delete").addEventListener("click", () => { if(confirm(`Delete ${t.name}?`)){ L.trips.remove(tid); location.href = ME; } });
   });
 }
 const keepScroll = fn => { const y = scrollY; fn(); scrollTo(0, y); };
 
-loadAll().then(d => { D = d; id ? tripPage(id) : listPage(); })
+/* on the Me page, the list and the form go where it asks; trips/ on its own goes to the Me page */
+if(embedded) window.Lookout.tripsInto = slot => loadAll().then(d => { D = d; listPage(slot); })
+  .catch(e => { slot.innerHTML = `<p class="muted">Couldn't load the trips (${esc(e.message)}).</p>`; });
+else if(!id) location.replace(ME);
+else loadAll().then(d => { D = d; tripPage(id); })
   .catch(e => { main.innerHTML = `<p class="muted">Couldn't load the trips (${esc(e.message)}).</p>`; });
 
 window.Lookout.openOn = openOn;   /* for the checks */

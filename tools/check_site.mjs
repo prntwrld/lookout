@@ -25,7 +25,7 @@ const flag = (where, what) => { problems.push(`${where}: ${what}`); console.log(
 const WIDTHS = [1366, 880, 390];
 const flowers = JSON.parse(await (await fetch(BASE + "data/flowers.json")).text()).species;
 const someFlower = flowers[3].slug;
-const PAGES = [["home", ""], ["places", "places/"], ["trips", "trips/"], ["atlas", "atlas/"], ["atlas-drop", "atlas/#at=46.6,-120.9"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
+const PAGES = [["home", ""], ["places", "places/"], ["me", "me/"], ["atlas", "atlas/"], ["atlas-drop", "atlas/#at=46.6,-120.9"], ["place", "places/?id=maple-pass"], ["place-lookout", "places/?id=hidden-lake"],
   ["living", "living/"], ["living-insects", "living/?g=insects"], ["living-tidepools", "living/?g=tidepools"], ["living-flowers", "living/?g=flowers"], ["living-mammals", "living/?g=mammals"], ["foraging", "living/?f=foraging"], ["near", "living/?f=near"], ["salmon", "living/?f=salmon"], ["whales", "living/?f=whales"], ["species", `living/?id=${someFlower}`], ["species-live", "living/?id=144815"], ["genus", "living/?id=144351"], ["key", "key/"], ["key-answered", "key/#colour=b,v&petals=irregular&leaf=palmate"], ["key-birds", "key/#key=birds&size=m&colour=b"], ["key-insects", "key/#key=here&g=beetles&region=central-cascades&when=year"], ["key-mammals", "key/#key=mammals&tail=bushy"], ["key-here", "key/#key=here&region=olympics&g=tidepools&when=year"]];
 
 /* things that should never wrap onto a second line */
@@ -84,8 +84,9 @@ if(!ONLY || ONLY === "trips"){
     await ctx.addInitScript(t => { if(!localStorage.getItem("lookout-trips")) localStorage.setItem("lookout-trips", JSON.stringify(t)); }, TRIP);
     const page = await ctx.newPage();
     const errs = []; page.on("pageerror", e => errs.push(e.message));
-    await page.goto(BASE + "trips/", {waitUntil: "load"}); await page.waitForTimeout(800);
-    if(!(await page.$(".trip-card"))) flag(`trips@${w}`, "the sample trip isn't listed");
+    await page.goto(BASE + "trips/", {waitUntil: "load"}); await page.waitForTimeout(1500);   /* goes on to the Me page */
+    if(!page.url().includes("/me/")) flag(`trips@${w}`, `trips/ didn't go to the Me page (${page.url()})`);
+    if(!(await page.$("#trips .trip-card"))) flag(`trips@${w}`, "the sample trip isn't listed on the Me page");
     await page.screenshot({path: `${SHOTS}/trips-${w}.png`, fullPage: true});
     await page.goto(BASE + "trips/?id=t1", {waitUntil: "load"}); await page.waitForSelector(".day", {timeout: 8000}).catch(() => flag(`trips@${w}`, "no days"));
     if(w === 1366){
@@ -112,7 +113,7 @@ if(!ONLY || ONLY === "trips"){
   }
 }
 
-/* ---------- the seeds: pick a sea, save a place from the list, and it's in Saved after a reload ---------- */
+/* ---------- the seeds: pick a sea, save a place from the list, and it's in Saved on the Me page ---------- */
 if(ONLY !== "trips") console.log("seeds");
 for(const w of ONLY === "trips" ? [] : [1366, 390]){
   const ctx = await browser.newContext({viewport: {width: w, height: w > 800 ? 900 : 844}, serviceWorkers: "block"});
@@ -129,18 +130,17 @@ for(const w of ONLY === "trips" ? [] : [1366, 390]){
   if(!rows || !first) flag(`seeds@${w}`, `nothing listed in ${water}`);
   else {
     await page.click("#s-list [data-save]");
-    await page.reload({waitUntil: "load"}); await page.waitForSelector("#saved", {timeout: 8000}).catch(() => {});
-    const kept = await page.$$eval("#saved [data-focus]", b => b.map(x => x.textContent)).catch(() => []);
-    if(!kept.includes(first)) flag(`seeds@${w}`, `saved "${first}" wasn't in Saved after a reload`);
-    else console.log(`  ${w}: ${rows} in ${water}; saved "${first}" and it stayed`);
     const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     if(ov > 1) flag(`seeds@${w}`, `page scrolls sideways by ${ov}px`);
-    await page.$eval("#saved", el => el.scrollIntoView());
-    if(water) await page.selectOption("#s-where", water);
     await page.waitForTimeout(1500);
-    await (await page.$("#saved")).screenshot({path: `${SHOTS}/seeds-saved-${w}.png`});
     await (await page.$("#beyond")).screenshot({path: `${SHOTS}/seeds-${w}.png`});
-    await page.click("#saved [data-save]");
+    await page.goto(BASE + "me/", {waitUntil: "load"}); await page.waitForSelector("#saved", {timeout: 8000}).catch(() => {});
+    const kept = await page.$$eval("#saved .seed-name", b => b.map(x => x.textContent)).catch(() => []);
+    if(!kept.includes(first)) flag(`seeds@${w}`, `saved "${first}" wasn't in Saved on the Me page`);
+    else console.log(`  ${w}: ${rows} in ${water}; saved "${first}" and it's on the Me page`);
+    await (await page.$("#saved")).screenshot({path: `${SHOTS}/seeds-saved-${w}.png`});
+    await page.click("#saved [data-unsave]");
+    await page.waitForTimeout(300);
     if(await page.$("#saved")) flag(`seeds@${w}`, "unsaving didn't empty Saved");
   }
   if(errs.length) flag(`seeds@${w}`, "script errors: " + errs.join(" | "));

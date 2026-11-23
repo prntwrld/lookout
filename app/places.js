@@ -1,4 +1,5 @@
-/* Lookout — Places: the bucket list (places/) and each place (places/?id=…).
+/* Lookout — Places: the bucket list (places/) and each place (places/?id=…). Your progress, your log, what you've
+   saved and Export / Import are on the Me page (me/, app/me.js).
    A place opens with its photo (yours, once you've done it), then its numbers, which of your books pick it,
    the box to tick it off, what you might see there this month, the map, what's around it, and the places nearby. */
 {
@@ -8,15 +9,6 @@ const id = new URLSearchParams(location.search).get("id");
 document.body.insertAdjacentHTML("beforeend", L.footer());
 
 /* ---------- the list ---------- */
-function regionBars(P){
-  const done = L.log.all();
-  return `<ul class="regions">${P.regions.map(reg => {
-    const here = P.list.filter(p => p.region === reg.id); if(!here.length) return "";
-    const k = here.filter(p => done[p.id]).length;
-    return `<li><span>${esc(reg.name)}</span><span class="bar"><i style="width:${100 * k / here.length}%"></i></span><span>${k} of ${here.length}</span></li>`;
-  }).join("")}</ul>`;
-}
-
 function listPage(P){
   const r = L.rng("places " + L.today()), m = L.month();
   const withPhoto = P.list.filter(p => p.photo);
@@ -25,19 +17,16 @@ function listPage(P){
   const done = L.log.all(), n = P.list.filter(p => done[p.id]).length;
   const kinds = [...new Set(P.list.map(p => p.kind))];
   main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(pick.id)}"><img src="${esc(pick.photo.src)}" alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.credit(pick.photo.by, pick.photo.lic, pick.photo.page)}</div>
-      <h1>Places</h1><p class="sub-line">${n} of ${P.list.length} done · <a href="${L.placeHref(pick.id)}">${esc(pick.name)}</a> above</p></section>` : `<h1>Places</h1>`)
+      <h1>Places</h1><p class="sub-line"><a href="${L.ROOT}me/">${n} of ${P.list.length} done</a> · <a href="${L.placeHref(pick.id)}">${esc(pick.name)}</a> above</p></section>` : `<h1>Places</h1>`)
     + L.section(`In season in ${L.MONTHS[m - 1]}`, season.length ? `<div class="cards">${season.map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {n: season.length})
     + L.section("The map", `<div class="mapbox" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p>`)
-    + `<div id="saved-slot"></div><div id="beyond-slot"></div>`
-    + L.section("By region", regionBars(P), {id: "by-region"})
+    + `<div id="beyond-slot"></div>`
     + L.section("Everything", `<div class="filters">
         <label>Region <select id="f-region"><option value="">All</option>${P.regions.filter(g => P.list.some(p => p.region === g.id)).map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></label>
         <label>Kind <select id="f-kind"><option value="">All</option>${kinds.map(k => `<option value="${k}">${esc(L.KIND[k] || k)}</option>`).join("")}</select></label>
         <label>Show <select id="f-done"><option value="">All</option><option value="todo">To do</option><option value="done">Done</option></select></label>
         <label>Sort <select id="f-sort"><option value="books">Most-picked</option><option value="name">Name</option><option value="short">Shortest</option><option value="gain">Least gain</option><option value="high">Highest</option></select></label>
-      </div><div class="cards" id="all"></div>`, {n: P.list.length})
-    + L.section("Your log", `<div class="chips"><button class="btn ghost" id="export" type="button">Export</button>
-        <label class="btn ghost" style="cursor:pointer">Import<input type="file" id="import" accept="application/json,.json" hidden></label></div>`);
+      </div><div class="cards" id="all"></div>`, {n: P.list.length});
   L.map($("map"), P.list);
   beyond(P);
   const draw = () => {
@@ -50,31 +39,12 @@ function listPage(P){
   };
   ["f-region", "f-kind", "f-done", "f-sort"].forEach(k => $(k).addEventListener("change", draw));
   draw(); L.ownPhotos(main);
-  $("export").addEventListener("click", () => L.log.export());
-  $("import").addEventListener("change", async e => {
-    const f = e.target.files[0]; if(!f) return;
-    try { const k = await L.log.import(f); L.toast(`Imported ${k} ${k === 1 ? "entry" : "entries"}`); listPage(P); }
-    catch(err){ L.toast(err.message || "Couldn't read that file"); }
-  });
-  document.addEventListener("lookout-log", () => { const el = $("by-region"); if(el) el.querySelector(".regions").outerHTML = regionBars(P); });
 }
 
 /* ---------- beyond the trail: the seeds (data/seeds.json) on a map, and the ones you've saved ---------- */
 const GROUP_NAME = {water: "Waters", coast: "Coast and islands", lowlands: "Lowlands and valleys", mountains: "Mountains", dry: "The dry side"};
 const inBox = (r, s) => { const [a, w, n, e] = r.bbox; return s.lat >= a && s.lat <= n && s.lon >= w && s.lon <= e; };
 
-function savedList(P, names){
-  const all = Object.entries(L.saved.all()).map(([id, r]) => ({id, ...r}));
-  const slot = $("saved-slot"); if(!slot) return;
-  if(!all.length){ slot.innerHTML = ""; return; }
-  /* by region, the regions in the order they're listed */
-  const order = Object.fromEntries(P.regions.map((r, i) => [r.id, i]));
-  const by = {};
-  for(const s of all) (by[s.region || ""] ||= []).push(s);
-  const rows = Object.keys(by).sort((a, b) => (order[a] ?? 999) - (order[b] ?? 999)).map(rg => `<h3 class="seed-h">${esc(names[rg] || "Elsewhere")} <span class="muted">${by[rg].length}</span></h3>
-    <ul class="seed-list">${by[rg].sort((a, b) => a.name.localeCompare(b.name)).map(s => seedRow(s, names, true)).join("")}</ul>`).join("");
-  slot.innerHTML = L.section("Saved", `<p class="muted small lede">From the map below, kept on this device (and in your log's Export).</p>${rows}`, {n: all.length, id: "saved"});
-}
 const seedRow = (s, names, savedOnly) => {
   const on = savedOnly || L.saved.has(s.id), where = (s.waters || []).map(w => names[w]).filter(Boolean);
   return `<li><i class="dot" style="background:${L.SEED_COLOUR[s.kind] || "#777"}"></i><span class="what"><button type="button" class="linkish" data-focus="${esc(s.id)}">${esc(s.name)}</button>
@@ -95,12 +65,12 @@ function wireRows(root, M){
 async function beyond(P){
   const [S, outline] = await Promise.all([L.data.seeds(), L.data.json("cascadia.json").catch(() => null)]);
   const names = Object.fromEntries(P.regions.map(r => [r.id, r.name]));
-  if(!S?.seeds?.length){ wireRows($("saved-slot"), null); savedList(P, names, null); document.addEventListener("lookout-saved", () => savedList(P, names, null)); return; }
+  if(!S?.seeds?.length) return;
   SEEDS = Object.fromEntries(S.seeds.map(s => [s.id, s]));
   const kinds = Object.keys(S.kinds).filter(k => S.kinds[k].n);
   let on = new Set(L.store.get("lookout-seed-kinds", null) || kinds.filter(k => k !== "campground"));
   const groups = Object.keys(GROUP_NAME).map(g => [g, P.regions.filter(r => r.kind === g && S.seeds.some(s => inBox(r, s)))]).filter(([, rs]) => rs.length);
-  $("beyond-slot").innerHTML = L.section("Beyond the trail", `<p class="muted small lede">Lighthouses, farmers markets, farm stands, ferries and more, across British Columbia, Washington, Oregon and Idaho. Tap a dot to save it; what you save is listed above.</p>
+  $("beyond-slot").innerHTML = L.section("Beyond the trail", `<p class="muted small lede">Lighthouses, farmers markets, farm stands, ferries and more, across British Columbia, Washington, Oregon and Idaho. Tap a dot to save it; what you save is kept on your <a href="${L.ROOT}me/#saved">Me</a> page.</p>
     <div class="filters"><label>Where <select id="s-where"><option value="">All of Cascadia</option>${groups.map(([g, rs]) => `<optgroup label="${GROUP_NAME[g]}">${rs.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join("")}</optgroup>`).join("")}</select></label></div>
     <div class="chips seed-kinds" id="s-kinds"></div>
     <div class="mapbox seeds-map" id="seedmap"></div>
@@ -126,10 +96,9 @@ async function beyond(P){
     on.has(b.dataset.kind) ? on.delete(b.dataset.kind) : on.add(b.dataset.kind);
     L.store.set("lookout-seed-kinds", [...on]); draw(false);
   });
-  wireRows($("s-list"), M); wireRows($("saved-slot"), M);
+  wireRows($("s-list"), M);
   draw(false);
-  savedList(P, names, M);
-  document.addEventListener("lookout-saved", () => { savedList(P, names, M); if($("s-where").value) draw(false); });
+  document.addEventListener("lookout-saved", () => { if($("s-where").value) draw(false); });
 }
 
 /* ---------- one place ---------- */
@@ -189,7 +158,7 @@ const tripPick = p => {
   const on = ts.filter(([, t]) => t.stops.some(s => s.ref === "place:" + p.id));
   return `<div class="add-trip">${on.map(([id, t]) => `<p class="small">On <a href="../trips/?id=${encodeURIComponent(id)}">${esc(t.name)}</a></p>`).join("")}
     ${ts.length > on.length ? `<label class="small muted">Add to a trip <select id="add-trip"><option value="">Pick one</option>${ts.filter(x => !on.includes(x)).map(([id, t]) => `<option value="${esc(id)}">${esc(t.name)}</option>`).join("")}</select></label>`
-      : ts.length ? "" : `<p class="small muted"><a href="../trips/">Plan a trip</a> and this can go on it.</p>`}</div>`;
+      : ts.length ? "" : `<p class="small muted"><a href="../me/#trips">Plan a trip</a> and this can go on it.</p>`}</div>`;
 };
 
 async function placePage(P, p){
