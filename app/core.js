@@ -324,6 +324,35 @@ const shrink = (file, max = 1600) => new Promise((ok, no) => {
   img.src = url;
 });
 
+/* ---------- what you've seen: species you've ticked off with "Seen it", for the field guide on the Me page ---------- */
+const SEEN = "lookout-seen";
+const seen = {
+  all: () => store.get(SEEN, {}),                                   /* {taxonId: {first, last, n, name, sci, photo?, lat?, lon?}} */
+  get: id => seen.all()[id] || null,
+  add(id, extra = {}){ const a = seen.all(), d = today(), e = a[id];
+    a[id] = e ? {...e, ...extra, last: d, n: (e.n || 1) + 1} : {first: d, last: d, n: 1, ...extra};
+    store.set(SEEN, a); document.dispatchEvent(new CustomEvent("lookout-seen")); return a[id]; },
+  set(id, e){ const a = seen.all(); a[id] = e; store.set(SEEN, a); document.dispatchEvent(new CustomEvent("lookout-seen")); },
+  remove(id){ const a = seen.all(); delete a[id]; store.set(SEEN, a); document.dispatchEvent(new CustomEvent("lookout-seen")); }
+};
+/* the "Seen it" line on a species page; one click ticks it off with today's date (and where you are, if the browser
+   shares it), another adds a sighting, and "Not seen" takes it back */
+const dateText = d => d ? new Date(d + "T12:00").toLocaleDateString("en-US", {day: "numeric", month: "long", year: "numeric"}) : "";
+const seenBox = s => `<p class="chips seen-box" data-seen-id="${esc(s.id)}" data-name="${esc(s.common || "")}" data-sci="${esc(s.sci || "")}" data-photo="${esc(s.photos?.[0] ? photoSrc(s.photos[0], "small") : "")}">${seenInner(s.id)}</p>`;
+const seenInner = id => { const e = seen.get(id);
+  return e ? `<button type="button" class="chip on" data-seen="again" aria-pressed="true">Seen it ✓</button><span class="small muted">First seen ${esc(dateText(e.first))}${e.place ? ` near ${esc(e.place)}` : ""}${e.n > 1 ? ` · ${e.n} times` : ""} · <button type="button" class="linkish" data-seen="again">Seen it again</button> · <button type="button" class="linkish" data-seen="undo">Not seen</button> · <a href="${ROOT}me/#guide">Your field guide</a></span>`
+    : `<button type="button" class="chip" data-seen="add" aria-pressed="false">Seen it</button><span class="small muted">Tick it off for <a href="${ROOT}me/#guide">your field guide</a></span>`; };
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-seen]"), box = b?.closest("[data-seen-id]"); if(!box) return;
+  const id = box.dataset.seenId;
+  if(b.dataset.seen === "undo"){ if(confirm("Take this species off your field guide?")) seen.remove(id); }
+  else {
+    seen.add(id, seen.get(id) ? {} : {name: box.dataset.name, sci: box.dataset.sci, ...(box.dataset.photo ? {photo: box.dataset.photo} : {})});
+    navigator.geolocation?.getCurrentPosition(p => { const e2 = seen.get(id); if(e2 && e2.lat == null) seen.set(id, {...e2, lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3)}); }, () => {}, {timeout: 8000, maximumAge: 600000});
+  }
+  box.innerHTML = seenInner(id);
+});
+
 /* ---------- your log: what you've done, when, and a note ---------- */
 const LOG = "lookout-log";
 const log = {
@@ -334,7 +363,7 @@ const log = {
   /* everything, photos included, as one JSON file */
   async export(){
     const pics = await photos.all();
-    const blob = new Blob([JSON.stringify({lookout: 1, exported: new Date().toISOString(), log: log.all(), saved: saved.all(), trips: trips.all(), photos: pics}, null, 1)], {type: "application/json"});
+    const blob = new Blob([JSON.stringify({lookout: 1, exported: new Date().toISOString(), log: log.all(), saved: saved.all(), trips: trips.all(), seen: seen.all(), inat: store.get("lookout-inat", null), photos: pics}, null, 1)], {type: "application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `lookout-${today()}.json`;
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
@@ -358,6 +387,13 @@ const log = {
           stops: t.stops.filter(x => x && typeof x.ref === "string").map(x => ({ref: x.ref, day: +x.day || 0})), note: String(t.note || ""), made: t.made || Date.now()};
       store.set(TRIPS, tv); document.dispatchEvent(new CustomEvent("lookout-trips"));
     }
+    if(j.seen && typeof j.seen === "object"){
+      const a = seen.all();
+      for(const [id, e] of Object.entries(j.seen)) if(/^\d+$/.test(id) && e && typeof e === "object" && typeof e.first === "string")
+        a[id] = {first: e.first, last: String(e.last || e.first), n: +e.n || 1, ...["name", "sci", "photo", "place"].reduce((o, k) => typeof e[k] === "string" ? {...o, [k]: e[k]} : o, {}), ...(isFinite(e.lat) && isFinite(e.lon) ? {lat: +e.lat, lon: +e.lon} : {}), ...(typeof e.place === "string" ? {place: e.place} : {})};
+      store.set(SEEN, a); document.dispatchEvent(new CustomEvent("lookout-seen"));
+    }
+    if(j.inat && typeof j.inat === "object" && typeof j.inat.user === "string" && !store.get("lookout-inat", null)) store.set("lookout-inat", j.inat);
     document.dispatchEvent(new CustomEvent("lookout-log"));
     return Object.keys(j.log).length;
   }
@@ -477,7 +513,7 @@ navigator.serviceWorker?.addEventListener("message", e => {
 });
 document.addEventListener("DOMContentLoaded", () => { const n = store.get("lookout-offline", 0), el = $("offline-state"); if(el && n) el.textContent = `Saved for offline · ${n} species`; });
 
-window.Lookout = {ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
+window.Lookout = {seen, seenBox, dateText, ROOT, esc, $, MONTHS, MON, store, data, inat, thumb, credit, inatCredit, placeHref, speciesHref, inatTaxon,
   month, inRange, inSeason, seasonText, blooming, bloomText, num, miles, feet, km, KIND, regionsAt, saved, trips, today, hash, rng, shuffle, photos, shrink, log, theme,
   sized, initials, placeCard, ownPhotos, speciesTile, section, toast, footer, familyName, COLOUR, sw,
   NAT, PNW, LICENSES, nat, openPhoto, taxonCard, openPhotos, obsPhoto, liveTile, fillPhotos, cap, GROUPS, group, groupChips, photoSrc, photoCredit, wikiLead, rankPhotos};

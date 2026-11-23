@@ -1,4 +1,6 @@
-/* Lookout — Me: everything that's yours, kept on this device. Your progress on the list and by region, what's in
+/* Lookout — Me: everything that's yours, kept on this device. Your field guide (the species in Lookout's keys, seen
+   ones in colour and the rest faded, filled by "Seen it" on species pages and by your iNaturalist sightings, and the
+   rivers you've been in), your progress on the list and by region, what's in
    season that you haven't done, Near you, your trips (the list and the form, from app/trips.js), what you've saved
    from Beyond the trail, and your log: what you've done, with the date and your note, and Export / Import. */
 {
@@ -46,11 +48,71 @@ function logList(P){
     `<p class="small muted">${esc(done[p.id].date || "")}${done[p.id].note ? ` · ${esc(done[p.id].note)}` : ""}</p></a>`)).join("")}</div>` : `<p class="muted">Nothing yet. Tick a place off on its page and it shows up here, with your date, note and photo.</p>`;
 }
 
+/* ---------- your field guide ---------- */
+const INAT = "lookout-inat";        /* {user, at, ids: {taxonId: count}, extra: {taxonId: [common, sci, photo]}, pts: [[lat, lon]]} */
+let showAll = false;
+const inBasin = (rings, lat, lon) => rings.some(ring => { let hit = false;
+  for(let a = 0, b = ring.length - 1; a < ring.length; b = a++){ const [xa, ya] = ring[a], [xb, yb] = ring[b];
+    if((ya > lat) !== (yb > lat) && lon < (xb - xa) * (lat - ya) / (yb - ya) + xa) hit = !hit; }
+  return hit; });
+
+function guide(P, D, A){
+  if(!D) return "";
+  const own = L.seen.all(), nat = L.store.get(INAT, null), ids = nat?.ids || {};
+  const has = id => own[id] || ids[id];
+  const total = D.groups.reduce((a, g) => a + g.s.length, 0);
+  const inDex = new Set(D.groups.flatMap(g => g.s.map(r => String(r[0]))));
+  const seenN = D.groups.reduce((a, g) => a + g.s.filter(r => has(r[0])).length, 0);
+  const note = id => own[id] ? `${new Date(own[id].last + "T12:00").toLocaleDateString("en-US", {month: "short", year: "numeric"})}${own[id].n > 1 ? ` · ${own[id].n}×` : ""}` : ids[id] ? `iNaturalist${ids[id] > 1 ? ` · ${ids[id]}×` : ""}` : "Not yet";
+  const tile = r => { const [id, common, sci, slug] = r, on = has(id);
+    return `<a class="sp dex-tile${on ? "" : " not"}" href="${L.speciesHref({id, slug})}"><div class="pic"><img src="${L.ROOT}data/thumbs/${id}.jpg" alt="" loading="lazy"></div><b>${esc(common || sci)}</b><span class="note">${esc(note(id))}</span></a>`; };
+  /* the groups you've seen most first; all of them on request */
+  const groups = D.groups.map(g => ({...g, n: g.s.filter(r => has(r[0])).length})).sort((a, b) => b.n - a.n || D.groups.indexOf(a) - D.groups.indexOf(b));
+  const shown = showAll ? groups : groups.slice(0, 4);
+  const rows = shown.map(g => { const seenFirst = [...g.s.filter(r => has(r[0])).sort((a, b) => String(own[b[0]]?.last || "").localeCompare(String(own[a[0]]?.last || ""))), ...g.s.filter(r => !has(r[0]))];
+    return `<div class="dex-group"><div class="dex-head"><h3>${esc(g.name)}</h3><span class="bar"><i style="width:${100 * g.n / g.s.length}%"></i></span><span>${g.n} of ${g.s.length}</span></div>
+      <div class="row">${seenFirst.map(tile).join("")}</div></div>`; }).join("");
+  /* anything else you've seen, beyond the keys */
+  const extra = [...Object.entries(own).filter(([id]) => !inDex.has(id)).sort((a, b) => String(b[1].last).localeCompare(String(a[1].last))).map(([id, e]) => [id, [e.name || "", e.sci || "", e.photo || ""]]),
+    ...Object.entries(nat?.extra || {}).filter(([id]) => !inDex.has(id) && !own[id])];
+  const more = extra.length ? `<div class="dex-group"><div class="dex-head"><h3>Beyond the keys</h3><span>${extra.length} more</span></div>
+      <div class="row">${extra.slice(0, 80).map(([id, [common, sci, photo]]) => `<a class="sp dex-tile" href="${L.speciesHref({id})}"><div class="pic">${photo ? `<img src="${esc(photo)}" alt="" loading="lazy">` : `<span class="ph">${esc((common || sci).slice(0, 2))}</span>`}</div><b>${esc(common || sci)}</b><span class="note">${esc(note(id))}</span></a>`).join("")}</div></div>` : "";
+  /* the rivers: your places done, the species you've ticked off where you were, and your iNaturalist sightings */
+  const done = L.log.all();
+  const pts = [...P.list.filter(p => done[p.id]).map(p => [p.pin.lat, p.pin.lon]), ...Object.values(own).filter(e => e.lat != null).map(e => [e.lat, e.lon]), ...(nat?.pts || [])];
+  const sheds = (A?.watersheds || []).map(w => ({name: w.name, on: pts.some(([la, lo]) => inBasin(w.rings, la, lo))}));
+  const rivers = sheds.length ? `<h3 class="atlas-h">Rivers you've been in <span class="muted small">${sheds.filter(x => x.on).length} of ${sheds.length}</span></h3>
+      <div class="chips">${sheds.map(x => `<span class="chip${x.on ? " on" : ""}">${esc(x.name)}</span>`).join("")}</div>
+      <p class="muted small">From the places you've done, where you were when you ticked a species off, and your iNaturalist sightings. Find them on the <a href="${L.ROOT}atlas/">Atlas</a>.</p>` : "";
+  return `<div class="inat-link"><label class="small" for="inat-user">${nat ? `Your iNaturalist sightings as <b>${esc(nat.user)}</b>, brought in ${esc(L.dateText(nat.at))}.` : "Fill it from your iNaturalist sightings:"}</label>
+      <input id="inat-user" placeholder="your iNaturalist username" value="${esc(nat?.user || "")}" autocomplete="off" spellcheck="false"><button class="btn ghost" type="button" id="inat-go">${nat ? "Bring them in again" : "Bring them in"}</button>
+      <span class="small muted" id="inat-note">${nat ? "" : `Your public sightings in Washington, Oregon and British Columbia. Or tap <b>Seen it</b> on any species page.`}</span></div>
+    ${rows}${groups.length > 4 ? `<p><button type="button" class="linkish" id="dex-all">${showAll ? "Show fewer groups" : `Show all ${groups.length} groups`}</button></p>` : ""}${more}${rivers}`;
+}
+
+/* your public iNaturalist sightings in the Northwest: every species (and how many times), and where (for the rivers) */
+async function fromInat(user){
+  const ids = {}, extra = {}, pts = [];
+  for(let page = 1; page <= 6; page++){
+    const j = await L.nat("observations/species_counts", {user_login: user, place_id: L.PNW, per_page: 500, page});
+    for(const x of j.results){ ids[x.taxon.id] = x.count; extra[x.taxon.id] = [x.taxon.preferred_common_name ? L.cap(x.taxon.preferred_common_name) : "", x.taxon.name, x.taxon.default_photo?.square_url || ""]; }
+    if(page * 500 >= j.total_results) break;
+  }
+  for(let page = 1; page <= 3; page++){
+    const j = await L.nat("observations", {user_login: user, place_id: L.PNW, per_page: 200, page, order_by: "observed_on"});
+    for(const o of j.results) if(o.location){ const [la, lo] = o.location.split(",").map(Number); pts.push([+la.toFixed(2), +lo.toFixed(2)]); }
+    if(page * 200 >= j.total_results) break;
+  }
+  return {user, at: L.today(), ids, extra, pts: [...new Set(pts.map(String))].map(x => x.split(",").map(Number))};
+}
+
 async function render(){
   const P = await L.data.places();
+  const [D, A] = await Promise.all([L.data.json("dex.json").catch(() => null), L.data.json("atlas.json").catch(() => null)]);
   const draw = () => {
     const n = Object.keys(L.saved.all()).length;
     main.innerHTML = `<section class="hero"><h1>Me</h1><p class="sub-line">Yours, and kept on this device: what you've done, what's next, your trips and what you've saved. Export takes it all with you.</p></section>`
+      + L.section("Your field guide", guide(P, D, A), {id: "guide", n: D ? (() => { const own = L.seen.all(), ids = L.store.get(INAT, null)?.ids || {}; const all = D.groups.flatMap(g => g.s); return `${all.filter(r => own[r[0]] || ids[r[0]]).length} of ${L.num(all.length)}`; })() : "", aside: `<span class="muted">Seen in colour, still to find faded</span>`})
       + L.section("Your progress", progress(P), {id: "progress"})
       + L.section(`Next up in ${L.MONTHS[L.month() - 1]}`, nextUp(P).length ? `<div class="cards">${nextUp(P).map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {aside: `<span class="muted">In season, not done yet</span>`})
       + L.section("Near you", `<p class="lede">What's been seen around where you're standing: a map of the last month's photographs, the latest sightings, the best bets this month, and your places nearby.</p>
@@ -62,6 +124,19 @@ async function render(){
           <p class="muted small">Export saves your log, your photos, what you've saved and your trips as one file; Import merges such a file back in.</p>`, {id: "log"});
     L.ownPhotos(main);
     L.tripsInto?.($("trips-slot")).then(() => { if(location.hash === "#trips") $("trips")?.scrollIntoView(); });
+    if(location.hash === "#guide") $("guide")?.scrollIntoView();
+    $("dex-all")?.addEventListener("click", () => { showAll = !showAll; const y = scrollY; draw(); scrollTo(0, y); });
+    const go = async () => {
+      const user = $("inat-user").value.trim().replace(/^@/, ""); if(!user) { $("inat-user").focus(); return; }
+      $("inat-go").disabled = true; $("inat-note").textContent = "Asking iNaturalist…";
+      try {
+        const r = await fromInat(user);
+        if(!Object.keys(r.ids).length){ $("inat-note").textContent = `No public sightings by ${user} in the Northwest. Check the username?`; $("inat-go").disabled = false; return; }
+        L.store.set(INAT, r); L.toast(`${Object.keys(r.ids).length} species from ${user}'s sightings`); const y = scrollY; draw(); scrollTo(0, y);
+      } catch(e){ $("inat-note").textContent = navigator.onLine === false ? "That needs a connection." : "iNaturalist didn't answer. Try again in a minute."; $("inat-go").disabled = false; }
+    };
+    $("inat-go")?.addEventListener("click", go);
+    $("inat-user")?.addEventListener("keydown", e => { if(e.key === "Enter") go(); });
     $("export").addEventListener("click", () => L.log.export());
     $("import").addEventListener("change", async e => {
       const f = e.target.files[0]; if(!f) return;
@@ -76,6 +151,7 @@ async function render(){
   });
   document.addEventListener("lookout-saved", () => { const y = scrollY; draw(); scrollTo(0, y); });
   document.addEventListener("lookout-log", () => { const y = scrollY; draw(); scrollTo(0, y); });
+  document.addEventListener("lookout-seen", () => { const y = scrollY; draw(); scrollTo(0, y); });
 }
 render().catch(e => { main.innerHTML = `<p class="muted">Couldn't load your things (${esc(e.message)}).</p>`; });
 }
