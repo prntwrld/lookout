@@ -23,7 +23,10 @@
 <main class="wrap" id="main"></main>
 <script src="../vendor/leaflet/leaflet.js"></script>
 <script src="../app/map.js"></script>
-<script src="../app/trips.js"></script>
-<script src="../app/me.js"></script>
+<script>
+/* me/?f=near is Near you, whose code is in Living things' script; otherwise the Me page itself */
+for(const src of new URLSearchParams(location.search).get("f") === "near" ? ["../app/sound.js", "../app/living.js"] : ["../app/trips.js", "../app/me.js"])
+  document.body.appendChild(Object.assign(document.createElement("script"), {src, async: false}));
+</script>
 </body>
 </html>
