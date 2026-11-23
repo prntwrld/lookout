@@ -582,3 +582,19 @@ footer a{color:inherit}
   .atlas-map{height:46vh;min-height:280px}
   .atlas-drop{scroll-margin-top:calc(46vh + 70px)}
 }
+
+/* ---------- your field guide (Me) ---------- */
+.dex-group{margin:0 0 26px}
+.dex-head{display:flex;align-items:baseline;gap:12px;margin:0 0 8px}
+.dex-head h3{font:400 21px/1.2 var(--display);margin:0;white-space:nowrap}
+.dex-head .bar{flex:1;max-width:240px}
+.dex-head > span:last-child{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#guide .row{grid-auto-columns:104px;gap:10px}
+.dex-tile b{font-size:14px}
+.dex-tile .note{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.dex-tile.not .pic img{filter:grayscale(1);opacity:.32}
+.dex-tile.not b{color:var(--muted)}
+.inat-link{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 22px}
+.inat-link input{font:inherit;font-size:16px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);width:14em;max-width:100%}
+.seen-box{align-items:center;margin:14px 0 0}
+@media (max-width:640px){ .dex-head .bar{display:none} }
