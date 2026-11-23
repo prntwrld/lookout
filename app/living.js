@@ -101,7 +101,7 @@ const treeLine = anc => {
 
 /* ---------- conservation status: the IUCN Red List, and any listing here that says it's at risk (as in Myriad) ---------- */
 const IUCN = {LC: "Least Concern", NT: "Near Threatened", VU: "Vulnerable", EN: "Endangered", CR: "Critically Endangered", EW: "Extinct in the Wild", EX: "Extinct", DD: "Data Deficient"};
-const WHERE = {46: "Washington", 10: "Oregon", 7085: "British Columbia", 6712: "Canada", 1: "the United States"};
+const WHERE = {46: "Washington", 10: "Oregon", 22: "Idaho", 7085: "British Columbia", 6712: "Canada", 1: "the United States"};
 const NS = {X: "Extirpated", H: "Possibly extirpated", 1: "Critically imperiled", 2: "Imperiled", 3: "Vulnerable"};
 const USF = {E: "Endangered", T: "Threatened", C: "A candidate for listing"};
 function statusText(cs){
@@ -111,7 +111,7 @@ function statusText(cs){
   const worst = {}, laws = [];
   for(const c of cs){
     const id = c.place?.id, auth = c.authority || "";
-    if(/NatureServe/i.test(auth) && [46, 10, 7085].includes(id)){
+    if(/NatureServe/i.test(auth) && [46, 10, 22, 7085].includes(id)){
       const m = /^S([XH1-3])/i.exec(String(c.status || "").toUpperCase()); if(!m) continue;
       const r = {X: 0, H: 0.5}[m[1]] ?? +m[1];
       if(worst[id] == null || r < worst[id].r) worst[id] = {r, what: NS[m[1]]};
@@ -189,8 +189,8 @@ async function fieldMarks(title, max = 1100){
   return out;
 }
 
-/* ---------- range: how often it's recorded in each of the three, and whether it's native or introduced there ---------- */
-const STATES = [[46, "Washington"], [10, "Oregon"], [7085, "British Columbia"]];
+/* ---------- range: how often it's recorded in each of the four, and whether it's native or introduced there ---------- */
+const STATES = [[46, "Washington"], [10, "Oregon"], [22, "Idaho"], [7085, "British Columbia"]];
 const andList = l => l.length < 3 ? l.join(" and ") : l.slice(0, -1).join(", ") + " and " + l[l.length - 1];
 async function rangeText(id){
   const got = await Promise.all(STATES.map(async ([pid, name]) => {
@@ -522,7 +522,7 @@ async function songs(){
 async function week(F, where = null){
   const sec = $("week"), body = sec.querySelector(".body");
   sec.querySelector("h2").textContent = `Seen this week${where ? " near you" : ""}`;
-  const sub = sec.querySelector(".sec-sub"); if(sub) sub.textContent = where ? `The most-sighted species within ${where.radius} km of you over the last seven days` : "The most-sighted species in Washington, Oregon and British Columbia over the last seven days";
+  const sub = sec.querySelector(".sec-sub"); if(sub) sub.textContent = where ? `The most-sighted species within ${where.radius} km of you over the last seven days` : "The most-sighted species in Washington, Oregon, Idaho and British Columbia over the last seven days";
   const list = (await kept("week" + nearTag(where), 3, () => counts({d1: daysAgo(7), quality_grade: "research,needs_id", per_page: 160, ...(where || {})}).catch(() => []))).filter(x => x.t.photo);
   if(list.length < (where ? 3 : 8)){
     if(where){ body.innerHTML = `<p class="muted">Little has been recorded within ${where.radius} km of you this week yet.</p>`; sec.hidden = false; } else sec.hidden = true;
@@ -557,7 +557,7 @@ async function guidePage(F){
     + `<h1>Living things</h1><p class="sub-line">Plants and animals of the Pacific Northwest${pick ? ` · <a href="${pick.href}">${esc(pick.name)}</a> above` : ""}</p></section>
     ${quiet("out", `Out in ${MONTH}`, "")}
     <div class="split pair">${quiet("songs", "Songs &amp; calls of the season", `Birds, and the mammals and frogs heard in ${MONTH}, recorded in the field. One plays after another.`)}
-    ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon and British Columbia over the last seven days")}</div>
+    ${quiet("week", "Seen this week", "The most-sighted species in Washington, Oregon, Idaho and British Columbia over the last seven days")}</div>
     <section class="section" id="browse"><h2 id="list-h">Explore</h2>
     <div class="filters"><input type="search" id="q" placeholder="Find any species" aria-label="Find any species" value="${esc(st.q)}"></div>
     <div class="cards" id="explore-cards"></div><div class="cards" id="group-cards" style="margin-top:28px"></div><p class="muted small" id="group-line" style="margin-top:20px"></p><div id="list"></div></section>`;
@@ -1009,7 +1009,7 @@ async function salmonPage(F){
         return `<a class="card" href="${L.speciesHref({id: f.id})}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(f.name)}</span>`}${here(f) ? `<span class="badge">${f.spawn.includes(m) ? "Spawning now" : "In the rivers"}</span>` : ""}</div>
           <h3>${esc(f.name)} <span class="muted small">${esc(f.aka)}</span></h3>${monthBar(f.river, m)}<p>Spawns ${esc(L.bloomText(f.spawn))}${f.odd ? ", odd years" : ""}. ${esc(f.note)}</p></a>`; }).join("")}</div></section>
     <section class="section" id="spots"><h2>Where to watch them</h2><div class="split"><div class="mapbox" id="spot-map"></div><div class="spots-box"><ul class="around spots">${D.spots.map(sp => `<li><b>${esc(sp.name)}</b> <span>${esc(sp.where)}</span>${sp.months.includes(m) ? ` <span class="now-tag">Now</span>` : ""}<br><span>${esc(sp.fish)}, ${esc(L.bloomText(sp.months))}. ${esc(sp.note)}</span></li>`).join("")}</ul></div></div></section>
-    <section class="section" id="s-recent" hidden><h2>Seen in the rivers lately</h2><p class="muted small sec-sub">Salmon and steelhead photographed in Washington, Oregon and British Columbia in the last month.</p><div class="row"></div></section>
+    <section class="section" id="s-recent" hidden><h2>Seen in the rivers lately</h2><p class="muted small sec-sub">Salmon and steelhead photographed in Washington, Oregon, Idaho and British Columbia in the last month.</p><div class="row"></div></section>
     <section class="section"><h2>Watching without harm</h2><ul class="around">${D.care.map(c => `<li>${esc(c)}</li>`).join("")}</ul></section>`;
   /* the map: every spot, those running now filled in */
   const Lf = window.L;
@@ -1051,7 +1051,7 @@ async function whalesPage(F){
       <div><h2 class="side-h">Around in ${MONTH}</h2><ul class="bullets" style="columns:1">${now.map(w => `<li>${esc(w.name)}</li>`).join("")}</ul>
         ${nowSpots.length ? `<h2 class="side-h" style="margin-top:24px">Where to watch now</h2><ul class="bullets" style="columns:1">${nowSpots.map(sp => `<li>${esc(sp.name)} <span class="muted small">${esc(sp.who)}</span></li>`).join("")}</ul>` : ""}
         <h2 class="side-h" style="margin-top:24px">Listen live</h2><p class="small"><a href="${esc(D.listen.href)}" target="_blank" rel="noopener">${esc(D.listen.name)} ↗</a> · ${esc(D.listen.text)}</p></div></div>
-    <section class="section" id="w-map-sec" hidden><h2>Seen lately <span class="n" id="w-map-n"></span></h2><p class="muted small sec-sub">Whales, dolphins and porpoises photographed in Washington, Oregon and British Columbia in the last month. Tap one.</p><div class="mapbox near-map" id="w-map"></div></section>
+    <section class="section" id="w-map-sec" hidden><h2>Seen lately <span class="n" id="w-map-n"></span></h2><p class="muted small sec-sub">Whales, dolphins and porpoises photographed in Washington, Oregon, Idaho and British Columbia in the last month. Tap one.</p><div class="mapbox near-map" id="w-map"></div></section>
     <section class="section"><h2>Who you might see</h2><p class="muted small sec-sub">Shaded months are the best for each; the outlined month is now.</p>
       <div class="cards">${D.whales.map(w => { const p = photo(w.id);
         return `<a class="card" href="${L.speciesHref({id: w.id})}"><div class="pic">${p ? `<img src="${L.inat(p, "medium")}" alt="" loading="lazy" title="Photo © ${esc(p.by)} · ${esc(p.lic)}">` : `<span class="ph">${L.initials(w.name)}</span>`}${w.months.includes(m) ? `<span class="badge">Around now</span>` : ""}</div>

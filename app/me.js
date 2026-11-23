@@ -49,7 +49,7 @@ function logList(P){
 }
 
 /* ---------- your field guide ---------- */
-const INAT = "lookout-inat";        /* {user, at, ids: {taxonId: count}, extra: {taxonId: [common, sci, photo]}, pts: [[lat, lon]]} */
+const INAT = "lookout-inat";        /* {user, at, ids: {taxonId: count}, extra: {taxonId: [common, sci, photo]}, dates: {taxonId: [first, last]}, pts: [[lat, lon]]} */
 let showAll = false;
 const inBasin = (rings, lat, lon) => rings.some(ring => { let hit = false;
   for(let a = 0, b = ring.length - 1; a < ring.length; b = a++){ const [xa, ya] = ring[a], [xb, yb] = ring[b];
@@ -63,13 +63,15 @@ function guide(P, D, A){
   const total = D.groups.reduce((a, g) => a + g.s.length, 0);
   const inDex = new Set(D.groups.flatMap(g => g.s.map(r => String(r[0]))));
   const seenN = D.groups.reduce((a, g) => a + g.s.filter(r => has(r[0])).length, 0);
-  const note = id => own[id] ? `${new Date(own[id].last + "T12:00").toLocaleDateString("en-US", {month: "short", year: "numeric"})}${own[id].n > 1 ? ` · ${own[id].n}×` : ""}` : ids[id] ? `iNaturalist${ids[id] > 1 ? ` · ${ids[id]}×` : ""}` : "Not yet";
+  const mon = d => new Date(d + "T12:00").toLocaleDateString("en-US", {month: "short", year: "numeric"});
+  const note = id => own[id] ? `${mon(own[id].last)}${own[id].n > 1 ? ` · ${own[id].n}×` : ""}` : ids[id] ? `${nat.dates?.[id] ? mon(nat.dates[id][1]) : "iNaturalist"}${ids[id] > 1 ? ` · ${ids[id]}×` : ""}` : "Not yet";
+  const lastOf = id => own[id]?.last || nat?.dates?.[id]?.[1] || "";
   const tile = r => { const [id, common, sci, slug] = r, on = has(id);
     return `<a class="sp dex-tile${on ? "" : " not"}" href="${L.speciesHref({id, slug})}"><div class="pic"><img src="${L.ROOT}data/thumbs/${id}.jpg" alt="" loading="lazy"></div><b>${esc(common || sci)}</b><span class="note">${esc(note(id))}</span></a>`; };
   /* the groups you've seen most first; all of them on request */
   const groups = D.groups.map(g => ({...g, n: g.s.filter(r => has(r[0])).length})).sort((a, b) => b.n - a.n || D.groups.indexOf(a) - D.groups.indexOf(b));
   const shown = showAll ? groups : groups.slice(0, 4);
-  const rows = shown.map(g => { const seenFirst = [...g.s.filter(r => has(r[0])).sort((a, b) => String(own[b[0]]?.last || "").localeCompare(String(own[a[0]]?.last || ""))), ...g.s.filter(r => !has(r[0]))];
+  const rows = shown.map(g => { const seenFirst = [...g.s.filter(r => has(r[0])).sort((a, b) => lastOf(b[0]).localeCompare(lastOf(a[0]))), ...g.s.filter(r => !has(r[0]))];
     return `<div class="dex-group"><div class="dex-head"><h3>${esc(g.name)}</h3><span class="bar"><i style="width:${100 * g.n / g.s.length}%"></i></span><span>${g.n} of ${g.s.length}</span></div>
       <div class="row">${seenFirst.map(tile).join("")}</div></div>`; }).join("");
   /* anything else you've seen, beyond the keys */
@@ -86,7 +88,7 @@ function guide(P, D, A){
       <p class="muted small">From the places you've done, where you were when you ticked a species off, and your iNaturalist sightings. Find them on the <a href="${L.ROOT}atlas/">Atlas</a>.</p>` : "";
   return `<div class="inat-link"><label class="small" for="inat-user">${nat ? `Your iNaturalist sightings as <b>${esc(nat.user)}</b>, brought in ${esc(L.dateText(nat.at))}.` : "Fill it from your iNaturalist sightings:"}</label>
       <input id="inat-user" placeholder="your iNaturalist username" value="${esc(nat?.user || "")}" autocomplete="off" spellcheck="false"><button class="btn ghost" type="button" id="inat-go">${nat ? "Bring them in again" : "Bring them in"}</button>
-      <span class="small muted" id="inat-note">${nat ? "" : `Your public sightings in Washington, Oregon and British Columbia. Or tap <b>Seen it</b> on any species page.`}</span></div>
+      <span class="small muted" id="inat-note">${nat ? "" : `Your public sightings in Washington, Oregon, Idaho and British Columbia. Or tap <b>Seen it</b> on any species page.`}</span></div>
     ${rows}${groups.length > 4 ? `<p><button type="button" class="linkish" id="dex-all">${showAll ? "Show fewer groups" : `Show all ${groups.length} groups`}</button></p>` : ""}${more}${rivers}`;
 }
 
@@ -98,12 +100,18 @@ async function fromInat(user){
     for(const x of j.results){ ids[x.taxon.id] = x.count; extra[x.taxon.id] = [x.taxon.preferred_common_name ? L.cap(x.taxon.preferred_common_name) : "", x.taxon.name, x.taxon.default_photo?.square_url || ""]; }
     if(page * 500 >= j.total_results) break;
   }
-  for(let page = 1; page <= 3; page++){
+  /* the sightings themselves (the latest thousand): where, for the rivers, and when, for each species' first and last */
+  const dates = {};
+  for(let page = 1; page <= 5; page++){
     const j = await L.nat("observations", {user_login: user, place_id: L.PNW, per_page: 200, page, order_by: "observed_on"});
-    for(const o of j.results) if(o.location){ const [la, lo] = o.location.split(",").map(Number); pts.push([+la.toFixed(2), +lo.toFixed(2)]); }
+    for(const o of j.results){
+      if(o.location){ const [la, lo] = o.location.split(",").map(Number); pts.push([+la.toFixed(2), +lo.toFixed(2)]); }
+      const t = o.taxon?.id, d = o.observed_on;
+      if(t && d){ const [a, b] = dates[t] || [d, d]; dates[t] = [d < a ? d : a, d > b ? d : b]; }
+    }
     if(page * 200 >= j.total_results) break;
   }
-  return {user, at: L.today(), ids, extra, pts: [...new Set(pts.map(String))].map(x => x.split(",").map(Number))};
+  return {user, at: L.today(), ids, extra, dates, pts: [...new Set(pts.map(String))].map(x => x.split(",").map(Number))};
 }
 
 async function render(){

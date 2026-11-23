@@ -19,7 +19,7 @@ const NAV = [["places", "Places"], ["atlas", "Atlas"], ["living", "Living things
 document.currentScript.insertAdjacentHTML("afterend", `<header class="top wrap">
   <a class="mark" href="${ROOT}"${here === "home" ? ` aria-current="page"` : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20 9 8l4 6 3-4 6 10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="5" r="1.8" fill="currentColor"/></svg><span class="word">Lookout</span></a>
   <nav aria-label="Sections">${NAV.map(([id, name]) => `<a href="${ROOT}${id}/"${id === here ? ` aria-current="page"` : ""}>${name}</a>`).join("")}</nav>
-  <a class="theme me-link" href="${ROOT}me/" aria-label="Me: your progress, log, saved places and trips"${here === "me" || here === "trips" ? ` aria-current="page"` : ""}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.6" r="2.7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.8 14c.6-2.9 2.7-4.4 5.2-4.4s4.6 1.5 5.2 4.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+  <a class="theme me-link" href="${ROOT}me/" aria-label="Me: your progress, log, saved places and trips"${here === "me" || here === "trips" ? ` aria-current="page"` : ""}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.6" r="2.7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.8 14c.6-2.9 2.7-4.4 5.2-4.4s4.6 1.5 5.2 4.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span>Me</span></a>
   <button class="theme" id="theme" type="button" aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
 </header>`);
 
@@ -117,9 +117,9 @@ const credit = (by, lic, href) => `<span class="credit">${href ? `<a href="${esc
 const inatCredit = p => credit(p.by, p.lic, `https://www.inaturalist.org/photos/${p.id}`);
 
 /* ---------- iNaturalist, live ----------
-   Living things reaches every species recorded in the Pacific Northwest (Washington, Oregon and British Columbia,
-   as in Myriad's Field Guide). Answers are kept for the visit so going back and forth asks nothing twice. */
-const NAT = "https://api.inaturalist.org/v1/", PNW = "46,10,7085";
+   Living things reaches every species recorded in the Pacific Northwest (Washington, Oregon, Idaho and British
+   Columbia: the heart of Cascadia, and the regions the guide covers). Answers are kept for the visit so going back and forth asks nothing twice. */
+const NAT = "https://api.inaturalist.org/v1/", PNW = "46,10,22,7085";
 const natCache = new Map();
 const fetchJSON = async (url, tries = 2) => {
   const r = await fetch(url, {signal: AbortSignal.timeout(15000)});

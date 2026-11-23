@@ -476,7 +476,7 @@ def main():
     w, s, e, n = m.bounds
     r = lambda c: [[round(x, 3), round(y, 3)] for x, y in c]
     parts = list(m.geoms)
-    box_ = [round(w - 6, 1), round(s - 3, 1), round(e + 6, 1), round(n + 2.5, 1)]
+    box_ = [round(w - 16, 1), round(s - 9, 1), round(e + 16, 1), round(n + 5, 1)]   # wide enough for any map shape
     rb = relief(*box_)
     json.dump({"name": "Cascadia",
                "about": "Every river that reaches the Pacific from the Copper River to Cape Mendocino, inland to the Continental Divide",

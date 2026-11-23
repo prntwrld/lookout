@@ -1,5 +1,6 @@
 /* Lookout — the front page: the day's sky and season, today's pick (a hike in season or a flower in bloom), where to
-   go this month, the map of Cascadia beside your progress, and what you've done lately. Today's pick is the same for everyone today and changes at midnight. */
+   go this month, the map of Cascadia (a preview of the Atlas: tap it and the Atlas opens with that raindrop), and
+   what you've done lately. Your progress is a line under the map; the rest of it is on the Me page. Today's pick is the same for everyone today and changes at midnight. */
 {
 const L = window.Lookout, {esc, $} = L;
 const main = $("main");
@@ -106,16 +107,10 @@ function goNow(P, r){
   return `<div class="go-row"><div>${body}</div>${almanac()}</div>`;
 }
 
-function progress(P){
-  const done = L.log.all(), n = P.list.filter(p => done[p.id]).length, total = P.list.length;
-  const rows = P.regions.map(reg => {
-    const here = P.list.filter(p => p.region === reg.id); if(!here.length) return "";
-    const k = here.filter(p => done[p.id]).length;
-    return `<li><span>${esc(reg.name)}</span><span class="bar"><i style="width:${100 * k / here.length}%"></i></span><span>${k} of ${here.length}</span></li>`;
-  }).join("");
-  return `<div class="progress"><div><div class="big-n">${n}<small> of ${total}</small></div>
-    <div class="bar" style="margin:14px 0 10px"><i style="width:${total ? 100 * n / total : 0}%"></i></div>
-    <a href="places/">The whole list →</a></div><ul class="regions">${rows}</ul></div>`;
+/* one line under the map: how far you've got, which opens the Me page */
+function progressLine(P){
+  const done = L.log.all(), n = P.list.filter(p => done[p.id]).length;
+  return `<a href="${L.ROOT}me/">${n} of ${P.list.length} done →</a>`;
 }
 
 function lately(P){
@@ -129,15 +124,15 @@ async function render(){
   const r = L.rng("home " + L.today());
   const outline = await L.data.json("cascadia.json").catch(() => null);
   main.innerHTML = hero(P, F, r)
+    + L.section("Cascadia", `<p class="muted small lede">Every river that reaches the Pacific, from the Copper River to Cape Mendocino. Tap anywhere to follow a raindrop to the sea.</p>
+      <div><div class="mapbox home-map" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span><span id="progress">${progressLine(P)}</span><span class="switches"><button type="button" class="chip" data-borders aria-pressed="false">Borders</button><button type="button" class="chip" data-rivers aria-pressed="false">Rivers in blue</button></span></p></div>`,
+      {aside: `<a href="${L.ROOT}atlas/">Open the Atlas →</a>`})
     + L.section(`Where to go in ${L.MONTHS[L.month() - 1]}`, goNow(P, r))
-    + L.section("Cascadia", `<div class="atlas"><div><div class="mapbox tall" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span><span class="switches"><button type="button" class="chip" data-borders aria-pressed="false">Borders</button><button type="button" class="chip" data-rivers aria-pressed="false">Rivers in blue</button></span></p></div>
-      <div id="progress"><h3 class="atlas-h">Your progress</h3>${progress(P)}</div></div>`, {aside: `<span class="muted">Every river to the Pacific, Copper River to Cape Mendocino</span>`})
     + L.section("Lately", lately(P), {id: "lately"});
-  L.map($("map"), P.list, {outline});
+  /* a tap on the land opens the Atlas with that raindrop */
+  L.map($("map"), P.list, {outline, onTap: ll => { location.href = `${L.ROOT}atlas/#at=${ll.lat.toFixed(3)},${ll.lng.toFixed(3)}`; }});
   L.ownPhotos(main);
-  document.addEventListener("lookout-log", () => {
-    $("progress")?.querySelector(".progress")?.replaceWith(Object.assign(document.createElement("div"), {innerHTML: progress(P)}).firstElementChild);
-  });
+  document.addEventListener("lookout-log", () => { const el = $("progress"); if(el) el.innerHTML = progressLine(P); });
 }
 render().catch(e => { main.innerHTML = `<p class="muted">Couldn't load the guide's data (${esc(e.message)}).</p>`; });
 }

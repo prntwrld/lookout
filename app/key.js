@@ -224,7 +224,7 @@ async function drawHere(more = false){
     + (at ? q("r", "Within", [["1", "1 km"], ["5", "5 km"], ["25", "25 km"]], r) : "")
     + q("when", "When", [["month", `In ${L.MONTHS[L.month() - 1]}`], ["year", "Any time of year"]], when);
   const me = ++token;
-  /* nowhere chosen: the whole region (Washington, Oregon and British Columbia) */
+  /* nowhere chosen: the whole region (Washington, Oregon, Idaho and British Columbia) */
   const placeName = at ? "near you" : reg ? "in " + reg.name : "in the Pacific Northwest";
   if(!more){ page = 1; $("hits").innerHTML = `<p class="muted">Asking iNaturalist what's been seen ${esc(placeName)}…</p>`; }
   const [lat, lng] = at ? at.split(",").map(Number) : [];
