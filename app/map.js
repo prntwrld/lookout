@@ -9,7 +9,7 @@ const pin = (done, big) => L_.divIcon({className: "", iconSize: big ? [26, 26] :
   html: `<span class="pin${done ? " done" : ""}${big ? " big" : ""}"></span>`});
 const dot = kind => L_.divIcon({className: "", iconSize: [12, 12], iconAnchor: [6, 6], html: `<span class="dot-pin" data-kind="${esc(kind)}"></span>`});
 
-function map(el, places, {single = null, around = [], outline = null} = {}){
+function map(el, places, {single = null, around = [], outline = null, onTap = null} = {}){
   if(!L_ || !el) return null;
   const m = L_.map(el, {scrollWheelZoom: false, zoomControl: true, attributionControl: true, tap: true, zoomSnap: outline ? .25 : 1});
   const osm = L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 17, crossOrigin: "anonymous",
@@ -32,6 +32,7 @@ function map(el, places, {single = null, around = [], outline = null} = {}){
   };
   draw();
   document.addEventListener("lookout-log", draw);
+  if(onTap) m.on("click", e => onTap(e.latlng));
   if(single){
     const pts = [[single.pin.lat, single.pin.lon], ...around.map(a => [a.lat, a.lon])];
     pts.length > 1 ? m.fitBounds(pts, {padding: [30, 30], maxZoom: 14}) : m.setView(pts[0], 13);

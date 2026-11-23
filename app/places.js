@@ -19,15 +19,13 @@ function listPage(P){
   main.innerHTML = (pick ? `<section class="hero"><div class="frame" data-hide-broken><a href="${L.placeHref(pick.id)}"><img src="${esc(pick.photo.src)}" alt="${esc(pick.name)}" crossorigin="anonymous"></a>${L.credit(pick.photo.by, pick.photo.lic, pick.photo.page)}</div>
       <h1>Places</h1><p class="sub-line"><a href="${L.ROOT}me/">${n} of ${P.list.length} done</a> · <a href="${L.placeHref(pick.id)}">${esc(pick.name)}</a> above</p></section>` : `<h1>Places</h1>`)
     + L.section(`In season in ${L.MONTHS[m - 1]}`, season.length ? `<div class="cards">${season.map(p => L.placeCard(p, P.region[p.region])).join("")}</div>` : "", {n: season.length})
-    + L.section("The map", `<div class="mapbox" id="map"></div><p class="legend"><span><i></i>To do</span><span><i class="done"></i>Done</span></p>`)
     + `<div id="beyond-slot"></div>`
     + L.section("Everything", `<div class="filters">
         <label>Region <select id="f-region"><option value="">All</option>${P.regions.filter(g => P.list.some(p => p.region === g.id)).map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></label>
         <label>Kind <select id="f-kind"><option value="">All</option>${kinds.map(k => `<option value="${k}">${esc(L.KIND[k] || k)}</option>`).join("")}</select></label>
         <label>Show <select id="f-done"><option value="">All</option><option value="todo">To do</option><option value="done">Done</option></select></label>
         <label>Sort <select id="f-sort"><option value="books">Most-picked</option><option value="name">Name</option><option value="short">Shortest</option><option value="gain">Least gain</option><option value="high">Highest</option></select></label>
-      </div><div class="cards" id="all"></div>`, {n: P.list.length});
-  L.map($("map"), P.list);
+      </div><div class="cards" id="all"></div>`, {n: P.list.length, aside: `<a href="${L.ROOT}atlas/">On the Atlas →</a>`});
   beyond(P);
   const draw = () => {
     const reg = $("f-region").value, kind = $("f-kind").value, show = $("f-done").value, sort = $("f-sort").value, done = L.log.all();
